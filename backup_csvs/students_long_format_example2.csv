@@ -1,0 +1,21 @@
+grade,name,class,task_id,question,question_type,input_type,response,completed_date
+1,Abigail M,Hernandez 1,task_1_a,task_1_a,picture,free_type,4,2025-01-15
+1,Abigail M,Hernandez 1,rhythm_check,Can you clap the rhythm?,string,multiple_choice(Yes|No|Partial),,
+1,Abigail M,Hernandez 1,pitch_match,task_2_a,picture,multiple_choice(1|2|3|4|5),,
+1,Haneefa B,Hernandez 1,task_1_a,task_1_a,picture,free_type,4,2025-01-15
+1,Haneefa B,Hernandez 1,rhythm_check,Can you clap the rhythm?,string,multiple_choice(Yes|No|Partial),Yes,2025-01-16
+1,Haneefa B,Hernandez 1,pitch_match,task_2_a,picture,multiple_choice(1|2|3|4|5),3,2025-01-16
+1,Isabella P,Hernandez 1,task_1_a,task_1_a,picture,free_type,2,2025-01-15
+1,Isabella P,Hernandez 1,rhythm_check,Can you clap the rhythm?,string,multiple_choice(Yes|No|Partial),,
+1,Kara A,Hernandez 1,task_1_a,task_1_a,picture,free_type,1,2025-01-15
+1,Ayva P,Lindner 1,math_1,2+2=?,string,free_type,5,2025-01-16
+1,Ayva P,Lindner 1,math_shapes,task_3_a,picture,multiple_choice(circle|square|triangle),circle,2025-01-17
+1,Ayva P,Lindner 1,reading_1,What letter is this?,string,free_type,,
+1,Jace T,Lindner 1,math_1,2+2=?,string,free_type,4,2025-01-16
+1,Jace T,Lindner 1,math_shapes,task_3_a,picture,multiple_choice(circle|square|triangle),,
+1,Jace T,Lindner 1,reading_1,What letter is this?,string,free_type,A,2025-01-17
+1,Luna E,Lindner 1,math_2,2+4=?,string,multiple_choice(3|6|7|8),,
+1,Luna E,Lindner 1,counting,Count to 10,string,free_type,,
+1,Noah A,Hernandez 1,task_1_b,task_1_b,picture,multiple_choice(3|6|7|8),6,2025-01-15
+1,Noah A,Hernandez 1,steady_beat,Keep steady beat,string,multiple_choice(Excellent|Good|Needs Work),Excellent,2025-01-18
+1,Noah A,Hernandez 1,note_reading,task_4_b,picture,free_type,,

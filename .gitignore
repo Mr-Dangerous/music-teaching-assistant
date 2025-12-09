@@ -1,0 +1,24 @@
+# Student Data Files (contain sensitive information)
+students.csv
+tasks.csv
+results.csv
+*_backup.csv
+*_old*.csv
+
+# Task Images (may contain student work)
+tasks/*/
+
+# System Files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+.~lock.*#
+
+# Editor directories
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp

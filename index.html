@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smartboard Teaching Assistant</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Loading Indicator -->
+  <div id="loading" class="loading" style="display: none;">
+    <div class="spinner"></div>
+    <p>Loading...</p>
+  </div>
+
+  <!-- Notification Banner -->
+  <div id="notification" class="notification" style="display: none;"></div>
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="header-left">
+      <button id="back-to-classes-btn" class="btn btn-secondary" style="display: none;">
+        ← Back to Classes
+      </button>
+    </div>
+    <div class="header-actions">
+      <select id="task-selector" class="task-selector" style="display: none;">
+        <option value="">Select Task...</option>
+      </select>
+      <span id="file-name" class="file-name"></span>
+      <span id="save-indicator" class="save-indicator"></span>
+      <button id="fullscreen-btn" class="btn btn-secondary" title="Toggle Fullscreen">
+        <span id="fullscreen-icon">⛶</span> Fullscreen
+      </button>
+      <button id="save-btn" class="btn btn-secondary" style="display: none;">
+        Save
+      </button>
+    </div>
+  </header>
+
+  <!-- Countdown Timer -->
+  <div id="countdown-timer" class="countdown-timer" style="display: none;">
+    <svg class="countdown-svg" viewBox="0 0 100 100">
+      <circle class="countdown-circle-bg" cx="50" cy="50" r="45"></circle>
+      <circle class="countdown-circle" cx="50" cy="50" r="45"></circle>
+    </svg>
+    <div class="countdown-number" id="countdown-number">5</div>
+  </div>
+
+  <!-- Main Container -->
+  <main class="app-container">
+
+    <!-- Screen 1: File Load -->
+    <div id="file-load-screen" class="screen">
+      <div class="screen-content centered">
+        <div class="welcome-card">
+          <h2>Welcome to Your Teaching Assistant</h2>
+          <p>Load your three CSV files to begin conducting assessments.</p>
+          <button id="load-file-btn" class="btn btn-primary btn-large">
+            Load Student Data (CSV)
+          </button>
+          <div class="info-box">
+            <p><strong>You will be asked to select 3 files:</strong></p>
+            <ul>
+              <li><strong>students.csv</strong> - Student roster (names, grades, classes)</li>
+              <li><strong>tasks.csv</strong> - Task definitions with grade levels</li>
+              <li><strong>results.csv</strong> - Student responses to tasks</li>
+            </ul>
+            <p style="margin-top: 10px;"><strong>Then:</strong></p>
+            <ul>
+              <li>Choose a class to assess</li>
+              <li>Select from grade-appropriate tasks</li>
+              <li>Record student responses</li>
+              <li>Changes save automatically to results.csv</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 2: Class Selection -->
+    <div id="class-select-screen" class="screen" style="display: none;">
+      <div class="screen-content">
+        <div id="class-grid" class="button-grid">
+          <!-- Class buttons will be inserted here by JavaScript -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 3: Class View (Roster + Task Display) -->
+    <div id="student-select-screen" class="screen" style="display: none;">
+      <div class="screen-content class-view">
+        <div class="class-view-container">
+          <!-- Left side: Student Roster -->
+          <div class="student-roster">
+            <h3 id="selected-class-name" class="roster-class-name">Class Name</h3>
+            <div id="student-list" class="student-list">
+              <!-- Student buttons will be inserted here by JavaScript -->
+            </div>
+          </div>
+
+          <!-- Right side: Task Display -->
+          <div class="task-display-area">
+            <div class="task-container">
+              <div id="task-info" class="task-info">
+                <h3 id="current-student-name">Select a student</h3>
+                <p id="current-task-name" class="task-name"></p>
+              </div>
+
+              <div class="task-and-response-row">
+                <div id="task-image-container" class="task-image-container">
+                  <img id="task-image" class="task-image" alt="Task" style="display: none;">
+                  <div id="no-task-message" class="no-task-message">
+                    <p>Select a student to view their assigned task</p>
+                  </div>
+                </div>
+
+                <!-- Response area -->
+                <div id="response-area" class="response-area" style="display: none;">
+                  <h4>Response</h4>
+                  <div id="response-container">
+                    <!-- Response input will go here -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Screen 4: Assessment -->
+    <div id="assessment-screen" class="screen" style="display: none;">
+      <div class="screen-content">
+        <div class="screen-header">
+          <button id="back-to-students-btn" class="btn btn-secondary">
+            ← Back to Students
+          </button>
+          <div class="assessment-header">
+            <h2>
+              <span id="current-class"></span> |
+              <span id="current-student"></span>
+            </h2>
+          </div>
+        </div>
+
+        <div class="assessment-form">
+          <!-- Artifact Selection -->
+          <div class="form-section">
+            <label for="artifact-select" class="form-label">Assessment Artifact</label>
+            <select id="artifact-select" class="form-select">
+              <!-- Artifact options will be inserted here by JavaScript -->
+            </select>
+          </div>
+
+          <!-- Question Input -->
+          <div class="form-section">
+            <label for="question-input" class="form-label">Question/Task</label>
+            <input
+              type="text"
+              id="question-input"
+              class="form-input"
+              placeholder="Enter question or task identifier (e.g., task_1)"
+            >
+            <p class="form-help">
+              Current Question: <strong id="current-question">No question set</strong>
+            </p>
+          </div>
+
+          <!-- Response Input (Dynamic) -->
+          <div class="form-section">
+            <div id="response-input-container">
+              <!-- Response input will be rendered here by JavaScript -->
+            </div>
+          </div>
+
+          <!-- Submit Button -->
+          <div class="form-section">
+            <button id="submit-btn" class="btn btn-primary btn-large btn-submit">
+              Submit & Next Student →
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <p>Smartboard Teaching Assistant v1.0</p>
+  </footer>
+
+  <!-- Load JavaScript modules -->
+  <script src="js/config.js"></script>
+  <script src="js/csv-handler.js"></script>
+  <script src="js/file-manager.js"></script>
+  <script src="js/response-handler.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
