@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Piano Octave 1</title>
+    <style>
+        :root {
+            /* Resolution scaling - inherits from parent or defaults to 1 */
+            --module-scale: 1;
+        }
+
+        /* Detect 4K mode from parent */
+        body.resolution-4k,
+        :root.resolution-4k {
+            --module-scale: 2;
+            transform: scale(2);
+            transform-origin: top left;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: calc(20px * var(--module-scale));
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: calc(900px * var(--module-scale));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: calc(20px * var(--module-scale));
+        }
+
+        .header {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: calc(10px * var(--module-scale));
+        }
+
+        .toggle-container {
+            display: flex;
+            gap: calc(10px * var(--module-scale));
+            flex-wrap: wrap;
+        }
+
+        .toggle-btn {
+            font-size: calc(16px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #3498db;
+            border: none;
+            padding: calc(12px * var(--module-scale)) calc(24px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+        }
+
+        .toggle-btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 calc(4px * var(--module-scale)) calc(8px * var(--module-scale)) rgba(0, 0, 0, 0.3);
+        }
+
+        .toggle-btn.active {
+            background-color: #27ae60;
+        }
+
+        .toggle-btn.active:hover {
+            background-color: #229954;
+        }
+
+        .prompt-text {
+            font-size: calc(32px * var(--module-scale));
+            font-weight: bold;
+            color: #2c3e50;
+            text-align: center;
+            min-height: calc(50px * var(--module-scale));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .piano-container {
+            position: relative;
+            width: fit-content;
+            margin: calc(20px * var(--module-scale)) 0;
+        }
+
+        .piano-keyboard {
+            position: relative;
+            display: flex;
+            height: calc(200px * var(--module-scale));
+        }
+
+        .piano-key {
+            position: relative;
+            cursor: pointer;
+            user-select: none;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: calc(10px * var(--module-scale));
+            font-size: calc(16px * var(--module-scale));
+            font-weight: bold;
+            transition: all 0.1s;
+        }
+
+        .white-key {
+            width: calc(80px * var(--module-scale));
+            height: calc(200px * var(--module-scale));
+            background: linear-gradient(to bottom, #ffffff 0%, #f5f5f5 100%);
+            border: calc(2px * var(--module-scale)) solid #333;
+            border-radius: 0 0 calc(5px * var(--module-scale)) calc(5px * var(--module-scale));
+            color: #333;
+            z-index: 1;
+        }
+
+        .white-key:hover {
+            background: linear-gradient(to bottom, #f0f0f0 0%, #e0e0e0 100%);
+        }
+
+        .white-key:active,
+        .white-key.active {
+            background: linear-gradient(to bottom, #e0e0e0 0%, #d0d0d0 100%);
+            transform: translateY(2px);
+        }
+
+        .black-key {
+            width: calc(50px * var(--module-scale));
+            height: calc(130px * var(--module-scale));
+            background: linear-gradient(to bottom, #333 0%, #000 100%);
+            border: calc(2px * var(--module-scale)) solid #000;
+            border-radius: 0 0 calc(3px * var(--module-scale)) calc(3px * var(--module-scale));
+            color: white;
+            position: absolute;
+            z-index: 2;
+            top: 0;
+        }
+
+        .black-key:hover {
+            background: linear-gradient(to bottom, #444 0%, #111 100%);
+        }
+
+        .black-key:active,
+        .black-key.active {
+            background: linear-gradient(to bottom, #222 0%, #000 100%);
+            transform: translateY(2px);
+        }
+
+        /* Position black keys between white keys */
+        .black-key[data-note="C#"] {
+            left: calc(55px * var(--module-scale));
+        }
+
+        .black-key[data-note="D#"] {
+            left: calc(135px * var(--module-scale));
+        }
+
+        .black-key[data-note="F#"] {
+            left: calc(295px * var(--module-scale));
+        }
+
+        .black-key[data-note="G#"] {
+            left: calc(375px * var(--module-scale));
+        }
+
+        .black-key[data-note="A#"] {
+            left: calc(455px * var(--module-scale));
+        }
+
+        .note-label {
+            display: block;
+        }
+
+        .note-label.hidden {
+            display: none;
+        }
+
+        .reset-btn {
+            font-size: calc(16px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #e74c3c;
+            border: none;
+            padding: calc(12px * var(--module-scale)) calc(24px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+        }
+
+        .reset-btn:hover {
+            background-color: #c0392b;
+            transform: translateY(-2px);
+            box-shadow: 0 calc(4px * var(--module-scale)) calc(8px * var(--module-scale)) rgba(0, 0, 0, 0.3);
+        }
+
+        @media (max-width: 768px) {
+            .piano-keyboard {
+                transform: scale(0.8);
+                transform-origin: center;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="toggle-container">
+                <button class="toggle-btn" id="assessmentToggle" onclick="toggleAssessmentMode()">
+                    Assessment Mode: OFF
+                </button>
+                <button class="toggle-btn" id="labelsToggle" onclick="toggleLabels()">
+                    Labels: ON
+                </button>
+            </div>
+            <button class="reset-btn" onclick="resetModule()">🔄 Reset</button>
+        </div>
+
+        <div class="prompt-text" id="promptText"></div>
+
+        <div class="piano-container">
+            <div class="piano-keyboard" id="pianoKeyboard">
+                <!-- White Keys -->
+                <div class="piano-key white-key" data-note="C" data-frequency="261.63">
+                    <span class="note-label">C</span>
+                </div>
+                <div class="piano-key white-key" data-note="D" data-frequency="293.66">
+                    <span class="note-label">D</span>
+                </div>
+                <div class="piano-key white-key" data-note="E" data-frequency="329.63">
+                    <span class="note-label">E</span>
+                </div>
+                <div class="piano-key white-key" data-note="F" data-frequency="349.23">
+                    <span class="note-label">F</span>
+                </div>
+                <div class="piano-key white-key" data-note="G" data-frequency="392.00">
+                    <span class="note-label">G</span>
+                </div>
+                <div class="piano-key white-key" data-note="A" data-frequency="440.00">
+                    <span class="note-label">A</span>
+                </div>
+                <div class="piano-key white-key" data-note="B" data-frequency="493.88">
+                    <span class="note-label">B</span>
+                </div>
+                <div class="piano-key white-key" data-note="C'" data-frequency="523.25">
+                    <span class="note-label">C'</span>
+                </div>
+
+                <!-- Black Keys -->
+                <div class="piano-key black-key" data-note="C#" data-frequency="277.18">
+                    <span class="note-label">C#</span>
+                </div>
+                <div class="piano-key black-key" data-note="D#" data-frequency="311.13">
+                    <span class="note-label">D#</span>
+                </div>
+                <div class="piano-key black-key" data-note="F#" data-frequency="369.99">
+                    <span class="note-label">F#</span>
+                </div>
+                <div class="piano-key black-key" data-note="G#" data-frequency="415.30">
+                    <span class="note-label">G#</span>
+                </div>
+                <div class="piano-key black-key" data-note="A#" data-frequency="466.16">
+                    <span class="note-label">A#</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Detect and apply resolution from parent frame
+        function detectParentResolution() {
+            try {
+                if (window.parent && window.parent !== window) {
+                    const parentBody = window.parent.document.body;
+                    if (parentBody.classList.contains('resolution-4k')) {
+                        document.body.classList.add('resolution-4k');
+                    }
+                }
+            } catch (e) {
+                console.log('Cannot access parent resolution, using default');
+            }
+        }
+
+        // Apply resolution on load
+        detectParentResolution();
+
+        // State
+        let assessmentMode = false;
+        let labelsVisible = true;
+        let currentTargetNote = null;
+        let currentResponse = null;
+        let audioContext = null;
+
+        // White keys only for assessment (Level 1)
+        const whiteKeys = ['C', 'D', 'E', 'F', 'G', 'A', 'B', "C'"];
+
+        // TaskModule interface for integration with main app
+        window.TaskModule = {
+            context: null,
+
+            init(context) {
+                this.context = context;
+                console.log('Piano Octave 1 initialized with context:', context);
+
+                // Check if there's an existing response to restore
+                if (context.existingResponse) {
+                    try {
+                        const saved = JSON.parse(context.existingResponse);
+                        if (saved.targetNote) {
+                            // Restore assessment mode state
+                            assessmentMode = true;
+                            currentTargetNote = saved.targetNote;
+                            updatePrompt();
+                            updateAssessmentButton();
+                        }
+                    } catch (e) {
+                        console.log('No valid existing response to restore');
+                    }
+                }
+            },
+
+            getResponse() {
+                return getCurrentResponseValue();
+            },
+
+            isComplete() {
+                return currentResponse !== null;
+            },
+
+            reset() {
+                resetModule();
+            }
+        };
+
+        // Initialize Audio Context
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioContext;
+        }
+
+        // Play note using Web Audio API
+        function playNote(frequency, duration = 0.5) {
+            const ctx = initAudioContext();
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            oscillator.frequency.value = frequency;
+            oscillator.type = 'sine';
+
+            // Envelope for more piano-like sound
+            gainNode.gain.setValueAtTime(0, ctx.currentTime);
+            gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + duration);
+
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + duration);
+        }
+
+        // Toggle assessment mode
+        function toggleAssessmentMode() {
+            assessmentMode = !assessmentMode;
+            updateAssessmentButton();
+
+            if (assessmentMode) {
+                generateNewQuestion();
+            } else {
+                currentTargetNote = null;
+                currentResponse = null;
+                updatePrompt();
+            }
+        }
+
+        function updateAssessmentButton() {
+            const btn = document.getElementById('assessmentToggle');
+            if (assessmentMode) {
+                btn.textContent = 'Assessment Mode: ON';
+                btn.classList.add('active');
+            } else {
+                btn.textContent = 'Assessment Mode: OFF';
+                btn.classList.remove('active');
+            }
+        }
+
+        // Toggle note labels
+        function toggleLabels() {
+            labelsVisible = !labelsVisible;
+            const labels = document.querySelectorAll('.note-label');
+            const btn = document.getElementById('labelsToggle');
+
+            if (labelsVisible) {
+                labels.forEach(label => label.classList.remove('hidden'));
+                btn.textContent = 'Labels: ON';
+                btn.classList.remove('active');
+            } else {
+                labels.forEach(label => label.classList.add('hidden'));
+                btn.textContent = 'Labels: OFF';
+                btn.classList.add('active');
+            }
+        }
+
+        // Generate new question for assessment mode
+        function generateNewQuestion() {
+            const randomIndex = Math.floor(Math.random() * whiteKeys.length);
+            currentTargetNote = whiteKeys[randomIndex];
+            currentResponse = null;
+            updatePrompt();
+        }
+
+        function updatePrompt() {
+            const promptEl = document.getElementById('promptText');
+            if (assessmentMode && currentTargetNote) {
+                promptEl.textContent = `Press (${currentTargetNote}) on the piano keyboard`;
+            } else if (assessmentMode) {
+                promptEl.textContent = 'Click a key to begin assessment';
+            } else {
+                promptEl.textContent = '';
+            }
+        }
+
+        // Handle key press
+        function handleKeyPress(key) {
+            const note = key.dataset.note;
+            const frequency = parseFloat(key.dataset.frequency);
+
+            // Visual feedback
+            key.classList.add('active');
+            setTimeout(() => {
+                key.classList.remove('active');
+            }, 200);
+
+            // Play sound
+            playNote(frequency);
+
+            // Handle assessment mode
+            if (assessmentMode) {
+                if (currentTargetNote) {
+                    // Record the response
+                    currentResponse = {
+                        targetNote: currentTargetNote,
+                        pressedNote: note,
+                        timestamp: new Date().toISOString()
+                    };
+
+                    // Notify parent
+                    notifyParent();
+
+                    // Generate next question after brief delay
+                    setTimeout(() => {
+                        generateNewQuestion();
+                    }, 500);
+                }
+            }
+        }
+
+        // Setup event listeners for piano keys
+        function setupPianoKeys() {
+            const keys = document.querySelectorAll('.piano-key');
+
+            keys.forEach(key => {
+                // Mouse events
+                key.addEventListener('mousedown', (e) => {
+                    e.preventDefault();
+                    handleKeyPress(key);
+                });
+
+                // Touch events
+                key.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    handleKeyPress(key);
+                });
+
+                // Prevent default behavior
+                key.addEventListener('touchmove', (e) => {
+                    e.preventDefault();
+                });
+            });
+        }
+
+        function getCurrentResponseValue() {
+            if (!currentResponse) {
+                return null;
+            }
+
+            return JSON.stringify(currentResponse);
+        }
+
+        function notifyParent() {
+            window.parent.postMessage({
+                type: 'taskmodule:response',
+                value: getCurrentResponseValue(),
+                isComplete: true
+            }, '*');
+        }
+
+        function resetModule() {
+            currentTargetNote = null;
+            currentResponse = null;
+
+            if (assessmentMode) {
+                generateNewQuestion();
+            } else {
+                updatePrompt();
+            }
+        }
+
+        // Listen for init message from parent
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'taskmodule:init') {
+                window.TaskModule.init(event.data.context);
+            }
+        });
+
+        // Initialize on load
+        window.addEventListener('DOMContentLoaded', () => {
+            setupPianoKeys();
+            updatePrompt();
+        });
+    </script>
+</body>
+
+</html>

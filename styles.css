@@ -3,43 +3,65 @@
 
 /* === CSS Variables === */
 :root {
+  /* Resolution Scaling */
+  --resolution-scale: 1;
+  /* 1 for 1920x1080, 2 for 3840x2160 */
+
   /* Bright, Kid-Friendly Colors */
-  --color-primary: #3b82f6;        /* Bright Blue */
+  --color-primary: #3b82f6;
+  /* Bright Blue */
   --color-primary-hover: #2563eb;
-  --color-secondary: #a855f7;      /* Purple */
+  --color-secondary: #a855f7;
+  /* Purple */
   --color-secondary-hover: #9333ea;
-  --color-success: #10b981;        /* Green */
-  --color-warning: #f59e0b;        /* Amber/Orange */
-  --color-danger: #ef4444;         /* Red */
-  --color-accent-1: #ec4899;       /* Pink */
-  --color-accent-2: #14b8a6;       /* Teal */
-  --color-accent-3: #f97316;       /* Orange */
+  --color-success: #10b981;
+  /* Green */
+  --color-warning: #f59e0b;
+  /* Amber/Orange */
+  --color-danger: #ef4444;
+  /* Red */
+  --color-accent-1: #ec4899;
+  /* Pink */
+  --color-accent-2: #14b8a6;
+  /* Teal */
+  --color-accent-3: #f97316;
+  /* Orange */
   --color-text: #1f2937;
   --color-text-light: #6b7280;
   --color-background: #ffffff;
-  --color-background-alt: #fef3c7; /* Soft Yellow */
+  --color-background-alt: #fef3c7;
+  /* Soft Yellow */
   --color-background-fun: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   --color-border: #d1d5db;
 
-  /* Font Sizes */
-  --font-small: 16px;
-  --font-normal: 18px;
-  --font-large: 24px;
-  --font-xlarge: 32px;
-  --font-heading: 36px;
+  /* Font Sizes (scaled by resolution) */
+  --font-small: calc(16px * var(--resolution-scale));
+  --font-normal: calc(18px * var(--resolution-scale));
+  --font-large: calc(24px * var(--resolution-scale));
+  --font-xlarge: calc(32px * var(--resolution-scale));
+  --font-heading: calc(36px * var(--resolution-scale));
 
-  /* Spacing */
-  --spacing-xs: 8px;
-  --spacing-sm: 12px;
-  --spacing-md: 16px;
-  --spacing-lg: 24px;
-  --spacing-xl: 32px;
+  /* Spacing (scaled by resolution) */
+  --spacing-xs: calc(8px * var(--resolution-scale));
+  --spacing-sm: calc(12px * var(--resolution-scale));
+  --spacing-md: calc(16px * var(--resolution-scale));
+  --spacing-lg: calc(24px * var(--resolution-scale));
+  --spacing-xl: calc(32px * var(--resolution-scale));
 
-  /* Touch Targets */
-  --touch-target-min: 44px;
+  /* Touch Targets (scaled by resolution) */
+  --touch-target-min: calc(44px * var(--resolution-scale));
 
   /* Transitions */
   --transition-speed: 200ms;
+}
+
+/* 4K Mode - 2x scaling */
+body.resolution-4k {
+  --resolution-scale: 2;
+  transform: scale(2);
+  transform-origin: top left;
+  width: 50%;
+  height: 50%;
 }
 
 /* === Reset and Base === */
@@ -63,9 +85,17 @@ body {
 }
 
 @keyframes gradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
 /* === Header === */
@@ -151,8 +181,13 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 .screen-content {
@@ -911,6 +946,7 @@ body {
     opacity: 0;
     transform: translateX(50px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -979,7 +1015,9 @@ body {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loading p {
@@ -1009,6 +1047,7 @@ body {
     opacity: 0;
     transform: translateX(-50%) translateY(-20px);
   }
+
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
@@ -1190,6 +1229,32 @@ body {
   background: var(--color-secondary-hover);
 }
 
+.btn-practice {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  color: white;
+  width: 100%;
+  margin-top: var(--spacing-md);
+  font-size: var(--font-large);
+  font-weight: 700;
+  padding: var(--spacing-md) var(--spacing-lg);
+  min-height: 60px;
+}
+
+.btn-practice:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+}
+
+/* Results Button */
+.results-button {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  border-color: #10b981 !important;
+}
+
+.results-button:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  border-color: #047857 !important;
+}
+
 /* Random Student Popup */
 .random-student-popup {
   position: fixed;
@@ -1255,6 +1320,7 @@ body {
 
 /* === Print Styles === */
 @media print {
+
   .app-header,
   .app-footer,
   .btn {

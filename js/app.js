@@ -18,6 +18,7 @@ class TeachingAssistantApp {
     this.selectedStudent = null;
     this.selectedTask = null;  // Currently selected task ID
     this.currentResponse = '';
+    this.practiceMode = false; // When true, operates without student context
 
     this.countdownTimer = null;
     this.countdownInterval = null;
@@ -73,6 +74,23 @@ class TeachingAssistantApp {
       });
     }
 
+    // View Results button
+    const viewResultsBtn = document.getElementById('view-results-btn');
+    if (viewResultsBtn) {
+      viewResultsBtn.addEventListener('click', () => {
+        window.location.href = 'results-viewer.html';
+      });
+    }
+
+    // Resolution toggle button
+    const resolutionToggleBtn = document.getElementById('resolution-toggle-btn');
+    if (resolutionToggleBtn) {
+      resolutionToggleBtn.addEventListener('click', () => this.toggleResolution());
+    }
+
+    //Initialize resolution based on screen or saved preference
+    this.initializeResolution();
+
     // Listen for fullscreen changes to update button
     document.addEventListener('fullscreenchange', () => this.updateFullscreenButton());
     document.addEventListener('webkitfullscreenchange', () => this.updateFullscreenButton());
@@ -85,19 +103,27 @@ class TeachingAssistantApp {
         // Module reported a response change
         this.currentResponse = event.data.value;
 
-        // Update result
-        if (this.selectedStudent && this.selectedTask) {
-          const result = this.getOrCreateResult(
-            this.selectedStudent.student_id,
-            this.selectedTask
-          );
-          result.response = event.data.value;
+        // Only save if not in practice mode
+        if (!this.practiceMode && this.selectedStudent && this.selectedTask && event.data.isComplete) {
+          // Create a NEW result entry for each completion
+          // This allows multiple attempts per session
+          const newResult = {
+            student_id: this.selectedStudent.student_id,
+            task_id: this.selectedTask,
+            response: event.data.value,
+            completed_date: new Date().toISOString()
+          };
+
+          // Add to results array
+          this.results.push(newResult);
+
           this.markUnsaved();
 
-          // If complete, start countdown
-          if (event.data.isComplete) {
-            this.startCountdown();
-          }
+          // Update localStorage with new results data
+          this.updateLocalStorage();
+
+          // Start countdown
+          this.startCountdown();
         }
       }
     });
@@ -106,6 +132,12 @@ class TeachingAssistantApp {
     const pickRandomBtn = document.getElementById('pick-random-btn');
     if (pickRandomBtn) {
       pickRandomBtn.addEventListener('click', () => this.pickRandomStudent());
+    }
+
+    // Practice mode button
+    const practiceModeBtn = document.getElementById('practice-mode-btn');
+    if (practiceModeBtn) {
+      practiceModeBtn.addEventListener('click', () => this.enterPracticeMode());
     }
 
     // Back buttons
@@ -195,7 +227,12 @@ class TeachingAssistantApp {
       // Populate task selector (will be filtered by grade when class is selected)
       this.populateTaskSelector();
 
-      // Show save button and task selector
+      // Store data in localStorage for results viewer
+      localStorage.setItem('teachingAssistant_students', JSON.stringify(this.students));
+      localStorage.setItem('teachingAssistant_tasks', JSON.stringify(this.tasks));
+      localStorage.setItem('teachingAssistant_results', JSON.stringify(this.results));
+
+      // Show save button, task selector, and view results button
       const saveBtn = document.getElementById('save-btn');
       if (saveBtn) {
         saveBtn.style.display = 'inline-flex';
@@ -204,6 +241,11 @@ class TeachingAssistantApp {
       const taskSelector = document.getElementById('task-selector');
       if (taskSelector && this.tasks.length > 0) {
         taskSelector.style.display = 'inline-block';
+      }
+
+      const viewResultsBtn = document.getElementById('view-results-btn');
+      if (viewResultsBtn) {
+        viewResultsBtn.style.display = 'inline-flex';
       }
 
       // Hide back button initially
@@ -224,6 +266,19 @@ class TeachingAssistantApp {
       }
     } finally {
       this.showLoading(false);
+    }
+  }
+
+  /**
+   * Update localStorage with current data
+   */
+  updateLocalStorage() {
+    try {
+      localStorage.setItem('teachingAssistant_students', JSON.stringify(this.students));
+      localStorage.setItem('teachingAssistant_tasks', JSON.stringify(this.tasks));
+      localStorage.setItem('teachingAssistant_results', JSON.stringify(this.results));
+    } catch (error) {
+      console.error('Error updating localStorage:', error);
     }
   }
 
@@ -563,10 +618,14 @@ class TeachingAssistantApp {
    * Check if student has completed a specific task
    */
   hasCompletedTask(student_id, task_id) {
-    const result = this.results.find(r =>
-      r.student_id === student_id && r.task_id === task_id
+    // Check if ANY result exists for this student-task combination
+    // (supports multiple completions per student)
+    return this.results.some(r =>
+      r.student_id === student_id &&
+      r.task_id === task_id &&
+      r.response &&
+      r.response.trim() !== ''
     );
-    return result && result.response && result.response.trim() !== '';
   }
 
   /**
@@ -575,6 +634,9 @@ class TeachingAssistantApp {
   displayStudentTask(student) {
     // Cancel any active countdown from previous student
     this.cancelCountdown();
+
+    // Exit practice mode when selecting a student
+    this.practiceMode = false;
 
     // Reset any loaded modules
     this.moduleLoader.reset();
@@ -1023,7 +1085,7 @@ class TeachingAssistantApp {
     const elem = document.documentElement;
 
     if (!document.fullscreenElement && !document.webkitFullscreenElement &&
-        !document.mozFullScreenElement && !document.msFullscreenElement) {
+      !document.mozFullScreenElement && !document.msFullscreenElement) {
       // Enter fullscreen
       if (elem.requestFullscreen) {
         elem.requestFullscreen();
@@ -1058,7 +1120,7 @@ class TeachingAssistantApp {
     if (!fullscreenIcon || !fullscreenBtn) return;
 
     const isFullscreen = document.fullscreenElement || document.webkitFullscreenElement ||
-                         document.mozFullScreenElement || document.msFullscreenElement;
+      document.mozFullScreenElement || document.msFullscreenElement;
 
     if (isFullscreen) {
       fullscreenIcon.textContent = '⛶';
@@ -1067,6 +1129,67 @@ class TeachingAssistantApp {
       fullscreenIcon.textContent = '⛶';
       fullscreenBtn.title = 'Enter Fullscreen';
     }
+  }
+
+  /**
+   * Initialize resolution based on screen size or saved preference
+   */
+  initializeResolution() {
+    // Check if there's a saved preference
+    const savedResolution = localStorage.getItem('teachingAssistant_resolution');
+
+    if (savedResolution) {
+      // Use saved preference
+      this.setResolution(savedResolution);
+    } else {
+      // Auto-detect based on screen resolution
+      const screenWidth = window.screen.width;
+      const screenHeight = window.screen.height;
+
+      // If screen is 4K or higher (3840x2160 or larger), use 4K mode
+      if (screenWidth >= 3840 || screenHeight >= 2160) {
+        this.setResolution('4k');
+      } else {
+        this.setResolution('1080p');
+      }
+    }
+  }
+
+  /**
+   * Toggle between 1080p and 4K resolution
+   */
+  toggleResolution() {
+    const currentResolution = document.body.classList.contains('resolution-4k') ? '4k' : '1080p';
+    const newResolution = currentResolution === '1080p' ? '4k' : '1080p';
+
+    this.setResolution(newResolution);
+
+    // Save preference
+    localStorage.setItem('teachingAssistant_resolution', newResolution);
+  }
+
+  /**
+   * Set resolution mode
+   */
+  setResolution(resolution) {
+    if (resolution === '4k') {
+      document.body.classList.add('resolution-4k');
+    } else {
+      document.body.classList.remove('resolution-4k');
+    }
+
+    this.updateResolutionButton();
+  }
+
+  /**
+   * Update resolution button text
+   */
+  updateResolutionButton() {
+    const resolutionIcon = document.getElementById('resolution-icon');
+    if (!resolutionIcon) return;
+
+    const is4k = document.body.classList.contains('resolution-4k');
+    resolutionIcon.textContent = is4k ? '4K' : '1080p';
   }
 
   /**
@@ -1204,8 +1327,8 @@ class TeachingAssistantApp {
       this.showLoading(false);
     }
 
-    // Clear task display
-    this.clearCurrentTask();
+    // Keep student selected for multiple attempts
+    // Only way to unselect is by clicking Practice button or selecting another student
   }
 
   /**
@@ -1306,6 +1429,75 @@ class TeachingAssistantApp {
     popup.onclick = () => {
       popup.style.display = 'none';
     };
+  }
+
+  /**
+   * Enter practice mode - use module without student context
+   */
+  enterPracticeMode() {
+    if (!this.selectedTask) {
+      this.showNotification('Please select a task first!', 'warning');
+      return;
+    }
+
+    // Get the task data
+    const taskData = this.getTask(this.selectedTask);
+    if (!taskData || !taskData.module_path) {
+      this.showNotification('No module available for this task', 'warning');
+      return;
+    }
+
+    // Enable practice mode
+    this.practiceMode = true;
+
+    // Clear student selection
+    this.selectedStudent = null;
+
+    // Remove active state from student buttons
+    const studentList = document.getElementById('student-list');
+    if (studentList) {
+      studentList.querySelectorAll('.student-roster-button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+    }
+
+    // Reset any loaded modules
+    this.moduleLoader.reset();
+
+    // Update student name display
+    document.getElementById('current-student-name').textContent = 'Practice Mode';
+
+    // Update task name
+    document.getElementById('current-task-name').textContent = `Task: ${taskData.question}`;
+
+    // Load the module in practice mode (no student context)
+    const container = document.getElementById('task-image-container');
+    const context = {
+      studentId: 'practice',
+      taskId: taskData.task_id,
+      grade: 'practice',
+      studentName: 'Practice Mode',
+      question: taskData.question,
+      existingResponse: null
+    };
+
+    this.moduleLoader.loadModule(
+      taskData.module_path,
+      container,
+      context
+    ).then(iframe => {
+      this.moduleLoader.currentResponseModule = iframe;
+      this.cancelCountdown();
+
+      const responseArea = document.getElementById('response-area');
+      if (responseArea) {
+        responseArea.style.display = 'none';
+      }
+
+      this.showNotification('Practice Mode - responses will not be saved', 'info');
+    }).catch(err => {
+      this.showNoTask(`Failed to load module: ${err.message}`);
+    });
   }
 }
 
