@@ -74,7 +74,21 @@ class FileManager {
       }
     }
 
-    // If any file wasn't loaded, prompt user to select them
+    // If any file wasn't loaded, try to load all at once
+    if (!studentsContent || !tasksContent || !resultsContent) {
+      try {
+        const allFiles = await this.loadAllFilesAtOnce();
+        if (allFiles) {
+          studentsContent = allFiles.studentsContent || studentsContent;
+          tasksContent = allFiles.tasksContent || tasksContent;
+          resultsContent = allFiles.resultsContent || resultsContent;
+        }
+      } catch (error) {
+        console.log('Batch file loading failed, falling back to individual selection:', error.message);
+      }
+    }
+
+    // If any file still wasn't loaded, prompt user to select them individually
     if (!studentsContent) {
       studentsContent = await this.openFile('students', 'Step 1 of 3: Select STUDENTS.CSV (student roster with names, grades, classes)');
     }
@@ -95,6 +109,141 @@ class FileManager {
       tasksContent,
       resultsContent
     };
+  }
+
+  /**
+   * Load all three CSV files at once with auto-detection
+   * @returns {Promise<Object|null>} - Object with studentsContent, tasksContent, and resultsContent, or null if failed
+   */
+  async loadAllFilesAtOnce() {
+    if (this.supportsFileSystemAccess) {
+      return await this.loadAllFilesWithAPI();
+    } else {
+      return await this.loadAllFilesWithFallback();
+    }
+  }
+
+  /**
+   * Load all files at once using File System Access API
+   */
+  async loadAllFilesWithAPI() {
+    try {
+      const fileHandles = await window.showOpenFilePicker({
+        types: [{
+          description: 'Select all 3 CSV files (students.csv, tasks.csv, results.csv)',
+          accept: {
+            'text/csv': ['.csv']
+          }
+        }],
+        multiple: true
+      });
+
+      if (fileHandles.length !== 3) {
+        throw new Error('Please select exactly 3 CSV files');
+      }
+
+      const results = {
+        studentsContent: null,
+        tasksContent: null,
+        resultsContent: null
+      };
+
+      // Read all files and auto-detect based on filename
+      for (const fileHandle of fileHandles) {
+        const file = await fileHandle.getFile();
+        const content = await file.text();
+        const fileName = fileHandle.name.toLowerCase();
+
+        if (fileName.includes('student')) {
+          results.studentsContent = content;
+          this.studentsFileHandle = fileHandle;
+          this.studentsFileName = fileHandle.name;
+        } else if (fileName.includes('task')) {
+          results.tasksContent = content;
+          this.tasksFileHandle = fileHandle;
+          this.tasksFileName = fileHandle.name;
+        } else if (fileName.includes('result')) {
+          results.resultsContent = content;
+          this.resultsFileHandle = fileHandle;
+          this.resultsFileName = fileHandle.name;
+        }
+      }
+
+      // Verify all files were detected
+      if (!results.studentsContent || !results.tasksContent || !results.resultsContent) {
+        throw new Error('Could not auto-detect all file types. Make sure filenames contain "student", "task", or "result"');
+      }
+
+      return results;
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error('File selection cancelled');
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Load all files at once using traditional file input (fallback)
+   */
+  async loadAllFilesWithFallback() {
+    return new Promise((resolve, reject) => {
+      alert('Select all 3 CSV files at once (students.csv, tasks.csv, results.csv)');
+
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.csv';
+      input.multiple = true;
+
+      input.onchange = async (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length !== 3) {
+          reject(new Error('Please select exactly 3 CSV files'));
+          return;
+        }
+
+        const results = {
+          studentsContent: null,
+          tasksContent: null,
+          resultsContent: null
+        };
+
+        try {
+          // Read all files and auto-detect based on filename
+          for (const file of files) {
+            const content = await file.text();
+            const fileName = file.name.toLowerCase();
+
+            if (fileName.includes('student')) {
+              results.studentsContent = content;
+              this.studentsFileName = file.name;
+            } else if (fileName.includes('task')) {
+              results.tasksContent = content;
+              this.tasksFileName = file.name;
+            } else if (fileName.includes('result')) {
+              results.resultsContent = content;
+              this.resultsFileName = file.name;
+            }
+          }
+
+          // Verify all files were detected
+          if (!results.studentsContent || !results.tasksContent || !results.resultsContent) {
+            reject(new Error('Could not auto-detect all file types. Make sure filenames contain "student", "task", or "result"'));
+            return;
+          }
+
+          resolve(results);
+        } catch (error) {
+          reject(new Error(`Failed to read files: ${error.message}`));
+        }
+      };
+
+      input.oncancel = () => {
+        reject(new Error('File selection cancelled'));
+      };
+
+      input.click();
+    });
   }
 
   /**

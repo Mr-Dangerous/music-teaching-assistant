@@ -31,7 +31,7 @@ The app uses a normalized relational data structure across three CSV files:
 
 2. **tasks.csv** - Task definitions (metadata)
    - `task_id, question, question_type, input_type, grade, question_module, response_module`
-   - Grade field enables filtering tasks by grade level
+   - Grade field is informational only (all tasks available to all grades)
    - question_module and response_module enable custom HTML modules (optional)
 
 3. **results.csv** - Student responses (relationships)
@@ -45,13 +45,16 @@ This replaces an older "wide format" single CSV with artifact_1, artifact_2 colu
 **app.js** - Main application controller
 - Manages UI state and navigation between screens
 - Coordinates between other modules
-- Implements grade-based task filtering in `populateTaskSelector(filterGrade)`
-- Key methods: `loadFile()`, `showClassScreen()`, `showStudentScreen()`, `displayStudentTask()`
+- Displays all tasks for all grades (no grade-level filtering)
+- Includes random student picker for selecting students who haven't completed the current task
+- Key methods: `loadFile()`, `showClassScreen()`, `showStudentScreen()`, `displayStudentTask()`, `pickRandomStudent()`
 
 **file-manager.js** - File I/O operations
 - Uses File System Access API (Chrome/Edge) for persistent file access
 - Fallback to download links for Firefox/Safari
-- `loadFiles()` prompts for all three CSVs with step-by-step guidance
+- `loadFiles()` supports batch loading: select all 3 CSVs at once with auto-detection by filename
+- Auto-detects file types based on keywords: "student", "task", "result"
+- Falls back to step-by-step prompts if batch loading fails
 - `saveResults()` only saves results.csv (students.csv and tasks.csv are read-only)
 
 **csv-handler.js** - CSV parsing
@@ -72,24 +75,35 @@ This replaces an older "wide format" single CSV with artifact_1, artifact_2 colu
 ### Data Flow
 
 ```
-1. Load: file-manager → CSVs → app.js parsers → in-memory arrays
-2. Select class → filter students by class → extract grade → filter tasks by grade
-3. Select task → find/create result entry → render input based on task.input_type
+1. Load: file-manager → CSVs (batch or individual) → app.js parsers → in-memory arrays
+2. Select class → filter students by class → show all available tasks
+3. Select task → find/create result entry → display task module
 4. Student responds → update result.response → start countdown timer
 5. Countdown completes → save results.csv via file-manager
 ```
 
-### Grade-Based Filtering
+### Random Student Picker
 
-Critical feature: When a class is selected, tasks are filtered to show only those matching the class's grade level.
+Feature to help teachers randomly select students for participation:
+- Button appears at bottom of student roster (labeled "Random")
+- Only selects from students who haven't completed the current task
+- Shows student's first name in a full-screen popup for 3 seconds
+- Click popup to dismiss early
+- Shows notification if all students have completed the task
 
-Implementation: `showStudentScreen()` extracts the class grade and calls `populateTaskSelector(classGrade)`, which filters `this.tasks` array by the `grade` field.
+Implementation: `pickRandomStudent()` filters available students and calls `showRandomStudentPopup()` with the selected student's first name.
 
 ### Key Design Decisions
 
 **File System Access API with fallback:**
 - Chrome/Edge: Can read/write files in place with permission
 - Firefox/Safari: Downloads files on save (can't write in place)
+
+**Batch file loading:**
+- Users can select all 3 CSV files at once (Ctrl+click or Cmd+click)
+- Auto-detects file types based on filename keywords: "student", "task", "result"
+- Falls back to individual file prompts if auto-detection fails
+- Significantly faster than the old 3-step file selection process
 
 **Auto-save on countdown:**
 - After student responds, 5-second countdown timer

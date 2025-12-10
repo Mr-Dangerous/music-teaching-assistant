@@ -102,6 +102,12 @@ class TeachingAssistantApp {
       }
     });
 
+    // Random student picker button
+    const pickRandomBtn = document.getElementById('pick-random-btn');
+    if (pickRandomBtn) {
+      pickRandomBtn.addEventListener('click', () => this.pickRandomStudent());
+    }
+
     // Back buttons
     const backToClassesBtn = document.getElementById('back-to-classes-btn');
     if (backToClassesBtn) {
@@ -492,11 +498,8 @@ class TeachingAssistantApp {
     // Filter students by class
     const classStudents = this.students.filter(s => s.class === this.selectedClass);
 
-    // Get the grade for this class and filter tasks
-    const classGrade = classStudents.length > 0 ? classStudents[0].grade : null;
-    if (classGrade) {
-      this.populateTaskSelector(classGrade);
-    }
+    // Show all tasks (no grade filtering)
+    this.populateTaskSelector(null);
 
     // Sort students by name
     classStudents.sort((a, b) => a.name.localeCompare(b.name));
@@ -1246,6 +1249,63 @@ class TeachingAssistantApp {
 
     // Clear selected student
     this.selectedStudent = null;
+  }
+
+  /**
+   * Pick a random student who hasn't completed the current task
+   */
+  pickRandomStudent() {
+    if (!this.selectedClass || !this.selectedTask) {
+      this.showNotification('Please select a class and task first!', 'warning');
+      return;
+    }
+
+    // Get students in current class
+    const classStudents = this.students.filter(s => s.class === this.selectedClass);
+
+    // Filter to students who haven't completed the current task
+    const availableStudents = classStudents.filter(student =>
+      !this.hasCompletedTask(student.student_id, this.selectedTask)
+    );
+
+    if (availableStudents.length === 0) {
+      this.showNotification('All students have completed this task!', 'success');
+      return;
+    }
+
+    // Pick random student from available students
+    const randomIndex = Math.floor(Math.random() * availableStudents.length);
+    const randomStudent = availableStudents[randomIndex];
+
+    // Show popup with student's first name only
+    const firstName = randomStudent.name.split(' ')[0];
+    this.showRandomStudentPopup(firstName);
+  }
+
+  /**
+   * Show popup animation with student name
+   */
+  showRandomStudentPopup(studentName) {
+    const popup = document.getElementById('random-student-popup');
+    const nameElement = document.getElementById('random-student-name');
+
+    if (!popup || !nameElement) return;
+
+    // Set student name
+    nameElement.textContent = studentName;
+
+    // Show popup
+    popup.style.display = 'flex';
+
+    // Hide popup after 3 seconds
+    setTimeout(() => {
+      popup.style.display = 'none';
+    }, 3000);
+
+    // Make popup clickable to close early
+    popup.onclick = () => {
+      popup.style.display = 'none';
+    };
   }
 }
 

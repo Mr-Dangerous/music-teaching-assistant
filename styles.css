@@ -1174,6 +1174,52 @@ body {
   display: none;
 }
 
+/* === Random Student Picker === */
+.btn-random {
+  background: var(--color-secondary);
+  color: white;
+  width: 100%;
+  margin-top: var(--spacing-md);
+  font-size: var(--font-large);
+  font-weight: 700;
+  padding: var(--spacing-md) var(--spacing-lg);
+  min-height: 60px;
+}
+
+.btn-random:hover {
+  background: var(--color-secondary-hover);
+}
+
+/* Random Student Popup */
+.random-student-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.8);
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.random-student-content {
+  position: relative;
+}
+
+.random-student-name {
+  font-size: 120px;
+  font-weight: 900;
+  color: white;
+  text-align: center;
+  padding: 60px 80px;
+  background: var(--color-secondary);
+  border-radius: 30px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
 /* === Responsive Design === */
 @media (max-width: 768px) {
   .app-header {
