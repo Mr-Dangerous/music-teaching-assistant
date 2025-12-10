@@ -6,6 +6,7 @@ class TeachingAssistantApp {
     this.csvHandler = new CSVHandler();
     this.fileManager = new FileManager();
     this.responseHandler = new ResponseHandler();
+    this.moduleLoader = new ModuleLoader();
 
     // New data structure: separate students and results
     this.students = [];        // From students.csv
@@ -77,6 +78,29 @@ class TeachingAssistantApp {
     document.addEventListener('webkitfullscreenchange', () => this.updateFullscreenButton());
     document.addEventListener('mozfullscreenchange', () => this.updateFullscreenButton());
     document.addEventListener('MSFullscreenChange', () => this.updateFullscreenButton());
+
+    // Listen for messages from custom modules
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'taskmodule:response') {
+        // Module reported a response change
+        this.currentResponse = event.data.value;
+
+        // Update result
+        if (this.selectedStudent && this.selectedTask) {
+          const result = this.getOrCreateResult(
+            this.selectedStudent.student_id,
+            this.selectedTask
+          );
+          result.response = event.data.value;
+          this.markUnsaved();
+
+          // If complete, start countdown
+          if (event.data.isComplete) {
+            this.startCountdown();
+          }
+        }
+      }
+    });
 
     // Back buttons
     const backToClassesBtn = document.getElementById('back-to-classes-btn');
@@ -239,9 +263,8 @@ class TeachingAssistantApp {
       tasks.push({
         task_id: line[0],
         question: line[1],
-        question_type: line[2],
-        input_type: line[3],
-        grade: line[4]
+        grade: line[2],
+        module_path: line[3]
       });
     }
 
@@ -550,13 +573,15 @@ class TeachingAssistantApp {
     // Cancel any active countdown from previous student
     this.cancelCountdown();
 
+    // Reset any loaded modules
+    this.moduleLoader.reset();
+
     // Update student name display
     document.getElementById('current-student-name').textContent = student.name;
 
     // Check if this student has this task assigned
     if (!this.selectedTask) {
       this.showNoTask('No task selected');
-      this.hideResponseArea();
       return;
     }
 
@@ -564,26 +589,20 @@ class TeachingAssistantApp {
     const taskData = this.getTask(this.selectedTask);
     if (!taskData) {
       this.showNoTask('Task not found');
-      this.hideResponseArea();
       return;
     }
 
     // Update task name
     document.getElementById('current-task-name').textContent = `Task: ${taskData.question}`;
 
-    // Check question_type to determine if we show image or text
-    const questionType = taskData.question_type || 'picture';
-
-    if (questionType === 'string') {
-      // Display task as text
-      this.displayTaskText(taskData.question);
-    } else {
-      // Default to picture - load task image with student's grade
-      this.loadTaskImage(taskData.task_id, student.grade);
+    // Check if module path is specified
+    if (!taskData.module_path) {
+      this.showNoTask('No module specified for this task');
+      return;
     }
 
-    // Show response area with appropriate input type
-    this.showResponseArea(student, taskData);
+    // Load the task module (handles both question display and response input)
+    this.loadTaskModule(taskData, student);
   }
 
   /**
@@ -651,22 +670,63 @@ class TeachingAssistantApp {
     const responseContainer = document.getElementById('response-container');
     responseContainer.innerHTML = '';
 
-    // Render response input using ResponseHandler
-    const responseInput = this.responseHandler.renderResponseInput(
-      inputType,
-      currentResponse,
-      (newResponse) => {
-        // Handle response change
-        this.currentResponse = newResponse;
-        result.response = newResponse;
-        this.markUnsaved();
+    // Check if response needs custom module
+    if (inputType === 'custom' && taskData.response_module) {
+      this.loadCustomResponseModule(taskData, student, responseContainer);
+    } else {
+      // Render response input using ResponseHandler
+      const responseInput = this.responseHandler.renderResponseInput(
+        inputType,
+        currentResponse,
+        (newResponse) => {
+          // Handle response change
+          this.currentResponse = newResponse;
+          result.response = newResponse;
+          this.markUnsaved();
 
-        // Start countdown timer after response is submitted
-        this.startCountdown();
+          // Start countdown timer after response is submitted
+          this.startCountdown();
+        }
+      );
+
+      responseContainer.appendChild(responseInput);
+    }
+  }
+
+  /**
+   * Load task module (handles both question and response)
+   */
+  loadTaskModule(taskData, student) {
+    const container = document.getElementById('task-image-container');
+    const result = this.getOrCreateResult(student.student_id, taskData.task_id);
+
+    const context = {
+      studentId: student.student_id,
+      taskId: taskData.task_id,
+      grade: student.grade,
+      studentName: student.name,
+      question: taskData.question,
+      existingResponse: result.response
+    };
+
+    this.moduleLoader.loadModule(
+      taskData.module_path,
+      container,
+      context
+    ).then(iframe => {
+      this.moduleLoader.currentResponseModule = iframe;
+
+      // Modules handle their own saving - disable main app countdown/auto-save
+      this.cancelCountdown();
+
+      // Show response area (module will handle the input)
+      const responseArea = document.getElementById('response-area');
+      if (responseArea) {
+        responseArea.style.display = 'none'; // Hide the separate response area since module handles it
       }
-    );
-
-    responseContainer.appendChild(responseInput);
+    }).catch(err => {
+      this.showNoTask(`Failed to load module: ${err.message}`);
+    });
   }
 
   /**
@@ -726,9 +786,21 @@ class TeachingAssistantApp {
   resetTaskDisplay() {
     document.getElementById('current-student-name').textContent = 'Select a student';
     document.getElementById('current-task-name').textContent = '';
-    document.getElementById('task-image').style.display = 'none';
-    document.getElementById('no-task-message').style.display = 'block';
-    document.getElementById('no-task-message').querySelector('p').textContent = 'Select a student to view their assigned task';
+
+    const taskImage = document.getElementById('task-image');
+    const noTaskMessage = document.getElementById('no-task-message');
+
+    if (taskImage) {
+      taskImage.style.display = 'none';
+    }
+
+    if (noTaskMessage) {
+      noTaskMessage.style.display = 'block';
+      const messageP = noTaskMessage.querySelector('p');
+      if (messageP) {
+        messageP.textContent = 'Select a student to view their assigned task';
+      }
+    }
   }
 
   /**
@@ -1103,12 +1175,25 @@ class TeachingAssistantApp {
       this.updateStudentButtonState(this.selectedStudent);
     }
 
-    // Save the results file
+    // Save the results file (only if triggered by user action, not automated)
     try {
       this.showLoading(true);
       const csvContent = this.resultsToCSV();
-      await this.fileManager.saveResults(csvContent);
-      this.updateSaveIndicator();
+
+      // Try to save, but don't throw error if it fails due to permissions
+      try {
+        await this.fileManager.saveResults(csvContent);
+        this.updateSaveIndicator();
+        this.showNotification('Response saved!', 'success');
+      } catch (saveError) {
+        if (saveError.message.includes('User activation')) {
+          // Permission error - just mark as unsaved, don't show error
+          this.markUnsaved();
+          console.log('Auto-save skipped (requires user interaction)');
+        } else {
+          throw saveError;
+        }
+      }
     } catch (error) {
       console.error('Error saving file:', error);
       this.showNotification(`Error saving: ${error.message}`, 'error');
@@ -1118,9 +1203,6 @@ class TeachingAssistantApp {
 
     // Clear task display
     this.clearCurrentTask();
-
-    // Show brief success message
-    this.showNotification('Response saved!', 'success');
   }
 
   /**

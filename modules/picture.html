@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Picture Task Module</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 0;
+      margin: 0;
+      background: white;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    .image-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: #f8f9fa;
+    }
+    .task-image {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 15px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+    .error-message {
+      color: #ef4444;
+      font-size: 24px;
+      text-align: center;
+    }
+    .response-section {
+      padding: 30px;
+      background: white;
+      border-top: 3px solid #e5e7eb;
+    }
+    .response-label {
+      font-size: 24px;
+      font-weight: bold;
+      color: #374151;
+      margin-bottom: 15px;
+    }
+    .response-display {
+      font-size: 48px;
+      font-weight: bold;
+      color: #7c3aed;
+      min-height: 70px;
+      padding: 20px;
+      border: 3px solid #7c3aed;
+      border-radius: 15px;
+      background: linear-gradient(135deg, #faf5ff 0%, #f3e8ff 100%);
+      text-align: center;
+      letter-spacing: 2px;
+    }
+    .response-display.empty {
+      color: #9ca3af;
+      font-size: 24px;
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="image-container">
+    <img id="task-image" class="task-image" style="display: none;" alt="Task">
+    <div id="error-message" class="error-message" style="display: none;"></div>
+  </div>
+
+  <div class="response-section">
+    <div class="response-label">Response:</div>
+    <div id="response-display" class="response-display empty">Type on the keyboard...</div>
+  </div>
+
+  <script>
+    let currentResponse = '';
+    let context = null;
+
+    window.TaskModule = {
+      init: function(ctx) {
+        context = ctx;
+        console.log('Picture module initialized:', ctx);
+
+        // Restore existing response
+        if (ctx.existingResponse) {
+          currentResponse = ctx.existingResponse;
+          updateDisplay();
+        }
+
+        // Load the image based on grade and taskId
+        loadTaskImage(ctx.taskId, ctx.grade);
+
+        // Set up keyboard listener
+        setupKeyboard();
+      },
+
+      getResponse: function() {
+        return currentResponse;
+      },
+
+      isComplete: function() {
+        return currentResponse.trim().length > 0;
+      },
+
+      reset: function() {
+        currentResponse = '';
+        updateDisplay();
+      }
+    };
+
+    function loadTaskImage(taskId, grade) {
+      const taskImage = document.getElementById('task-image');
+      const errorMessage = document.getElementById('error-message');
+
+      const gradeFolderName = grade === 'K' ? 'Grade K' : `Grade ${grade}`;
+      const imagePath = `../tasks/${gradeFolderName}/${taskId}.png`;
+      const imagePathAlt = `../tasks/${gradeFolderName}/${taskId}.jpg`;
+
+      taskImage.onload = () => {
+        taskImage.style.display = 'block';
+        errorMessage.style.display = 'none';
+      };
+
+      taskImage.onerror = () => {
+        // Try JPG if PNG fails
+        taskImage.src = imagePathAlt;
+        taskImage.onerror = () => {
+          taskImage.style.display = 'none';
+          errorMessage.style.display = 'block';
+          errorMessage.textContent = `Image not found: ${gradeFolderName}/${taskId}.png or .jpg`;
+        };
+      };
+
+      taskImage.src = imagePath;
+    }
+
+    function setupKeyboard() {
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace') {
+          e.preventDefault();
+          currentResponse = currentResponse.slice(0, -1);
+        } else if (e.key === 'Enter') {
+          e.preventDefault();
+          notifyComplete();
+        } else if (e.key.length === 1 && !e.ctrlKey && !e.metaKey) {
+          currentResponse += e.key;
+        } else {
+          return; // Don't update for other keys
+        }
+
+        updateDisplay();
+        notifyParent();
+      });
+    }
+
+    function updateDisplay() {
+      const display = document.getElementById('response-display');
+      if (currentResponse.trim().length > 0) {
+        display.textContent = currentResponse;
+        display.classList.remove('empty');
+      } else {
+        display.textContent = 'Type on the keyboard...';
+        display.classList.add('empty');
+      }
+    }
+
+    function notifyParent() {
+      window.parent.postMessage({
+        type: 'taskmodule:response',
+        value: currentResponse,
+        isComplete: currentResponse.trim().length > 0
+      }, '*');
+    }
+
+    function notifyComplete() {
+      if (currentResponse.trim().length > 0) {
+        window.parent.postMessage({
+          type: 'taskmodule:response',
+          value: currentResponse,
+          isComplete: true
+        }, '*');
+      }
+    }
+
+    // Listen for init message
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'taskmodule:init') {
+        window.TaskModule.init(event.data.context);
+      }
+    });
+  </script>
+</body>
+</html>

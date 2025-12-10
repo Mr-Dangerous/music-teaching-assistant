@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Button Test Module</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 40px;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      text-align: center;
+    }
+    h2 {
+      font-size: 32px;
+      margin-bottom: 30px;
+    }
+    .button-container {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .choice-button {
+      font-size: 28px;
+      padding: 30px 50px;
+      border: none;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      transition: all 0.3s ease;
+    }
+    .choice-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+    }
+    .choice-button.selected {
+      background: linear-gradient(135deg, #10b981, #059669);
+      box-shadow: 0 8px 25px rgba(16, 185, 129, 0.5);
+      transform: scale(1.05);
+    }
+    .info {
+      margin-top: 30px;
+      font-size: 18px;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+  <h2>Pick Your Favorite Color!</h2>
+  <div class="button-container" id="buttons"></div>
+  <div class="info" id="info">Click a color to select it</div>
+
+  <script>
+    const colors = [
+      { name: 'Red', emoji: '🔴' },
+      { name: 'Blue', emoji: '🔵' },
+      { name: 'Green', emoji: '🟢' },
+      { name: 'Yellow', emoji: '🟡' }
+    ];
+
+    let selectedColor = null;
+
+    // Define the TaskModule interface
+    window.TaskModule = {
+      init: function(context) {
+        console.log('Test module initialized:', context);
+
+        // Display student name
+        if (context.studentName) {
+          document.querySelector('h2').textContent =
+            `${context.studentName}, pick your favorite color!`;
+        }
+
+        // Restore existing response if any
+        if (context.existingResponse) {
+          selectedColor = context.existingResponse;
+          updateInfo();
+        }
+
+        renderButtons();
+      },
+
+      getResponse: function() {
+        return selectedColor;
+      },
+
+      isComplete: function() {
+        return selectedColor !== null;
+      },
+
+      reset: function() {
+        selectedColor = null;
+        renderButtons();
+        updateInfo();
+      }
+    };
+
+    function renderButtons() {
+      const container = document.getElementById('buttons');
+      container.innerHTML = '';
+
+      colors.forEach(color => {
+        const btn = document.createElement('button');
+        btn.className = 'choice-button';
+        btn.innerHTML = `${color.emoji}<br>${color.name}`;
+
+        if (selectedColor === color.name) {
+          btn.classList.add('selected');
+        }
+
+        btn.onclick = () => {
+          selectedColor = color.name;
+          renderButtons();
+          updateInfo();
+
+          // Notify parent app
+          window.parent.postMessage({
+            type: 'taskmodule:response',
+            value: color.name,
+            isComplete: true
+          }, '*');
+        };
+
+        container.appendChild(btn);
+      });
+    }
+
+    function updateInfo() {
+      const info = document.getElementById('info');
+      if (selectedColor) {
+        info.textContent = `Selected: ${selectedColor} ✓`;
+      } else {
+        info.textContent = 'Click a color to select it';
+      }
+    }
+
+    // Listen for init message from parent
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'taskmodule:init') {
+        window.TaskModule.init(event.data.context);
+      }
+    });
+  </script>
+</body>
+</html>

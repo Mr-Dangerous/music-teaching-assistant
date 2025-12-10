@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom Task Module</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      padding: 20px;
+      margin: 0;
+      background: white;
+    }
+    /* Add your styles here */
+  </style>
+</head>
+<body>
+  <h2>Your Custom Task</h2>
+  <div id="content">
+    <!-- Add your HTML here -->
+  </div>
+
+  <script>
+    // Required: Define the TaskModule interface
+    window.TaskModule = {
+      // Initialize with context from parent app
+      init: function(context) {
+        // context contains: studentId, taskId, grade, existingResponse, studentName
+        console.log('Module initialized:', context);
+
+        // Restore existing response if any
+        if (context.existingResponse) {
+          // TODO: Restore state from context.existingResponse
+        }
+      },
+
+      // Required: Return the current response value
+      getResponse: function() {
+        // TODO: Return the student's response
+        // Can be a string, number, JSON, file path, etc.
+        return null;
+      },
+
+      // Required: Return true if response is valid/complete
+      isComplete: function() {
+        // TODO: Check if student has completed the task
+        return false;
+      },
+
+      // Optional: Reset the module to initial state
+      reset: function() {
+        // TODO: Clear any selections, inputs, recordings, etc.
+      }
+    };
+
+    // Optional: Notify parent when response changes
+    function notifyParent(response, isComplete) {
+      window.parent.postMessage({
+        type: 'taskmodule:response',
+        value: response,
+        isComplete: isComplete
+      }, '*');
+    }
+
+    // Listen for init message from parent
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'taskmodule:init') {
+        window.TaskModule.init(event.data.context);
+      }
+    });
+
+    // TODO: Add your module logic here
+    // Example: When the student completes the task, call:
+    // notifyParent(responseValue, true);
+  </script>
+</body>
+</html>
