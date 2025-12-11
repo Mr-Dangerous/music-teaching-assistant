@@ -32,8 +32,8 @@
             justify-content: center;
             height: 100vh;
             margin: 0;
-            padding: calc(10px * var(--module-scale));
-            overflow: hidden;
+            padding: calc(5px * var(--module-scale));
+            overflow: auto;
         }
 
         .container {
@@ -42,9 +42,9 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            height: 100%;
+            height: auto;
             justify-content: flex-start;
-            gap: calc(10px * var(--module-scale));
+            gap: calc(5px * var(--module-scale));
         }
 
         .controls {
@@ -117,8 +117,8 @@
 
         .rhythm-palette {
             display: flex;
-            gap: calc(20px * var(--module-scale));
-            padding: calc(15px * var(--module-scale));
+            gap: calc(15px * var(--module-scale));
+            padding: calc(10px * var(--module-scale));
             background-color: #ecf0f1;
             border-radius: calc(8px * var(--module-scale));
             flex-wrap: wrap;
@@ -133,7 +133,7 @@
             cursor: grab;
             user-select: none;
             touch-action: none;
-            padding: calc(10px * var(--module-scale));
+            padding: calc(8px * var(--module-scale));
             background-color: white;
             border: calc(3px * var(--module-scale)) solid #34495e;
             border-radius: calc(8px * var(--module-scale));
@@ -250,7 +250,7 @@
                 oninput="updateTempo(this.value)">
         </div>
 
-        <canvas id="staffCanvas" width="1100" height="300"></canvas>
+        <canvas id="staffCanvas" width="1100" height="220"></canvas>
 
         <div class="rhythm-palette">
             <div class="rhythm-item" data-rhythm="ta" draggable="false">
@@ -326,9 +326,10 @@
         let dragOffset = { x: 0, y: 0 };
         let longPressTimer = null;
         let longPressTarget = null;
-        let isSorted = false; // Track if composition has been sorted
+        let isSorted = false; // Manually controlled by Sort/Unsort button
         let staffLowered = false; // Track if staff is in lowered position
         let showNoteNames = false; // Track if note names should be shown on notes
+        let draggedExistingNote = null; // Track when repositioning an existing note
         const MAX_BEATS = 16;
 
         // Audio context for playback
@@ -349,6 +350,28 @@
             'la': 440.00,  // A4
             'mi': 329.63   // E4
         };
+
+        // Store student context from parent
+        let studentContext = null;
+
+        // Listen for init message from parent
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'taskmodule:init') {
+                studentContext = event.data.context;
+                console.log('Received student context:', studentContext);
+
+                // Load previous composition if available
+                if (studentContext && studentContext.existingResponse) {
+                    try {
+                        const saved = JSON.parse(studentContext.existingResponse);
+                        restoreComposition(saved);
+                        console.log('Loaded previous composition:', saved);
+                    } catch (err) {
+                        console.error('Failed to load previous composition:', err);
+                    }
+                }
+            }
+        });
 
         // Initialize
         function init() {
@@ -379,7 +402,7 @@
             const lineSpacing = 70 * scale;
             const soLineY = canvasHeight / 2 - lineSpacing / 2;
             const miLineY = canvasHeight / 2 + lineSpacing / 2;
-            const laPosY = soLineY - 35 * scale;
+            const laPosY = soLineY - 20 * scale; // Lowered so bottom touches so line
 
             // Draw staff lines
             ctx.strokeStyle = '#2c3e50';
@@ -451,6 +474,9 @@
         }
 
         function drawRhythmItem(ctx, item, index, scale, soLineY, miLineY, laPosY) {
+            // Skip hidden notes (being repositioned)
+            if (item.hidden) return;
+
             // Calculate x position - use stored position if not sorted, otherwise calculate evenly spaced
             let x;
             if (isSorted) {
@@ -495,7 +521,7 @@
             // Note head
             ctx.fillStyle = hasColor ? '#2c3e50' : '#95a5a6';
             ctx.beginPath();
-            ctx.ellipse(x, y, noteRadius * 1.2, noteRadius, Math.PI / 4, 0, Math.PI * 2);
+            ctx.ellipse(x, y, noteRadius * 1.2, noteRadius, -Math.PI / 4, 0, Math.PI * 2);
             ctx.fill();
 
             // Stem (slightly larger)
@@ -525,12 +551,12 @@
 
             // First note
             ctx.beginPath();
-            ctx.ellipse(x - noteSpacing, y, noteRadius * 1.2, noteRadius, Math.PI / 4, 0, Math.PI * 2);
+            ctx.ellipse(x - noteSpacing, y, noteRadius * 1.2, noteRadius, -Math.PI / 4, 0, Math.PI * 2);
             ctx.fill();
 
             // Second note
             ctx.beginPath();
-            ctx.ellipse(x + noteSpacing, y, noteRadius * 1.2, noteRadius, Math.PI / 4, 0, Math.PI * 2);
+            ctx.ellipse(x + noteSpacing, y, noteRadius * 1.2, noteRadius, -Math.PI / 4, 0, Math.PI * 2);
             ctx.fill();
 
             // Stems (slightly larger)
@@ -605,26 +631,26 @@
             });
 
             document.addEventListener('mousemove', (e) => {
-                if (draggedItem) {
+                if (draggedItem || draggedExistingNote) {
                     drag(e);
                 }
             });
 
             document.addEventListener('touchmove', (e) => {
-                if (draggedItem) {
+                if (draggedItem || draggedExistingNote) {
                     drag(e.touches[0]);
                     e.preventDefault();
                 }
             }, { passive: false });
 
             document.addEventListener('mouseup', (e) => {
-                if (draggedItem) {
+                if (draggedItem || draggedExistingNote) {
                     endDrag(e);
                 }
             });
 
             document.addEventListener('touchend', (e) => {
-                if (draggedItem) {
+                if (draggedItem || draggedExistingNote) {
                     endDrag(e.changedTouches[0]);
                 }
             });
@@ -666,37 +692,106 @@
         }
 
         function drag(event) {
-            if (!draggedItem) return;
-
-            draggedItem.element.style.left = (event.clientX - dragOffset.x) + 'px';
-            draggedItem.element.style.top = (event.clientY - dragOffset.y) + 'px';
+            if (draggedItem) {
+                draggedItem.element.style.left = (event.clientX - dragOffset.x) + 'px';
+                draggedItem.element.style.top = (event.clientY - dragOffset.y) + 'px';
+            } else if (draggedExistingNote && draggedExistingNote.element) {
+                draggedExistingNote.element.style.left = (event.clientX - 20) + 'px';
+                draggedExistingNote.element.style.top = (event.clientY - 20) + 'px';
+            }
         }
 
         function endDrag(event) {
-            if (!draggedItem) return;
+            if (draggedItem) {
+                const canvas = document.getElementById('staffCanvas');
+                const canvasRect = canvas.getBoundingClientRect();
 
-            const canvas = document.getElementById('staffCanvas');
-            const canvasRect = canvas.getBoundingClientRect();
+                const dropX = event.clientX;
+                const dropY = event.clientY;
 
-            const dropX = event.clientX;
-            const dropY = event.clientY;
+                // Check if dropped on canvas
+                if (dropX >= canvasRect.left && dropX <= canvasRect.right &&
+                    dropY >= canvasRect.top && dropY <= canvasRect.bottom) {
 
-            // Check if dropped on canvas
-            if (dropX >= canvasRect.left && dropX <= canvasRect.right &&
-                dropY >= canvasRect.top && dropY <= canvasRect.bottom) {
+                    // Calculate total beats
+                    const totalBeats = composition.reduce((sum, item) => sum + item.beats, 0);
 
-                // Calculate total beats
-                const totalBeats = composition.reduce((sum, item) => sum + item.beats, 0);
-
-                if (totalBeats + draggedItem.beats <= MAX_BEATS) {
-                    addToComposition(draggedItem.rhythm, event, canvasRect);
-                } else {
-                    alert('Cannot add more notes! Maximum 16 beats reached.');
+                    if (totalBeats + draggedItem.beats <= MAX_BEATS) {
+                        addToComposition(draggedItem.rhythm, event, canvasRect);
+                    } else {
+                        alert('Cannot add more notes! Maximum 16 beats reached.');
+                    }
                 }
+
+                draggedItem.element.remove();
+                draggedItem = null;
+            } else if (draggedExistingNote) {
+                const canvas = document.getElementById('staffCanvas');
+                const canvasRect = canvas.getBoundingClientRect();
+
+                const dropX = event.clientX;
+                const dropY = event.clientY;
+
+                const index = draggedExistingNote.index;
+
+                // Check if dropped on canvas - update position, otherwise delete
+                if (dropX >= canvasRect.left && dropX <= canvasRect.right &&
+                    dropY >= canvasRect.top && dropY <= canvasRect.bottom) {
+
+                    // Update the note's position and pitch
+                    updateRepositionedNote(index, event, canvasRect);
+                } else {
+                    // Delete note - it was dropped outside
+                    composition.splice(index, 1);
+                    updateBeatCounter();
+                }
+
+                // Clean up visual element
+                if (draggedExistingNote.element) {
+                    draggedExistingNote.element.remove();
+                }
+                draggedExistingNote = null;
+
+                // Unhide all notes and redraw
+                composition.forEach(item => delete item.hidden);
+                drawStaff();
+                // Don't notify parent - only save on Finish
+            }
+        }
+
+        function updateRepositionedNote(index, event, canvasRect) {
+            const scale = getScale();
+            const canvasX = event.clientX - canvasRect.left;
+            const canvasY = event.clientY - canvasRect.top;
+
+            const item = composition[index];
+
+            // Update position
+            item.x = canvasX;
+            item.y = canvasY;
+
+            // Update pitch if it's not a rest
+            if (item.rhythm !== 'shh') {
+                const lineSpacing = 70 * scale;
+                const soLineY = canvasRect.height / 2 - lineSpacing / 2;
+                const miLineY = canvasRect.height / 2 + lineSpacing / 2;
+                const laPosY = soLineY - 20 * scale;
+
+                const distances = {
+                    'la': Math.abs(canvasY - laPosY),
+                    'so': Math.abs(canvasY - soLineY),
+                    'mi': Math.abs(canvasY - miLineY)
+                };
+
+                item.pitch = Object.keys(distances).reduce((a, b) =>
+                    distances[a] < distances[b] ? a : b
+                );
             }
 
-            draggedItem.element.remove();
-            draggedItem = null;
+            delete item.hidden;
+
+            // Adjust spacing to prevent overlaps
+            adjustNoteSpacing(index);
         }
 
         function addToComposition(rhythm, event, canvasRect) {
@@ -708,7 +803,7 @@
             const lineSpacing = 70 * scale;
             const soLineY = canvasRect.height / 2 - lineSpacing / 2;
             const miLineY = canvasRect.height / 2 + lineSpacing / 2;
-            const laPosY = soLineY - 35 * scale;
+            const laPosY = soLineY - 20 * scale;
 
             let pitch = null;
 
@@ -735,15 +830,60 @@
 
             composition.push(item);
 
-            // Check if we've hit 16 beats - auto-sort if so
-            const totalBeats = composition.reduce((sum, item) => sum + item.beats, 0);
-            if (totalBeats >= MAX_BEATS) {
-                sortComposition();
-            }
+            // Add spacing if too close to other notes
+            adjustNoteSpacing(composition.length - 1);
 
+            // No auto-sort - user must click Sort button manually
             drawStaff();
             updateBeatCounter();
-            notifyParent();
+            // Don't notify parent - only save on Finish
+        }
+
+        function adjustNoteSpacing(newNoteIndex) {
+            const maxIterations = 10; // Prevent infinite loops
+
+            // Get the width of a note based on its type
+            function getNoteWidth(note) {
+                if (note.rhythm === 'ti-ti') return 70; // ti-ti is wider (two notes with beam)
+                if (note.rhythm === 'shh') return 30; // rest is narrower
+                return 40; // ta (single note)
+            }
+
+            // Keep adjusting until all notes have proper spacing
+            for (let iteration = 0; iteration < maxIterations; iteration++) {
+                let anyAdjustment = false;
+
+                // Check all pairs of notes
+                for (let i = 0; i < composition.length; i++) {
+                    for (let j = i + 1; j < composition.length; j++) {
+                        const note1 = composition[i];
+                        const note2 = composition[j];
+
+                        // Calculate required spacing based on note widths
+                        const minSpacing = (getNoteWidth(note1) + getNoteWidth(note2)) / 2 + 5;
+                        const distance = Math.abs(note1.x - note2.x);
+
+                        // If too close, push them apart
+                        if (distance < minSpacing) {
+                            const overlap = minSpacing - distance;
+                            const pushAmount = (overlap / 2) + 1; // Small push each direction
+
+                            if (note1.x < note2.x) {
+                                note1.x -= pushAmount;
+                                note2.x += pushAmount;
+                            } else {
+                                note1.x += pushAmount;
+                                note2.x -= pushAmount;
+                            }
+
+                            anyAdjustment = true;
+                        }
+                    }
+                }
+
+                // If no adjustments were needed, we're done
+                if (!anyAdjustment) break;
+            }
         }
 
         function startLongPress(event) {
@@ -758,7 +898,7 @@
             if (clickedIndex !== -1) {
                 longPressTarget = clickedIndex;
                 longPressTimer = setTimeout(() => {
-                    deleteItem(clickedIndex);
+                    startRepositioning(clickedIndex, event);
                     longPressTarget = null;
                 }, 500); // 500ms long press
             }
@@ -788,11 +928,47 @@
             return -1;
         }
 
-        function deleteItem(index) {
-            composition.splice(index, 1);
+        function startRepositioning(index, event) {
+            // Auto-unsort if currently sorted
+            if (isSorted) {
+                isSorted = false;
+                document.querySelector('button[onclick="sortComposition()"]').textContent = '📊 Sort';
+                drawStaff();
+            }
+
+            const item = composition[index];
+
+            // Store the dragged note info
+            draggedExistingNote = {
+                index: index,
+                originalItem: { ...item }
+            };
+
+            // Hide the original note temporarily
+            item.hidden = true;
             drawStaff();
-            updateBeatCounter();
-            notifyParent();
+
+            // Start visual drag feedback            
+            startDragVisual(item, event);
+        }
+
+        function startDragVisual(item, event) {
+            const clone = document.createElement('div');
+            clone.classList.add('dragging');
+            clone.style.position = 'fixed';
+            clone.style.fontSize = '40px';
+            clone.style.zIndex = '1000';
+            clone.style.pointerEvents = 'none';
+
+            const label = item.rhythm === 'ta' ? 'TA' : item.rhythm === 'ti-ti' ? 'TI-TI' : 'SHH';
+            clone.textContent = label;
+
+            document.body.appendChild(clone);
+
+            draggedExistingNote.element = clone;
+
+            clone.style.left = (event.clientX - 20) + 'px';
+            clone.style.top = (event.clientY - 20) + 'px';
         }
 
         function setMeter(meter) {
@@ -805,7 +981,7 @@
             document.querySelector(`[data-meter="${meter}"]`).classList.add('active');
 
             drawStaff();
-            notifyParent();
+            // Don't notify parent - only save on Finish
         }
 
         function updateTempo(value) {
@@ -821,9 +997,10 @@
         function clearStaff() {
             composition = [];
             isSorted = false;
+            document.querySelector('button[onclick="sortComposition()"]').textContent = '📊 Sort';
             drawStaff();
             updateBeatCounter();
-            notifyParent();
+            // Don't notify parent - only save on Finish
         }
 
         function sortComposition() {
@@ -831,11 +1008,21 @@
                 return;
             }
 
-            // Sort by x position (left to right)
-            composition.sort((a, b) => a.x - b.x);
-            isSorted = true;
+            // Toggle sorted state
+            isSorted = !isSorted;
+
+            if (isSorted) {
+                // Sort by x position (left to right)
+                composition.sort((a, b) => a.x - b.x);
+                // Update button text
+                document.querySelector('button[onclick="sortComposition()"]').textContent = '📊 Unsort';
+            } else {
+                // Update button text
+                document.querySelector('button[onclick="sortComposition()"]').textContent = '📊 Sort';
+            }
+
             drawStaff();
-            notifyParent();
+            // Don't notify parent - only save on Finish
         }
 
         async function importFromClipboard() {
@@ -886,12 +1073,32 @@
                 return;
             }
 
-            // Sort the composition
-            sortComposition();
+            // No auto-sort - user controls sorting manually
 
-            // Show completion message
-            alert('Composition finished! Great work! 🎵');
-            notifyParent();
+            // Check if there's a selected student (from parent context)
+            console.log('Student context:', studentContext);
+
+            if (!studentContext || !studentContext.studentId) {
+                // No student selected - copy JSON to clipboard
+                console.log('No student - copying to clipboard');
+                copyCompositionToClipboard();
+            } else {
+                // Student selected - save to results.csv
+                console.log('Student selected - calling notifyParent');
+                notifyParent();
+            }
+        }
+
+        async function copyCompositionToClipboard() {
+            const response = getCurrentResponse();
+            try {
+                await navigator.clipboard.writeText(response);
+                alert('Composition copied to clipboard! 📋\nYou can paste this to save or share your melody.');
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                // Fallback - show the JSON for manual copying
+                prompt('Copy this JSON to save your composition:', response);
+            }
         }
 
         function playComposition() {
@@ -900,8 +1107,7 @@
                 return;
             }
 
-            // Sort the composition before playing
-            sortComposition();
+            // No auto-sort - play notes in current order
 
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
