@@ -5,7 +5,7 @@ class TeachingAssistantApp {
   constructor() {
     this.csvHandler = new CSVHandler();
     this.fileManager = new FileManager();
-    this.responseHandler = new ResponseHandler();
+    // this.responseHandler = new ResponseHandler(); // Legacy - all tasks now use custom modules
     this.moduleLoader = new ModuleLoader();
 
     // New data structure: separate students and results
@@ -24,6 +24,9 @@ class TeachingAssistantApp {
     this.countdownInterval = null;
     this.countdownPaused = false;
     this.countdownTimeLeft = 5;
+
+    // Track absent students for current session only (not from CSV)
+    this.sessionAbsentStudents = new Set();
 
     this.initializeApp();
   }
@@ -194,21 +197,21 @@ class TeachingAssistantApp {
   async loadFile() {
     try {
       this.showLoading(true);
-      this.showNotification('Loading files... Please select the three CSV files when prompted.', 'info');
+      // this.showNotification('Loading files... Please select the three CSV files when prompted.', 'info');
 
       // Load all three files
       const { studentsContent, tasksContent, resultsContent } = await this.fileManager.loadFiles();
 
       // Parse students.csv (student_id, name, grade, class)
-      this.showNotification('Parsing student roster...', 'info');
+      // this.showNotification('Parsing student roster...', 'info');
       this.students = this.parseStudentsCSV(studentsContent);
 
       // Parse tasks.csv (task_id, question, question_type, input_type, grade)
-      this.showNotification('Parsing task definitions...', 'info');
+      // this.showNotification('Parsing task definitions...', 'info');
       this.tasks = this.parseTasksCSV(tasksContent);
 
       // Parse results.csv (student_id, task_id, response, completed_date)
-      this.showNotification('Parsing student responses...', 'info');
+      // this.showNotification('Parsing student responses...', 'info');
       this.results = this.parseResultsCSV(resultsContent);
 
       console.log(`Loaded ${this.students.length} students`);
@@ -221,8 +224,8 @@ class TeachingAssistantApp {
       }
 
       // Update UI
-      const fileNames = this.fileManager.getFileNames();
-      document.getElementById('file-name').textContent = `${fileNames.students}, ${fileNames.tasks}, ${fileNames.results}`;
+      // File name display removed from UI
+
 
       // Populate task selector (will be filtered by grade when class is selected)
       this.populateTaskSelector();
@@ -257,7 +260,7 @@ class TeachingAssistantApp {
       // Show class selection screen
       this.showClassScreen();
 
-      this.showNotification(`Loaded ${this.students.length} students, ${this.tasks.length} tasks, ${this.results.length} responses!`, 'success');
+      // this.showNotification(`Loaded ${this.students.length} students, ${this.tasks.length} tasks, ${this.results.length} responses!`, 'success');
     } catch (error) {
       console.error('Error loading files:', error);
 
@@ -588,12 +591,72 @@ class TeachingAssistantApp {
       button.textContent = displayName;
       button.dataset.studentId = student.student_id;
 
+      // Check if student is marked absent (check for ATTENDANCE record)
+      const isAbsent = this.isStudentAbsent(student.student_id);
+      if (isAbsent) {
+        button.classList.add('absent');
+      }
+
       // Highlight students who have completed the currently selected task
       if (this.hasCompletedTask(student.student_id, this.selectedTask)) {
         button.classList.add('completed');
       }
 
+      // Long-press detection for marking absent
+      let pressTimer = null;
+      let touchMoved = false;
+
+      const startPress = (e) => {
+        touchMoved = false;
+        pressTimer = setTimeout(() => {
+          // Long press detected - toggle absent status
+          this.toggleAbsentStatus(student);
+
+          // Provide haptic feedback if available
+          if (navigator.vibrate) {
+            navigator.vibrate(50);
+          }
+        }, 800); // 800ms for long press
+      };
+
+      const cancelPress = () => {
+        if (pressTimer) {
+          clearTimeout(pressTimer);
+          pressTimer = null;
+        }
+      };
+
+      const endPress = () => {
+        if (pressTimer && !touchMoved) {
+          // This was a regular click (not long press)
+          clearTimeout(pressTimer);
+          pressTimer = null;
+        }
+      };
+
+      // Mouse events
+      button.addEventListener('mousedown', startPress);
+      button.addEventListener('mouseup', endPress);
+      button.addEventListener('mouseleave', cancelPress);
+
+      // Touch events
+      button.addEventListener('touchstart', (e) => {
+        startPress(e);
+      });
+      button.addEventListener('touchmove', () => {
+        touchMoved = true;
+        cancelPress();
+      });
+      button.addEventListener('touchend', endPress);
+
+      // Regular click handler
       button.addEventListener('click', () => {
+        // Don't select absent students for tasks
+        if (button.classList.contains('absent')) {
+          this.showNotification(`${student.name} is marked absent`, 'warning');
+          return;
+        }
+
         // Remove active class from all buttons
         studentList.querySelectorAll('.student-roster-button').forEach(btn => {
           btn.classList.remove('active');
@@ -627,6 +690,53 @@ class TeachingAssistantApp {
       r.response.trim() !== ''
     );
   }
+
+  /**
+   * Check if student is marked absent (for this session)
+   */
+  isStudentAbsent(student_id) {
+    // Check session tracker only (not CSV records)
+    return this.sessionAbsentStudents.has(student_id);
+  }
+
+  /**
+   * Toggle student absent status
+   */
+  toggleAbsentStatus(student) {
+    const isCurrentlyAbsent = this.isStudentAbsent(student.student_id);
+
+    if (isCurrentlyAbsent) {
+      // Remove from session tracker
+      this.sessionAbsentStudents.delete(student.student_id);
+
+      // Also remove any ATTENDANCE records for this student from this session
+      this.results = this.results.filter(r =>
+        !(r.student_id === student.student_id && r.task_id === 'ATTENDANCE')
+      );
+      this.showNotification(`${student.name} marked as present`, 'success');
+    } else {
+      // Add to session tracker
+      this.sessionAbsentStudents.add(student.student_id);
+
+      // Create ATTENDANCE record for CSV persistence
+      const attendanceRecord = {
+        student_id: student.student_id,
+        task_id: 'ATTENDANCE',
+        response: 'absent',
+        completed_date: new Date().toISOString()
+      };
+      this.results.push(attendanceRecord);
+      this.showNotification(`${student.name} marked as ABSENT`, 'warning');
+    }
+
+    // Update localStorage
+    this.updateLocalStorage();
+    this.markUnsaved();
+
+    // Refresh the student list to update UI
+    this.showStudentScreen();
+  }
+
 
   /**
    * Display the task for a selected student
@@ -678,25 +788,21 @@ class TeachingAssistantApp {
   }
 
   /**
-   * Get or create result for a student-task combination
+   * Get most recent result for a student-task combination (read-only)
+   * Returns null if no result exists
    */
-  getOrCreateResult(student_id, task_id) {
-    let result = this.results.find(r =>
+  getMostRecentResult(student_id, task_id) {
+    // Find all results for this student-task combination
+    const studentResults = this.results.filter(r =>
       r.student_id === student_id && r.task_id === task_id
     );
 
-    if (!result) {
-      // Create new result entry (task metadata comes from tasks.csv)
-      result = {
-        student_id: student_id,
-        task_id: task_id,
-        response: '',
-        completed_date: ''
-      };
-      this.results.push(result);
+    if (studentResults.length === 0) {
+      return null;
     }
 
-    return result;
+    // Return the most recent one (last in array, which has latest date)
+    return studentResults[studentResults.length - 1];
   }
 
   /**
@@ -717,53 +823,14 @@ class TeachingAssistantApp {
   /**
    * Show response area with appropriate input type
    */
-  showResponseArea(student, taskData) {
-    const responseArea = document.getElementById('response-area');
-    if (!responseArea) return;
-
-    // Get or create result for this student-task combination
-    const result = this.getOrCreateResult(student.student_id, this.selectedTask);
-
-    // Get response type from task data
-    const inputType = taskData.input_type || '';
-    const currentResponse = result.response || '';
-
-    // Show response area
-    responseArea.style.display = 'block';
-
-    // Clear existing response container
-    const responseContainer = document.getElementById('response-container');
-    responseContainer.innerHTML = '';
-
-    // Check if response needs custom module
-    if (inputType === 'custom' && taskData.response_module) {
-      this.loadCustomResponseModule(taskData, student, responseContainer);
-    } else {
-      // Render response input using ResponseHandler
-      const responseInput = this.responseHandler.renderResponseInput(
-        inputType,
-        currentResponse,
-        (newResponse) => {
-          // Handle response change
-          this.currentResponse = newResponse;
-          result.response = newResponse;
-          this.markUnsaved();
-
-          // Start countdown timer after response is submitted
-          this.startCountdown();
-        }
-      );
-
-      responseContainer.appendChild(responseInput);
-    }
-  }
-
   /**
    * Load task module (handles both question and response)
    */
   loadTaskModule(taskData, student) {
     const container = document.getElementById('task-image-container');
-    const result = this.getOrCreateResult(student.student_id, taskData.task_id);
+
+    // Get most recent result to restore previous response (if any)
+    const existingResult = this.getMostRecentResult(student.student_id, taskData.task_id);
 
     const context = {
       studentId: student.student_id,
@@ -771,7 +838,7 @@ class TeachingAssistantApp {
       grade: student.grade,
       studentName: student.name,
       question: taskData.question,
-      existingResponse: result.response
+      existingResponse: existingResult ? existingResult.response : ''
     };
 
     this.moduleLoader.loadModule(
@@ -784,25 +851,14 @@ class TeachingAssistantApp {
       // Modules handle their own saving - disable main app countdown/auto-save
       this.cancelCountdown();
 
-      // Show response area (module will handle the input)
+      // Hide the separate response area since module handles everything
       const responseArea = document.getElementById('response-area');
       if (responseArea) {
-        responseArea.style.display = 'none'; // Hide the separate response area since module handles it
+        responseArea.style.display = 'none';
       }
     }).catch(err => {
       this.showNoTask(`Failed to load module: ${err.message}`);
     });
-  }
-
-  /**
-   * Hide response area
-   */
-  hideResponseArea() {
-    const responseArea = document.getElementById('response-area');
-    if (responseArea) {
-      responseArea.style.display = 'none';
-    }
-    this.responseHandler.reset();
   }
 
   /**
