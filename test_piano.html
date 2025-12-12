@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Piano Module</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 20px;
+            font-family: Arial, sans-serif;
+            background: #f0f0f0;
+        }
+
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        iframe {
+            width: 100%;
+            height: 600px;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+        }
+
+        .info-panel {
+            margin-top: 20px;
+            padding: 15px;
+            background: #ecf0f1;
+            border-radius: 5px;
+        }
+
+        .info-panel h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+
+        .info-panel pre {
+            background: #34495e;
+            color: white;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="test-container">
+        <h1>🎹 Piano Octave 1 - Test Page</h1>
+
+        <iframe id="moduleFrame" src="modules/piano_octave_1.html"></iframe>
+
+        <div class="controls">
+            <button onclick="testInit()">Initialize Module</button>
+            <button onclick="testGetResponse()">Get Response</button>
+            <button onclick="testIsComplete()">Check if Complete</button>
+            <button onclick="testReset()">Reset Module</button>
+        </div>
+
+        <div class="info-panel">
+            <h3>Module Response Data:</h3>
+            <pre id="responseOutput">No response yet...</pre>
+
+            <h3>Features:</h3>
+            <ul>
+                <li><strong>Playing Mode (Default):</strong> Click any key to hear the note</li>
+                <li><strong>Assessment Mode:</strong> Toggle to ON - prompts student to press specific white keys (C, D,
+                    E, F, G, A, B, C')</li>
+                <li><strong>Labels Toggle:</strong> Show/hide note names on the keys</li>
+                <li><strong>Web Audio API:</strong> Synthesized piano tones using sine waves</li>
+                <li><strong>Touch Support:</strong> Works on both mouse and touch devices</li>
+                <li><strong>Black Keys:</strong> Visible and playable but not used in Level 1 assessment</li>
+            </ul>
+
+            <h3>Response Format:</h3>
+            <pre>{
+  "targetNote": "C",      // The note the student was asked to press
+  "pressedNote": "D",     // The note the student actually pressed
+  "timestamp": "2025-12-10T15:35:30.123Z"
+}</pre>
+        </div>
+    </div>
+
+    <script>
+        const iframe = document.getElementById('moduleFrame');
+        const output = document.getElementById('responseOutput');
+
+        // Listen for messages from the module
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'taskmodule:response') {
+                output.textContent = JSON.stringify(JSON.parse(event.data.value), null, 2);
+            }
+        });
+
+        function testInit() {
+            iframe.contentWindow.postMessage({
+                type: 'taskmodule:init',
+                context: {
+                    studentId: 'test-student-123',
+                    taskId: 'piano_octave_1',
+                    grade: '1',
+                    studentName: 'Test Student',
+                    existingResponse: null
+                }
+            }, '*');
+            output.textContent = 'Module initialized with test context';
+        }
+
+        function testGetResponse() {
+            const module = iframe.contentWindow.TaskModule;
+            if (module) {
+                const response = module.getResponse();
+                if (response) {
+                    output.textContent = JSON.stringify(JSON.parse(response), null, 2);
+                } else {
+                    output.textContent = 'No response yet - try pressing a key in assessment mode';
+                }
+            }
+        }
+
+        function testIsComplete() {
+            const module = iframe.contentWindow.TaskModule;
+            if (module) {
+                const complete = module.isComplete();
+                output.textContent = `Module complete: ${complete}`;
+            }
+        }
+
+        function testReset() {
+            const module = iframe.contentWindow.TaskModule;
+            if (module) {
+                module.reset();
+                output.textContent = 'Module reset';
+            }
+        }
+
+        // Auto-initialize on load
+        window.addEventListener('load', () => {
+            setTimeout(testInit, 500);
+        });
+    </script>
+</body>
+
+</html>

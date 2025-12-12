@@ -249,6 +249,12 @@ class ResultsViewerApp {
         // Get unique modules from tasks
         const modules = [...new Set(this.tasks.map(t => t.module_path))].filter(Boolean);
 
+        // Check if there are any ATTENDANCE records
+        const hasAttendance = this.results.some(r => r.task_id === 'ATTENDANCE');
+        if (hasAttendance) {
+            modules.push('ATTENDANCE');
+        }
+
         modules.forEach(modulePath => {
             const option = document.createElement('option');
             option.value = modulePath;
@@ -283,10 +289,16 @@ class ResultsViewerApp {
 
         // Filter by module
         if (this.selectedModule) {
-            const moduleTasks = this.tasks
-                .filter(t => t.module_path === this.selectedModule)
-                .map(t => t.task_id);
-            filteredResults = filteredResults.filter(r => moduleTasks.includes(r.task_id));
+            if (this.selectedModule === 'ATTENDANCE') {
+                // Filter for attendance records specifically
+                filteredResults = filteredResults.filter(r => r.task_id === 'ATTENDANCE');
+            } else {
+                // Filter by tasks that use this module
+                const moduleTasks = this.tasks
+                    .filter(t => t.module_path === this.selectedModule)
+                    .map(t => t.task_id);
+                filteredResults = filteredResults.filter(r => moduleTasks.includes(r.task_id));
+            }
         }
 
         // Apply checkbox filters
@@ -296,6 +308,18 @@ class ResultsViewerApp {
         // Parse and display results
         const parsedResults = filteredResults
             .map(result => {
+                // Special case: ATTENDANCE records don't have a task
+                if (result.task_id === 'ATTENDANCE') {
+                    const parsed = this.resultsParser.parseResult(result, null);
+                    if (!parsed) return null;
+
+                    return {
+                        ...parsed,
+                        modulePath: 'ATTENDANCE',
+                        studentId: result.student_id
+                    };
+                }
+
                 const task = this.tasks.find(t => t.task_id === result.task_id);
                 if (!task) return null;
 

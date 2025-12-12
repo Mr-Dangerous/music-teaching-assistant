@@ -6,7 +6,9 @@ class ResultsParser {
         // Module-specific parsers
         this.parsers = {
             'so_la_mi_trainer': this.parseSoLaMi.bind(this),
+            'so_la_mi_re_do_trainer': this.parseSoLaMi.bind(this), // Same format as so_la_mi_trainer
             'piano_octave_1': this.parsePianoOctave1.bind(this),
+            'ATTENDANCE': this.parseAttendance.bind(this), // Special case for attendance
             // Add more module parsers here as needed
         };
     }
@@ -14,12 +16,17 @@ class ResultsParser {
     /**
      * Parse a result based on its module type
      * @param {Object} result - Result object with task_id, response, etc.
-     * @param {Object} task - Task object with module_path
+     * @param {Object} task - Task object with module_path (may be null for ATTENDANCE)
      * @returns {Object} Parsed result with question, answer, and score
      */
     parseResult(result, task) {
         if (!result || !result.response) {
             return null;
+        }
+
+        // Special case: ATTENDANCE records don't have a task in tasks.csv
+        if (result.task_id === 'ATTENDANCE') {
+            return this.parseAttendance(result, null);
         }
 
         // Extract module name from module_path
@@ -148,6 +155,19 @@ class ResultsParser {
     }
 
     /**
+     * Parse Attendance records
+     * Response format: "absent"
+     */
+    parseAttendance(result, task) {
+        return {
+            question: 'Attendance',
+            answer: result.response === 'absent' ? 'ABSENT' : result.response,
+            score: '—',
+            timestamp: result.completed_date || ''
+        };
+    }
+
+    /**
      * Default parser for unknown modules
      */
     parseDefault(result, task) {
@@ -163,10 +183,16 @@ class ResultsParser {
      * Get display name for module
      */
     getModuleDisplayName(modulePath) {
+        // Special case for ATTENDANCE
+        if (modulePath === 'ATTENDANCE') {
+            return 'Attendance';
+        }
+
         const moduleName = this.extractModuleName(modulePath);
 
         const displayNames = {
             'so_la_mi_trainer': 'So La Mi Trainer',
+            'so_la_mi_re_do_trainer': 'So La Mi Re Do Trainer',
             'piano_octave_1': 'Piano Octave 1',
             // Add more display names here
         };

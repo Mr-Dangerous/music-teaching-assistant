@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interval Trainer</title>
+    <style>
+        :root {
+            /* Resolution scaling - inherits from parent or defaults to 1 */
+            --module-scale: 1;
+        }
+
+        /* Detect 4K mode from parent */
+        body.resolution-4k,
+        :root.resolution-4k {
+            --module-scale: 2;
+            transform: scale(2);
+            transform-origin: top left;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: calc(20px * var(--module-scale));
+        }
+
+        .container {
+            background: white;
+            border-radius: calc(20px * var(--module-scale));
+            box-shadow: 0 calc(20px * var(--module-scale)) calc(60px * var(--module-scale)) rgba(0, 0, 0, 0.3);
+            padding: calc(40px * var(--module-scale));
+            max-width: calc(1000px * var(--module-scale));
+            width: 100%;
+        }
+
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            font-size: calc(36px * var(--module-scale));
+            margin-bottom: calc(30px * var(--module-scale));
+            font-weight: 700;
+        }
+
+        .controls {
+            display: flex;
+            gap: calc(15px * var(--module-scale));
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: calc(20px * var(--module-scale));
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: calc(8px * var(--module-scale));
+        }
+
+        .control-label {
+            font-size: calc(14px * var(--module-scale));
+            font-weight: 600;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .control-btn {
+            padding: calc(12px * var(--module-scale)) calc(24px * var(--module-scale));
+            font-size: calc(16px * var(--module-scale));
+            font-weight: 600;
+            border: none;
+            border-radius: calc(8px * var(--module-scale));
+            cursor: pointer;
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            box-shadow: 0 calc(4px * var(--module-scale)) calc(12px * var(--module-scale)) rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            min-width: calc(100px * var(--module-scale));
+        }
+
+        .control-btn:hover {
+            transform: translateY(calc(-2px * var(--module-scale)));
+            box-shadow: 0 calc(6px * var(--module-scale)) calc(16px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
+        }
+
+        .direction-btn {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+
+        .mode-controls {
+            display: flex;
+            gap: calc(10px * var(--module-scale));
+            justify-content: center;
+            margin-bottom: calc(20px * var(--module-scale));
+            flex-wrap: wrap;
+        }
+
+        .mode-btn {
+            padding: calc(10px * var(--module-scale)) calc(24px * var(--module-scale));
+            font-size: calc(14px * var(--module-scale));
+            font-weight: 600;
+            border: calc(2px * var(--module-scale)) solid #3498db;
+            border-radius: calc(8px * var(--module-scale));
+            cursor: pointer;
+            background: white;
+            color: #3498db;
+            transition: all 0.3s ease;
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            border-color: #2980b9;
+        }
+
+        .mode-btn:hover {
+            transform: translateY(calc(-2px * var(--module-scale)));
+        }
+
+        .play-btn {
+            padding: calc(16px * var(--module-scale)) calc(40px * var(--module-scale));
+            font-size: calc(24px * var(--module-scale));
+            font-weight: 700;
+            border: none;
+            border-radius: calc(12px * var(--module-scale));
+            cursor: pointer;
+            background: linear-gradient(135deg, #27ae60, #229954);
+            color: white;
+            box-shadow: 0 calc(6px * var(--module-scale)) calc(20px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            display: block;
+            margin: 0 auto calc(30px * var(--module-scale));
+        }
+
+        .play-btn:hover {
+            transform: translateY(calc(-3px * var(--module-scale)));
+            box-shadow: 0 calc(8px * var(--module-scale)) calc(24px * var(--module-scale)) rgba(0, 0, 0, 0.25);
+        }
+
+        .play-btn:active {
+            transform: translateY(0);
+        }
+
+        .play-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .interval-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(calc(130px * var(--module-scale)), 1fr));
+            gap: calc(12px * var(--module-scale));
+            margin-bottom: calc(30px * var(--module-scale));
+        }
+
+        .interval-btn {
+            height: calc(60px * var(--module-scale));
+            font-size: calc(17px * var(--module-scale));
+            font-weight: 700;
+            border: calc(3px * var(--module-scale)) solid transparent;
+            border-radius: calc(12px * var(--module-scale));
+            cursor: pointer;
+            color: white;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            box-shadow: 0 calc(4px * var(--module-scale)) calc(12px * var(--module-scale)) rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Diatonic interval colors */
+        .interval-btn[data-interval="M2"],
+        .interval-btn[data-interval="2"] {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+
+        .interval-btn[data-interval="M3"],
+        .interval-btn[data-interval="3"] {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
+
+        .interval-btn[data-interval="P4"],
+        .interval-btn[data-interval="4"] {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+
+        .interval-btn[data-interval="P5"],
+        .interval-btn[data-interval="5"] {
+            background: linear-gradient(135deg, #f39c12, #e67e22);
+        }
+
+        .interval-btn[data-interval="M6"],
+        .interval-btn[data-interval="6"] {
+            background: linear-gradient(135deg, #1abc9c, #16a085);
+        }
+
+        .interval-btn[data-interval="M7"],
+        .interval-btn[data-interval="7"] {
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+        }
+
+        .interval-btn[data-interval="P8"],
+        .interval-btn[data-interval="8"] {
+            background: linear-gradient(135deg, #16a085, #1abc9c);
+        }
+
+        /* Alteration colors */
+        .interval-btn.alteration {
+            background: linear-gradient(135deg, #95a5a6, #7f8c8d);
+            font-size: calc(15px * var(--module-scale));
+        }
+
+        .interval-btn:hover {
+            transform: translateY(calc(-3px * var(--module-scale)));
+            box-shadow: 0 calc(8px * var(--module-scale)) calc(20px * var(--module-scale)) rgba(0, 0, 0, 0.25);
+        }
+
+        .interval-btn:active {
+            transform: translateY(0);
+        }
+
+        .interval-btn.selected {
+            border-color: #2c3e50;
+            box-shadow: 0 0 0 calc(4px * var(--module-scale)) rgba(44, 62, 80, 0.3),
+                0 calc(4px * var(--module-scale)) calc(12px * var(--module-scale)) rgba(0, 0, 0, 0.15);
+            transform: scale(1.05);
+        }
+
+        .interval-btn.correct {
+            border-color: #27ae60;
+            box-shadow: 0 0 0 calc(4px * var(--module-scale)) rgba(39, 174, 96, 0.5),
+                0 calc(4px * var(--module-scale)) calc(12px * var(--module-scale)) rgba(0, 0, 0, 0.15);
+        }
+
+        .interval-btn.incorrect {
+            border-color: #e74c3c;
+            box-shadow: 0 0 0 calc(4px * var(--module-scale)) rgba(231, 76, 60, 0.5),
+                0 calc(4px * var(--module-scale)) calc(12px * var(--module-scale)) rgba(0, 0, 0, 0.15);
+        }
+
+        .feedback {
+            text-align: center;
+            font-size: calc(20px * var(--module-scale));
+            font-weight: 600;
+            min-height: calc(40px * var(--module-scale));
+            color: #2c3e50;
+            margin-top: calc(20px * var(--module-scale));
+        }
+
+        .feedback.correct {
+            color: #27ae60;
+        }
+
+        .feedback.incorrect {
+            color: #e74c3c;
+        }
+
+        .new-question-btn {
+            padding: calc(14px * var(--module-scale)) calc(32px * var(--module-scale));
+            font-size: calc(18px * var(--module-scale));
+            font-weight: 600;
+            border: none;
+            border-radius: calc(10px * var(--module-scale));
+            cursor: pointer;
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            color: white;
+            box-shadow: 0 calc(4px * var(--module-scale)) calc(12px * var(--module-scale)) rgba(0, 0, 0, 0.15);
+            transition: all 0.3s ease;
+            display: block;
+            margin: calc(20px * var(--module-scale)) auto 0;
+        }
+
+        .new-question-btn:hover {
+            transform: translateY(calc(-2px * var(--module-scale)));
+            box-shadow: 0 calc(6px * var(--module-scale)) calc(16px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        @keyframes pulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .interval-btn.selected {
+            animation: pulse 0.5s ease-in-out;
+        }
+
+        /* Completion indicator */
+        .completion-indicator {
+            position: fixed;
+            top: calc(20px * var(--module-scale));
+            right: calc(20px * var(--module-scale));
+            width: calc(60px * var(--module-scale));
+            height: calc(60px * var(--module-scale));
+            background-color: #27ae60;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(36px * var(--module-scale));
+            color: white;
+            box-shadow: 0 calc(4px * var(--module-scale)) calc(12px * var(--module-scale)) rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            animation: popIn 0.3s ease;
+        }
+
+        .completion-indicator.show {
+            display: flex;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        .countdown-timer {
+            text-align: center;
+            font-size: calc(48px * var(--module-scale));
+            font-weight: 700;
+            color: #3498db;
+            margin-top: calc(20px * var(--module-scale));
+            min-height: calc(60px * var(--module-scale));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .countdown-timer.counting {
+            animation: countPulse 1s ease-in-out;
+        }
+
+        @keyframes countPulse {
+
+            0%,
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.2);
+                opacity: 0.7;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Completion Indicator -->
+    <div id="completionIndicator" class="completion-indicator">✓</div>
+
+    <div class="container">
+        <h1>🎵 Interval Trainer</h1>
+
+        <div class="controls">
+            <div class="control-group">
+                <div class="control-label">Starting Note</div>
+                <button class="control-btn" id="noteBtn" onclick="cycleNote()">C4</button>
+            </div>
+
+            <div class="control-group">
+                <div class="control-label">Direction</div>
+                <button class="control-btn direction-btn" id="directionBtn" onclick="toggleDirection()">⬆ Up</button>
+            </div>
+        </div>
+
+        <div class="mode-controls">
+            <button class="mode-btn active" onclick="setMode('diatonic')">Diatonic</button>
+            <button class="mode-btn" onclick="setMode('chromatic')">+ Chromatic Alterations</button>
+        </div>
+
+        <button class="play-btn" id="playBtn" onclick="playInterval()">▶ Play Interval</button>
+
+        <div class="interval-buttons" id="intervalButtons">
+            <!-- Buttons will be dynamically generated -->
+        </div>
+
+        <div class="feedback" id="feedback"></div>
+
+        <div class="countdown-timer" id="countdownTimer"></div>
+
+        <button class="new-question-btn" id="newQuestionBtn" onclick="newQuestion()" style="display: none;">🔄 New
+            Question</button>
+    </div>
+
+    <script>
+        // Detect and apply resolution from parent frame
+        function detectParentResolution() {
+            try {
+                if (window.parent && window.parent !== window) {
+                    const parentBody = window.parent.document.body;
+                    if (parentBody.classList.contains('resolution-4k')) {
+                        document.body.classList.add('resolution-4k');
+                    }
+                }
+            } catch (e) {
+                console.log('Cannot access parent resolution, using default');
+            }
+        }
+
+        detectParentResolution();
+
+        // Audio Context
+        let audioContext = null;
+
+        function getAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioContext;
+        }
+
+        // Chromatic scale frequencies
+        const chromaticNotes = [
+            'C4', 'C#4', 'D4', 'D#4', 'E4', 'F4', 'F#4', 'G4', 'G#4', 'A4', 'A#4', 'B4',
+            'C5', 'C#5', 'D5', 'D#5', 'E5', 'F5', 'F#5', 'G5', 'G#5', 'A5', 'A#5', 'B5', 'C6'
+        ];
+
+        const noteFrequencies = {
+            'C4': 261.63,
+            'C#4': 277.18,
+            'D4': 293.66,
+            'D#4': 311.13,
+            'E4': 329.63,
+            'F4': 349.23,
+            'F#4': 369.99,
+            'G4': 392.00,
+            'G#4': 415.30,
+            'A4': 440.00,
+            'A#4': 466.16,
+            'B4': 493.88,
+            'C5': 523.25,
+            'C#5': 554.37,
+            'D5': 587.33,
+            'D#5': 622.25,
+            'E5': 659.25,
+            'F5': 698.46,
+            'F#5': 739.99,
+            'G5': 783.99,
+            'G#5': 830.61,
+            'A5': 880.00,
+            'A#5': 932.33,
+            'B5': 987.77,
+            'C6': 1046.50
+        };
+
+        const availableNotes = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4'];
+
+        // Interval definitions (semitone counts)
+        const intervalDefinitions = {
+            // Diatonic intervals (from C major scale)
+            'M2': { semitones: 2, label: 'Major 2nd' },    // C to D
+            'M3': { semitones: 4, label: 'Major 3rd' },    // C to E
+            'P4': { semitones: 5, label: 'Perfect 4th' },  // C to F
+            'P5': { semitones: 7, label: 'Perfect 5th' },  // C to G
+            'M6': { semitones: 9, label: 'Major 6th' },    // C to A
+            'M7': { semitones: 11, label: 'Major 7th' },   // C to B
+            'P8': { semitones: 12, label: 'Octave' },      // C to C
+
+            // Chromatic alterations
+            'm2': { semitones: 1, label: 'Minor 2nd' },
+            'm3': { semitones: 3, label: 'Minor 3rd' },
+            'A4': { semitones: 6, label: 'Aug 4th/Tritone' },
+            'd5': { semitones: 6, label: 'Dim 5th/Tritone' },
+            'm6': { semitones: 8, label: 'Minor 6th' },
+            'm7': { semitones: 10, label: 'Minor 7th' }
+        };
+
+        // State
+        let currentNote = 'C4';
+        let direction = 'up';
+        let mode = 'diatonic'; // 'diatonic' or 'chromatic'
+        let targetInterval = null;
+        let previousInterval = null; // Track previous interval to avoid repetition
+        let selectedInterval = null;
+        let hasPlayed = false;
+        let isAnswered = false;
+        let countdownTimer = null;
+        let countdownValue = 0;
+
+        // TaskModule interface for integration with main app
+        window.TaskModule = {
+            context: null,
+
+            init(context) {
+                this.context = context;
+                console.log('Interval Trainer initialized with context:', context);
+
+                // Check if there's an existing response to restore
+                if (context.existingResponse) {
+                    try {
+                        const saved = JSON.parse(context.existingResponse);
+                        if (saved.targetInterval !== undefined) {
+                            // Restore the state
+                            targetInterval = saved.targetInterval;
+                            selectedInterval = saved.selectedInterval;
+                            currentNote = saved.startingNote || 'C4';
+                            direction = saved.direction || 'up';
+                            mode = saved.mode || 'diatonic';
+
+                            updateUI();
+
+                            if (selectedInterval !== null) {
+                                showFeedback();
+                            }
+                        }
+                    } catch (e) {
+                        console.log('No valid existing response to restore');
+                    }
+                } else {
+                    // Generate new question
+                    renderButtons();
+                    newQuestion();
+                }
+            },
+
+            getResponse() {
+                return getCurrentResponse();
+            },
+
+            isComplete() {
+                return isAnswered;
+            },
+
+            reset() {
+                resetModule();
+            }
+        };
+
+        // Set mode
+        function setMode(newMode) {
+            if (isAnswered) return;
+
+            mode = newMode;
+
+            // Update mode buttons
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Re-render buttons and generate new question
+            renderButtons();
+            newQuestion();
+        }
+
+        // Render interval buttons based on current mode
+        function renderButtons() {
+            const container = document.getElementById('intervalButtons');
+            container.innerHTML = '';
+
+            let intervals;
+            if (mode === 'diatonic') {
+                intervals = ['M2', 'M3', 'P4', 'P5', 'M6', 'M7', 'P8'];
+            } else {
+                // Chromatic mode includes all intervals
+                intervals = ['m2', 'M2', 'm3', 'M3', 'P4', 'A4', 'P5', 'm6', 'M6', 'm7', 'M7', 'P8'];
+            }
+
+            intervals.forEach(interval => {
+                const btn = document.createElement('button');
+                btn.className = 'interval-btn';
+                if (mode === 'chromatic' && ['m2', 'm3', 'A4', 'd5', 'm6', 'm7'].includes(interval)) {
+                    btn.classList.add('alteration');
+                }
+                btn.dataset.interval = interval;
+                btn.textContent = getIntervalDisplayName(interval);
+                btn.onclick = () => selectInterval(interval);
+                // Buttons are always enabled for exploration
+                container.appendChild(btn);
+            });
+        }
+
+        // Get display name for interval
+        function getIntervalDisplayName(interval) {
+            const shortNames = {
+                'm2': 'min 2nd',
+                'M2': 'Maj 2nd',
+                'm3': 'min 3rd',
+                'M3': 'Maj 3rd',
+                'P4': '4th',
+                'A4': 'Aug 4th',
+                'd5': 'Dim 5th',
+                'P5': '5th',
+                'm6': 'min 6th',
+                'M6': 'Maj 6th',
+                'm7': 'min 7th',
+                'M7': 'Maj 7th',
+                'P8': 'Octave'
+            };
+            return shortNames[interval] || interval;
+        }
+
+        // Play a single note
+        function playNote(frequency, startTime, duration = 0.5) {
+            const ctx = getAudioContext();
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            oscillator.frequency.value = frequency;
+            oscillator.type = 'sine';
+
+            // Envelope for smooth sound
+            gainNode.gain.setValueAtTime(0, startTime);
+            gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.05);
+            gainNode.gain.linearRampToValueAtTime(0.2, startTime + duration - 0.1);
+            gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
+
+            oscillator.start(startTime);
+            oscillator.stop(startTime + duration);
+        }
+
+        // Calculate target frequency for interval
+        function getIntervalFrequency(baseNote, interval, dir) {
+            const baseIndex = chromaticNotes.indexOf(baseNote);
+            const semitones = intervalDefinitions[interval].semitones;
+
+            let targetIndex;
+            if (dir === 'up') {
+                targetIndex = baseIndex + semitones;
+            } else {
+                targetIndex = baseIndex - semitones;
+            }
+
+            // Clamp to available range
+            targetIndex = Math.max(0, Math.min(chromaticNotes.length - 1, targetIndex));
+
+            return noteFrequencies[chromaticNotes[targetIndex]];
+        }
+
+        // Play interval
+        async function playInterval() {
+            if (targetInterval === null) return;
+
+            const ctx = getAudioContext();
+            const currentTime = ctx.currentTime;
+
+            const freq1 = noteFrequencies[currentNote];
+            const freq2 = getIntervalFrequency(currentNote, targetInterval, direction);
+
+            // Play notes in sequence
+            playNote(freq1, currentTime, 0.6);
+            playNote(freq2, currentTime + 0.7, 0.6);
+
+            hasPlayed = true;
+        }
+
+        // Cycle through notes
+        function cycleNote() {
+            if (isAnswered) return;
+
+            const currentIndex = availableNotes.indexOf(currentNote);
+            currentNote = availableNotes[(currentIndex + 1) % availableNotes.length];
+            document.getElementById('noteBtn').textContent = currentNote;
+        }
+
+        // Toggle direction
+        function toggleDirection() {
+            if (isAnswered) return;
+
+            direction = direction === 'up' ? 'down' : 'up';
+            const btn = document.getElementById('directionBtn');
+            btn.textContent = direction === 'up' ? '⬆ Up' : '⬇ Down';
+        }
+
+        // Select interval
+        function selectInterval(interval) {
+            // Always play the interval sound when clicked
+            playIntervalForButton(interval);
+
+            // If there's an active question and it hasn't been answered yet, register the answer
+            if (targetInterval !== null && !isAnswered && hasPlayed) {
+                selectedInterval = interval;
+
+                // Update UI
+                document.querySelectorAll('.interval-btn').forEach(btn => {
+                    btn.classList.remove('selected');
+                });
+                event.target.classList.add('selected');
+
+                // Mark as answered
+                isAnswered = true;
+
+                // Show feedback
+                showFeedback();
+
+                // Notify parent of completion
+                notifyCompletion();
+            }
+        }
+
+        // Play interval for a specific button (for exploration)
+        function playIntervalForButton(interval) {
+            const ctx = getAudioContext();
+            const currentTime = ctx.currentTime;
+
+            const freq1 = noteFrequencies[currentNote];
+            const freq2 = getIntervalFrequency(currentNote, interval, direction);
+
+            // Play notes in sequence
+            playNote(freq1, currentTime, 0.6);
+            playNote(freq2, currentTime + 0.7, 0.6);
+        }
+
+        // Show feedback
+        function showFeedback() {
+            const feedback = document.getElementById('feedback');
+            const buttons = document.querySelectorAll('.interval-btn');
+
+            const isCorrect = selectedInterval === targetInterval;
+
+            if (isCorrect) {
+                feedback.textContent = `✓ Correct! The interval was a ${intervalDefinitions[targetInterval].label}.`;
+                feedback.className = 'feedback correct';
+            } else {
+                feedback.textContent = `✗ Incorrect. You selected ${intervalDefinitions[selectedInterval].label}, but it was a ${intervalDefinitions[targetInterval].label}.`;
+                feedback.className = 'feedback incorrect';
+            }
+
+            // Highlight correct and incorrect
+            buttons.forEach(btn => {
+                const interval = btn.dataset.interval;
+                if (interval === targetInterval) {
+                    btn.classList.add('correct');
+                } else if (interval === selectedInterval) {
+                    btn.classList.add('incorrect');
+                }
+            });
+
+            // Show new question button
+            document.getElementById('newQuestionBtn').style.display = 'block';
+
+            // Show completion indicator
+            const indicator = document.getElementById('completionIndicator');
+            indicator.classList.add('show');
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 2000);
+
+            // Start countdown for auto-advance
+            startCountdown();
+        }
+
+        // Start countdown timer
+        function startCountdown() {
+            // Clear any existing countdown
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+            }
+
+            countdownValue = 3;
+            const countdownDisplay = document.getElementById('countdownTimer');
+
+            // Display initial countdown
+            countdownDisplay.textContent = countdownValue;
+            countdownDisplay.classList.add('counting');
+
+            // Update countdown every second
+            countdownTimer = setInterval(() => {
+                countdownValue--;
+
+                if (countdownValue > 0) {
+                    countdownDisplay.textContent = countdownValue;
+                    // Re-trigger animation
+                    countdownDisplay.classList.remove('counting');
+                    void countdownDisplay.offsetWidth; // Force reflow
+                    countdownDisplay.classList.add('counting');
+                } else {
+                    // Countdown finished - auto-advance
+                    clearInterval(countdownTimer);
+                    countdownTimer = null;
+                    countdownDisplay.textContent = '';
+                    countdownDisplay.classList.remove('counting');
+                    newQuestion();
+                }
+            }, 1000);
+        }
+
+        // Clear countdown timer
+        function clearCountdown() {
+            if (countdownTimer) {
+                clearInterval(countdownTimer);
+                countdownTimer = null;
+            }
+            const countdownDisplay = document.getElementById('countdownTimer');
+            countdownDisplay.textContent = '';
+            countdownDisplay.classList.remove('counting');
+        }
+
+        // New question
+        function newQuestion() {
+            // Clear countdown if manually triggered
+            clearCountdown();
+
+            // Generate random interval based on current mode
+            let intervals;
+            if (mode === 'diatonic') {
+                intervals = ['M2', 'M3', 'P4', 'P5', 'M6', 'M7', 'P8'];
+            } else {
+                intervals = ['m2', 'M2', 'm3', 'M3', 'P4', 'A4', 'P5', 'm6', 'M6', 'm7', 'M7', 'P8'];
+            }
+
+            // Filter out the previous interval to avoid repetition
+            if (previousInterval && intervals.length > 1) {
+                intervals = intervals.filter(i => i !== previousInterval);
+            }
+
+            // Select new random interval
+            targetInterval = intervals[Math.floor(Math.random() * intervals.length)];
+            previousInterval = targetInterval;
+
+            // Reset state
+            selectedInterval = null;
+            hasPlayed = false;
+            isAnswered = false;
+
+            // Update UI
+            updateUI();
+        }
+
+        // Update UI
+        function updateUI() {
+            // Clear feedback
+            document.getElementById('feedback').textContent = '';
+            document.getElementById('feedback').className = 'feedback';
+
+            // Clear countdown
+            document.getElementById('countdownTimer').textContent = '';
+            document.getElementById('countdownTimer').classList.remove('counting');
+
+            // Reset buttons
+            document.querySelectorAll('.interval-btn').forEach(btn => {
+                btn.classList.remove('selected', 'correct', 'incorrect');
+            });
+
+            // Update controls
+            document.getElementById('noteBtn').textContent = currentNote;
+            document.getElementById('directionBtn').textContent = direction === 'up' ? '⬆ Up' : '⬇ Down';
+
+            // Update mode buttons
+            document.querySelectorAll('.mode-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', (i === 0 && mode === 'diatonic') || (i === 1 && mode === 'chromatic'));
+            });
+
+            // Hide new question button
+            document.getElementById('newQuestionBtn').style.display = 'none';
+
+            // If already answered, show feedback
+            if (isAnswered && selectedInterval !== null) {
+                const selectedBtn = document.querySelector(`.interval-btn[data-interval="${selectedInterval}"]`);
+                if (selectedBtn) {
+                    selectedBtn.classList.add('selected');
+                }
+                showFeedback();
+            }
+        }
+
+        // Get current response
+        function getCurrentResponse() {
+            if (targetInterval === null || selectedInterval === null) {
+                return null;
+            }
+
+            return JSON.stringify({
+                startingNote: currentNote,
+                direction: direction,
+                mode: mode,
+                targetInterval: targetInterval,
+                targetIntervalName: intervalDefinitions[targetInterval].label,
+                selectedInterval: selectedInterval,
+                selectedIntervalName: intervalDefinitions[selectedInterval].label,
+                correct: selectedInterval === targetInterval
+            });
+        }
+
+        // Check if complete
+        function checkIfComplete() {
+            return isAnswered;
+        }
+
+        // Reset module
+        function resetModule() {
+            targetInterval = null;
+            selectedInterval = null;
+            hasPlayed = false;
+            isAnswered = false;
+            currentNote = 'C4';
+            direction = 'up';
+            mode = 'diatonic';
+            renderButtons();
+            updateUI();
+        }
+
+        // Notify parent of completion
+        function notifyCompletion() {
+            if (window.parent && window.parent.TaskModule) {
+                try {
+                    window.parent.postMessage({
+                        type: 'task-complete',
+                        response: getCurrentResponse()
+                    }, '*');
+                } catch (e) {
+                    console.log('Could not notify parent:', e);
+                }
+            }
+        }
+
+        // Initialize
+        window.addEventListener('load', () => {
+            // If not loaded in iframe, generate a question
+            if (window === window.parent) {
+                renderButtons();
+                newQuestion();
+            }
+        });
+    </script>
+</body>
+
+</html>

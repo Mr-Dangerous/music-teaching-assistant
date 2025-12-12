@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>So La Mi Trainer</title>
+    <title>So La Mi Re Do Trainer</title>
     <style>
         :root {
             /* Resolution scaling - inherits from parent or defaults to 1 */
@@ -396,12 +396,14 @@
             <button class="custom-pattern-btn" onclick="openCustomPattern()">Custom Pattern</button>
         </div>
 
-        <canvas id="staffCanvas" width="900" height="250"></canvas>
+        <canvas id="staffCanvas" width="900" height="300"></canvas>
 
         <div class="label-container" id="labelContainer">
             <div class="draggable-label" data-note="so">So</div>
             <div class="draggable-label" data-note="la">La</div>
             <div class="draggable-label" data-note="mi">Mi</div>
+            <div class="draggable-label" data-note="re">Re</div>
+            <div class="draggable-label" data-note="do">Do</div>
         </div>
 
         <button class="toggle-labels-btn" onclick="toggleStaffLabels()">Toggle Labels</button>
@@ -429,11 +431,11 @@
 
             <div class="syntax-help">
                 <strong>Syntax:</strong><br>
-                <code>s</code>=so, <code>l</code>=la, <code>m</code>=mi<br><br>
-                <strong>Example:</strong> <code>slm</code> = so, la, mi
+                <code>s</code>=so, <code>l</code>=la, <code>m</code>=mi, <code>r</code>=re, <code>d</code>=do<br><br>
+                <strong>Example:</strong> <code>slmrd</code> = so, la, mi, re, do
             </div>
 
-            <input type="text" id="customPatternInput" class="pattern-input" placeholder="e.g., slm or ssml"
+            <input type="text" id="customPatternInput" class="pattern-input" placeholder="e.g., slmrd or dsmd"
                 maxlength="12">
 
             <div class="modal-buttons">
@@ -469,7 +471,7 @@
 
             init(context) {
                 this.context = context;
-                console.log('So La Mi Trainer initialized with context:', context);
+                console.log('So La Mi Re Do Trainer initialized with context:', context);
 
                 // Check if there's an existing response to restore
                 if (context.existingResponse) {
@@ -502,7 +504,9 @@
         const noteColors = {
             'so': '#27ae60',  // Green
             'la': '#9b59b6',  // Purple
-            'mi': '#f1c40f'   // Yellow
+            'mi': '#f1c40f',  // Yellow
+            're': '#e67e22',  // Orange
+            'do': '#e74c3c'   // Red
         };
 
         // State
@@ -527,7 +531,7 @@
 
         // Generate random pattern of notes
         function generateRandomPattern() {
-            const notes = ['so', 'la', 'mi'];
+            const notes = ['so', 'la', 'mi', 're', 'do'];
             currentPattern = [];
 
             // If first note is set, start with it
@@ -590,16 +594,20 @@
                 noteRadius = 25 * scale;
             }
 
-            // Two-line staff for So-La-Mi (scaled)
+            // Three-line staff for So-La-Mi-Re-Do (scaled)
             const lineSpacing = 60 * scale;
-            const soLineY = canvasHeight / 2 - lineSpacing / 2;
-            const miLineY = canvasHeight / 2 + lineSpacing / 2;
+            const soLineY = canvasHeight / 2 - lineSpacing;
+            const miLineY = canvasHeight / 2;
+            const doLineY = canvasHeight / 2 + lineSpacing;
             const laPosY = soLineY - noteRadius; // La touches the So line from above
+            const rePosY = (miLineY + doLineY) / 2; // Re is in the space between Mi and Do
 
             const noteYPositions = {
                 'la': laPosY,
                 'so': soLineY,
-                'mi': miLineY
+                're': rePosY,
+                'mi': miLineY,
+                'do': doLineY
             };
 
             // Draw staff lines (scaled)
@@ -618,6 +626,12 @@
             ctx.lineTo(staffRight, miLineY);
             ctx.stroke();
 
+            // Do line
+            ctx.beginPath();
+            ctx.moveTo(staffLeft, doLineY);
+            ctx.lineTo(staffRight, doLineY);
+            ctx.stroke();
+
             // Draw staff labels on the left based on state
             if (staffLabelsState !== 'off') {
                 ctx.font = `bold ${24 * scale}px Arial`;
@@ -631,6 +645,7 @@
 
                 if (staffLabelsState === 'all') {
                     ctx.fillText('Mi', staffLeft - (20 * scale), miLineY);
+                    ctx.fillText('Do', staffLeft - (20 * scale), doLineY);
                 }
             }
 
@@ -931,7 +946,7 @@
             radioList.appendChild(noneDiv);
 
             // Note options
-            const notes = ['so', 'la', 'mi'];
+            const notes = ['so', 'la', 'mi', 're', 'do'];
             notes.forEach(note => {
                 const div = document.createElement('div');
                 div.className = 'radio-item';
@@ -977,7 +992,9 @@
             const noteMap = {
                 's': 'so',
                 'l': 'la',
-                'm': 'mi'
+                'm': 'mi',
+                'r': 're',
+                'd': 'do'
             };
 
             const pattern = [];
@@ -1002,7 +1019,7 @@
             const parsed = parseCustomPattern(input);
 
             if (!parsed) {
-                alert('Invalid pattern! Please use s, l, or m only.');
+                alert('Invalid pattern! Please use s, l, m, r, or d only.');
                 closeModal('customPatternModal');
                 return;
             }

@@ -1,0 +1,1026 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>So La Mi Composer</title>
+    <style>
+        :root {
+            --module-scale: 1;
+        }
+
+        body.resolution-4k,
+        :root.resolution-4k {
+            --module-scale: 2;
+            transform: scale(2);
+            transform-origin: top left;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: calc(10px * var(--module-scale));
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: calc(1100px * var(--module-scale));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            justify-content: flex-start;
+            gap: calc(10px * var(--module-scale));
+        }
+
+        .controls {
+            display: flex;
+            gap: calc(10px * var(--module-scale));
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            font-size: calc(20px * var(--module-scale));
+            /* Increased from 16 to 20 */
+            font-weight: bold;
+            color: white;
+            border: none;
+            padding: calc(12px * var(--module-scale)) calc(24px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+        }
+
+        .btn-success:hover {
+            background-color: #229954;
+        }
+
+        .btn-warning {
+            background-color: #e67e22;
+        }
+
+        .btn-warning:hover {
+            background-color: #d35400;
+        }
+
+        .btn-secondary {
+            background-color: #9b59b6;
+        }
+
+        .btn-secondary:hover {
+            background-color: #8e44ad;
+        }
+
+        #staffCanvas {
+            display: block;
+            border: 3px solid #3498db;
+            border-radius: 5px;
+            background-color: white;
+            max-width: 100%;
+            flex-shrink: 0;
+            cursor: crosshair;
+        }
+
+        .rhythm-palette {
+            display: flex;
+            gap: calc(20px * var(--module-scale));
+            padding: calc(15px * var(--module-scale));
+            background-color: #ecf0f1;
+            border-radius: calc(8px * var(--module-scale));
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .rhythm-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: calc(5px * var(--module-scale));
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+            padding: calc(10px * var(--module-scale));
+            background-color: white;
+            border: calc(3px * var(--module-scale)) solid #34495e;
+            border-radius: calc(8px * var(--module-scale));
+            transition: transform 0.2s;
+        }
+
+        .rhythm-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 calc(4px * var(--module-scale)) calc(8px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .rhythm-item:active {
+            cursor: grabbing;
+        }
+
+        .rhythm-item.dragging {
+            opacity: 0.7;
+            position: fixed;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .rhythm-symbol {
+            font-size: calc(28px * var(--module-scale));
+            /* Increased from 20 to 28 */
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .rhythm-label {
+            font-size: calc(14px * var(--module-scale));
+            color: #7f8c8d;
+        }
+
+        .tempo-control {
+            display: flex;
+            align-items: center;
+            gap: calc(10px * var(--module-scale));
+        }
+
+        .tempo-slider {
+            width: calc(150px * var(--module-scale));
+        }
+
+        .tempo-label {
+            font-size: calc(18px * var(--module-scale));
+            /* Increased from 14 to 18 */
+            font-weight: bold;
+            color: #2c3e50;
+            min-width: calc(120px * var(--module-scale));
+        }
+
+        .meter-selector {
+            display: flex;
+            gap: calc(5px * var(--module-scale));
+        }
+
+        .meter-btn {
+            font-size: calc(18px * var(--module-scale));
+            /* Increased from 14 to 18 */
+            font-weight: bold;
+            color: white;
+            background-color: #34495e;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(18px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+        }
+
+        .meter-btn.active {
+            background-color: #e74c3c;
+        }
+
+        .meter-btn:hover {
+            opacity: 0.8;
+        }
+
+        .beat-counter {
+            font-size: calc(20px * var(--module-scale));
+            /* Increased from 16 to 20 */
+            font-weight: bold;
+            color: #2c3e50;
+            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
+            background-color: #ecf0f1;
+            border-radius: calc(5px * var(--module-scale));
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="controls">
+            <button class="btn btn-primary" onclick="clearStaff()">🔄 Clear</button>
+            <button class="btn btn-secondary" onclick="sortComposition()">📊 Sort</button>
+            <button class="btn btn-secondary" onclick="importFromClipboard()">📋 Import</button>
+            <button class="btn btn-secondary" onclick="toggleStaffPosition()">⬇️ Lower Staff</button>
+            <button class="btn btn-success" onclick="finishComposition()">✓ Finished!</button>
+            <button class="btn btn-warning" onclick="playComposition()">▶ Play</button>
+
+            <div class="meter-selector">
+                <span style="font-weight: bold; margin-right: 5px;">Meter:</span>
+                <button class="meter-btn" data-meter="2" onclick="setMeter(2)">2</button>
+                <button class="meter-btn" data-meter="3" onclick="setMeter(3)">3</button>
+                <button class="meter-btn active" data-meter="4" onclick="setMeter(4)">4</button>
+            </div>
+
+            <div class="beat-counter" id="beatCounter">Beats: 0/16</div>
+        </div>
+
+        <div class="tempo-control">
+            <span class="tempo-label">Tempo: <span id="tempoValue">100</span> BPM</span>
+            <input type="range" class="tempo-slider" id="tempoSlider" min="60" max="180" value="100"
+                oninput="updateTempo(this.value)">
+        </div>
+
+        <canvas id="staffCanvas" width="1100" height="300"></canvas>
+
+        <button class="btn btn-success" id="addStaffBtn" onclick="addSecondStaff()"
+            style="display: none; margin: 10px 0;">
+            ➕ Add Another Staff
+        </button>
+
+        <canvas id="staffCanvas2" width="1100" height="300" style="display: none;"></canvas>
+
+        <div class="rhythm-palette">
+            <div class="rhythm-item" data-rhythm="ta" draggable="false">
+                <div class="rhythm-symbol">TA</div>
+                <div class="rhythm-label">quarter note</div>
+            </div>
+            <div class="rhythm-item" data-rhythm="ti-ti" draggable="false">
+                <div class="rhythm-symbol">TI-TI</div>
+                <div class="rhythm-label">eighth notes</div>
+            </div>
+            <div class="rhythm-item" data-rhythm="shh" draggable="false">
+                <div class="rhythm-symbol">SHH</div>
+                <div class="rhythm-label">rest</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Detect and apply resolution from parent frame
+        function detectParentResolution() {
+            try {
+                if (window.parent && window.parent !== window) {
+                    const parentBody = window.parent.document.body;
+                    if (parentBody.classList.contains('resolution-4k')) {
+                        document.body.classList.add('resolution-4k');
+                    }
+                }
+            } catch (e) {
+                console.log('Cannot access parent resolution, using default');
+            }
+        }
+
+        detectParentResolution();
+
+        // TaskModule interface
+        window.TaskModule = {
+            context: null,
+
+            init(context) {
+                this.context = context;
+                console.log('So La Mi Composer initialized with context:', context);
+
+                if (context.existingResponse) {
+                    try {
+                        const saved = JSON.parse(context.existingResponse);
+                        if (saved.composition) {
+                            restoreComposition(saved);
+                        }
+                    } catch (e) {
+                        console.log('No valid existing response to restore');
+                    }
+                }
+            },
+
+            getResponse() {
+                return getCurrentResponse();
+            },
+
+            isComplete() {
+                return true; // Always complete since this is a composition tool
+            },
+
+            reset() {
+                clearStaff();
+            }
+        };
+
+        // State
+        let composition = []; // Array of {rhythm, pitch, x, y, beats}
+        let currentMeter = 4;
+        let tempo = 100;
+        let draggedItem = null;
+        let dragOffset = { x: 0, y: 0 };
+        let longPressTimer = null;
+        let longPressTarget = null;
+        let isSorted = false; // Track if composition has been sorted
+        let staffLowered = false; // Track if staff is in lowered position
+        let secondStaffActive = false; // Track if second staff is visible
+        let MAX_BEATS = 16; // Changes to 32 when second staff is added
+
+        // Audio context for playback
+        let audioContext = null;
+
+        // Load rest image
+        const restImage = new Image();
+        restImage.src = 'data:image/png;base64,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';
+        let restImageLoaded = false;
+        restImage.onload = () => {
+            restImageLoaded = true;
+            drawStaff(); // Redraw once image is loaded
+        };
+
+        // Note frequencies (using middle C as reference)
+        const noteFrequencies = {
+            'so': 392.00,  // G4
+            'la': 440.00,  // A4
+            'mi': 329.63   // E4
+        };
+
+        // Initialize
+        function init() {
+            drawStaff();
+            setupDragAndDrop();
+            updateBeatCounter();
+        }
+
+        // Get current scale factor
+        function getScale() {
+            return document.body.classList.contains('resolution-4k') ? 2 : 1;
+        }
+
+        // Draw staff and composition
+        function drawStaff() {
+            drawStaffCanvas('staffCanvas', 0, 16);
+
+            if (secondStaffActive) {
+                drawStaffCanvas('staffCanvas2', 16, 32);
+            }
+
+            // Show/hide "Add Staff" button
+            updateAddStaffButton();
+        }
+
+        function drawStaffCanvas(canvasId, startBeat, endBeat) {
+            const canvas = document.getElementById(canvasId);
+            const ctx = canvas.getContext('2d');
+            const scale = getScale();
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const staffLeft = 60 * scale;
+            const staffRight = canvasWidth - (60 * scale);
+
+            // Staff lines for So-La-Mi
+            const lineSpacing = 70 * scale;
+            const soLineY = canvasHeight / 2 - lineSpacing / 2;
+            const miLineY = canvasHeight / 2 + lineSpacing / 2;
+            const laPosY = soLineY - 35 * scale;
+
+            // Draw staff lines
+            ctx.strokeStyle = '#2c3e50';
+            ctx.lineWidth = 3 * scale;
+
+            // So line
+            ctx.beginPath();
+            ctx.moveTo(staffLeft, soLineY);
+            ctx.lineTo(staffRight, soLineY);
+            ctx.stroke();
+
+            // Mi line
+            ctx.beginPath();
+            ctx.moveTo(staffLeft, miLineY);
+            ctx.lineTo(staffRight, miLineY);
+            ctx.stroke();
+
+            // Draw staff labels
+            ctx.font = `bold ${32 * scale}px Arial`;  // Increased from 20 to 32 for distance readability
+            ctx.fillStyle = '#2c3e50';
+            ctx.textAlign = 'right';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('So', staffLeft - (15 * scale), soLineY);
+            ctx.fillText('Mi', staffLeft - (15 * scale), miLineY);
+
+            // Filter composition items for this staff based on beat position
+            const staffItems = getItemsForStaff(startBeat, endBeat);
+
+            // Draw bar lines only if composition is sorted
+            if (staffItems.length > 0 && isSorted) {
+                drawBarLinesForStaff(ctx, staffLeft, staffRight, soLineY, miLineY, scale, staffItems);
+            }
+
+            // Draw composition items
+            staffItems.forEach((item, index) => {
+                drawRhythmItem(ctx, item, index, scale, soLineY, miLineY, laPosY, staffItems.length);
+            });
+        }
+
+        function getItemsForStaff(startBeat, endBeat) {
+            let currentBeat = 0;
+            const items = [];
+
+            for (let i = 0; i < composition.length; i++) {
+                const item = composition[i];
+                const itemEndBeat = currentBeat + item.beats;
+
+                if (currentBeat >= startBeat && currentBeat < endBeat) {
+                    items.push({ ...item, originalIndex: i });
+                }
+
+                currentBeat = itemEndBeat;
+                if (currentBeat >= endBeat) break;
+            }
+
+            return items;
+        }
+
+        function drawBarLinesForStaff(ctx, staffLeft, staffRight, soLineY, miLineY, scale, staffItems) {
+            // Calculate total beats
+            let totalBeats = 0;
+            staffItems.forEach(item => {
+                totalBeats += item.beats;
+            });
+
+            if (totalBeats === 0) return;
+
+            // Calculate spacing for items
+            const usableWidth = staffRight - staffLeft;
+            const itemWidth = usableWidth / staffItems.length;
+
+            // Track beats and draw bar lines
+            let currentBeat = 0;
+
+            ctx.strokeStyle = '#34495e';
+            ctx.lineWidth = 2 * scale;
+
+            staffItems.forEach((item, index) => {
+                currentBeat += item.beats;
+
+                // Draw bar line if we've completed a measure
+                if (currentBeat % currentMeter === 0 && index < staffItems.length - 1) {
+                    const barX = staffLeft + (itemWidth * (index + 1));
+                    ctx.beginPath();
+                    ctx.moveTo(barX, soLineY - (30 * scale));
+                    ctx.lineTo(barX, miLineY + (30 * scale));
+                    ctx.stroke();
+                }
+            });
+        }
+
+        function drawRhythmItem(ctx, item, index, scale, soLineY, miLineY, laPosY, staffItemCount) {
+            // Calculate x position - use stored position if not sorted, otherwise calculate evenly spaced
+            let x;
+            if (isSorted) {
+                const usableWidth = 1100 - (120 * scale);
+                const spacing = staffItemCount > 0 ? usableWidth / staffItemCount : usableWidth;
+                x = (60 * scale) + (spacing * index) + spacing / 2;
+            } else {
+                // Use the stored drop position
+                x = item.x;
+            }
+
+            // Determine y position based on pitch (always snap vertically)
+            let y;
+            if (item.pitch === 'so') {
+                y = soLineY;
+            } else if (item.pitch === 'la') {
+                y = laPosY;
+            } else if (item.pitch === 'mi') {
+                y = miLineY;
+            } else {
+                // Rest - neutral position
+                y = (soLineY + miLineY) / 2;
+            }
+
+            // Update stored position
+            item.x = x;
+            item.y = y;
+
+            // Draw based on rhythm type
+            if (item.rhythm === 'ta') {
+                drawQuarterNote(ctx, x, y, item.pitch !== null, scale);
+            } else if (item.rhythm === 'ti-ti') {
+                drawEighthNotes(ctx, x, y, item.pitch !== null, scale);
+            } else if (item.rhythm === 'shh') {
+                drawRest(ctx, x, y, scale);
+            }
+        }
+
+        function drawQuarterNote(ctx, x, y, hasColor, scale) {
+            const noteRadius = 16 * scale;  // Doubled from 8 to 16
+
+            // Note head
+            ctx.fillStyle = hasColor ? '#2c3e50' : '#95a5a6';
+            ctx.beginPath();
+            ctx.ellipse(x, y, noteRadius * 1.2, noteRadius, Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Stem (slightly larger)
+            ctx.strokeStyle = hasColor ? '#2c3e50' : '#95a5a6';
+            ctx.lineWidth = 2.5 * scale;  // Slightly larger from 2 to 2.5
+            ctx.beginPath();
+            ctx.moveTo(x + noteRadius, y);
+            ctx.lineTo(x + noteRadius, y - (40 * scale));  // Slightly longer from 35 to 40
+            ctx.stroke();
+        }
+
+        function drawEighthNotes(ctx, x, y, hasColor, scale) {
+            const noteRadius = 16 * scale;  // Doubled from 8 to 16
+            const noteSpacing = 18 * scale;  // Increased spacing for larger notes
+
+            // Two note heads
+            ctx.fillStyle = hasColor ? '#2c3e50' : '#95a5a6';
+
+            // First note
+            ctx.beginPath();
+            ctx.ellipse(x - noteSpacing, y, noteRadius * 1.2, noteRadius, Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Second note
+            ctx.beginPath();
+            ctx.ellipse(x + noteSpacing, y, noteRadius * 1.2, noteRadius, Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Stems (slightly larger)
+            ctx.strokeStyle = hasColor ? '#2c3e50' : '#95a5a6';
+            ctx.lineWidth = 2.5 * scale;  // Slightly larger from 2 to 2.5
+
+            ctx.beginPath();
+            ctx.moveTo(x - noteSpacing + noteRadius, y);
+            ctx.lineTo(x - noteSpacing + noteRadius, y - (40 * scale));  // Slightly longer from 35 to 40
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(x + noteSpacing + noteRadius, y);
+            ctx.lineTo(x + noteSpacing + noteRadius, y - (40 * scale));  // Slightly longer from 35 to 40
+            ctx.stroke();
+
+            // Beam connecting the notes
+            ctx.beginPath();
+            ctx.moveTo(x - noteSpacing + noteRadius, y - (40 * scale));
+            ctx.lineTo(x + noteSpacing + noteRadius, y - (40 * scale));
+            ctx.lineWidth = 5 * scale;  // Slightly thicker beam
+            ctx.stroke();
+        }
+
+        function drawRest(ctx, x, y, scale) {
+            if (restImageLoaded) {
+                // Draw the PNG image, sized appropriately
+                const imgHeight = 60 * scale;  // Match the doubled rest height
+                const imgWidth = imgHeight * 0.5;  // Maintain aspect ratio (rests are typically narrow)
+
+                ctx.drawImage(
+                    restImage,
+                    x - imgWidth / 2,
+                    y - imgHeight / 2,
+                    imgWidth,
+                    imgHeight
+                );
+            } else {
+                // Fallback: draw text if image hasn't loaded yet
+                ctx.fillStyle = '#95a5a6';
+                ctx.font = `bold ${24 * scale}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('REST', x, y);
+            }
+        }
+
+        // Drag and drop setup
+        function setupDragAndDrop() {
+            const rhythmItems = document.querySelectorAll('.rhythm-item');
+
+            rhythmItems.forEach(item => {
+                item.addEventListener('mousedown', (e) => {
+                    startDrag(item, e);
+                });
+
+                item.addEventListener('touchstart', (e) => {
+                    startDrag(item, e.touches[0]);
+                    e.preventDefault();
+                }, { passive: false });
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (draggedItem) {
+                    drag(e);
+                }
+            });
+
+            document.addEventListener('touchmove', (e) => {
+                if (draggedItem) {
+                    drag(e.touches[0]);
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            document.addEventListener('mouseup', (e) => {
+                if (draggedItem) {
+                    endDrag(e);
+                }
+            });
+
+            document.addEventListener('touchend', (e) => {
+                if (draggedItem) {
+                    endDrag(e.changedTouches[0]);
+                }
+            });
+
+            // Long press for deletion
+            const canvas = document.getElementById('staffCanvas');
+
+            canvas.addEventListener('mousedown', (e) => {
+                startLongPress(e);
+            });
+
+            canvas.addEventListener('touchstart', (e) => {
+                startLongPress(e.touches[0]);
+            }, { passive: true });
+
+            canvas.addEventListener('mouseup', clearLongPress);
+            canvas.addEventListener('mousemove', clearLongPress);
+            canvas.addEventListener('touchend', clearLongPress);
+            canvas.addEventListener('touchmove', clearLongPress);
+        }
+
+        function startDrag(item, event) {
+            const clone = item.cloneNode(true);
+            clone.classList.add('dragging');
+            document.body.appendChild(clone);
+
+            draggedItem = {
+                element: clone,
+                rhythm: item.dataset.rhythm,
+                beats: item.dataset.rhythm === 'ti-ti' ? 1 : 1 // ta=1, ti-ti=1, shh=1
+            };
+
+            const rect = item.getBoundingClientRect();
+            dragOffset.x = event.clientX - rect.left;
+            dragOffset.y = event.clientY - rect.top;
+
+            clone.style.left = (event.clientX - dragOffset.x) + 'px';
+            clone.style.top = (event.clientY - dragOffset.y) + 'px';
+        }
+
+        function drag(event) {
+            if (!draggedItem) return;
+
+            draggedItem.element.style.left = (event.clientX - dragOffset.x) + 'px';
+            draggedItem.element.style.top = (event.clientY - dragOffset.y) + 'px';
+        }
+
+        function endDrag(event) {
+            if (!draggedItem) return;
+
+            const canvas = document.getElementById('staffCanvas');
+            const canvasRect = canvas.getBoundingClientRect();
+
+            const dropX = event.clientX;
+            const dropY = event.clientY;
+
+            // Check if dropped on canvas
+            if (dropX >= canvasRect.left && dropX <= canvasRect.right &&
+                dropY >= canvasRect.top && dropY <= canvasRect.bottom) {
+
+                // Calculate total beats
+                const totalBeats = composition.reduce((sum, item) => sum + item.beats, 0);
+
+                if (totalBeats + draggedItem.beats <= MAX_BEATS) {
+                    addToComposition(draggedItem.rhythm, event, canvasRect);
+                } else {
+                    alert('Cannot add more notes! Maximum 16 beats reached.');
+                }
+            }
+
+            draggedItem.element.remove();
+            draggedItem = null;
+        }
+
+        function addToComposition(rhythm, event, canvasRect) {
+            const scale = getScale();
+            const canvasX = event.clientX - canvasRect.left;
+            const canvasY = event.clientY - canvasRect.top;
+
+            // Determine pitch based on Y position (snap to So, La, or Mi)
+            const lineSpacing = 70 * scale;
+            const soLineY = canvasRect.height / 2 - lineSpacing / 2;
+            const miLineY = canvasRect.height / 2 + lineSpacing / 2;
+            const laPosY = soLineY - 35 * scale;
+
+            let pitch = null;
+
+            if (rhythm !== 'shh') {
+                // Snap to closest pitch
+                const distances = {
+                    'la': Math.abs(canvasY - laPosY),
+                    'so': Math.abs(canvasY - soLineY),
+                    'mi': Math.abs(canvasY - miLineY)
+                };
+
+                pitch = Object.keys(distances).reduce((a, b) =>
+                    distances[a] < distances[b] ? a : b
+                );
+            }
+
+            const item = {
+                rhythm: rhythm,
+                pitch: pitch,
+                beats: rhythm === 'ti-ti' ? 1 : 1,
+                x: canvasX,  // Store exact drop position
+                y: canvasY
+            };
+
+            composition.push(item);
+
+            // Check if we've hit 16 beats - auto-sort if so
+            const totalBeats = composition.reduce((sum, item) => sum + item.beats, 0);
+            if (totalBeats >= MAX_BEATS) {
+                sortComposition();
+            }
+
+            drawStaff();
+            updateBeatCounter();
+            notifyParent();
+        }
+
+        function startLongPress(event) {
+            const canvas = document.getElementById('staffCanvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            const clickX = event.clientX - canvasRect.left;
+            const clickY = event.clientY - canvasRect.top;
+
+            // Find clicked item
+            const clickedIndex = findItemAtPosition(clickX, clickY);
+
+            if (clickedIndex !== -1) {
+                longPressTarget = clickedIndex;
+                longPressTimer = setTimeout(() => {
+                    deleteItem(clickedIndex);
+                    longPressTarget = null;
+                }, 500); // 500ms long press
+            }
+        }
+
+        function clearLongPress() {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+                longPressTarget = null;
+            }
+        }
+
+        function findItemAtPosition(x, y) {
+            const threshold = 30;
+            for (let i = 0; i < composition.length; i++) {
+                const item = composition[i];
+                if (item.x && item.y) {
+                    const distance = Math.sqrt(
+                        Math.pow(x - item.x, 2) + Math.pow(y - item.y, 2)
+                    );
+                    if (distance < threshold) {
+                        return i;
+                    }
+                }
+            }
+            return -1;
+        }
+
+        function deleteItem(index) {
+            composition.splice(index, 1);
+            drawStaff();
+            updateBeatCounter();
+            notifyParent();
+        }
+
+        function setMeter(meter) {
+            currentMeter = meter;
+
+            // Update button states
+            document.querySelectorAll('.meter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-meter="${meter}"]`).classList.add('active');
+
+            drawStaff();
+            notifyParent();
+        }
+
+        function updateTempo(value) {
+            tempo = parseInt(value);
+            document.getElementById('tempoValue').textContent = tempo;
+        }
+
+        function updateBeatCounter() {
+            const totalBeats = composition.reduce((sum, item) => sum + item.beats, 0);
+            document.getElementById('beatCounter').textContent = `Beats: ${totalBeats}/${MAX_BEATS}`;
+        }
+
+        function clearStaff() {
+            composition = [];
+            isSorted = false;
+            secondStaffActive = false;
+            MAX_BEATS = 16;
+            document.getElementById('staffCanvas2').style.display = 'none';
+            drawStaff();
+            updateBeatCounter();
+            notifyParent();
+        }
+
+        function sortComposition() {
+            if (composition.length === 0) {
+                return;
+            }
+
+            // Sort by x position (left to right)
+            composition.sort((a, b) => a.x - b.x);
+            isSorted = true;
+            drawStaff();
+            notifyParent();
+        }
+
+        async function importFromClipboard() {
+            try {
+                // Read text from clipboard
+                const text = await navigator.clipboard.readText();
+
+                if (!text) {
+                    alert('Clipboard is empty!');
+                    return;
+                }
+
+                // Try to parse as JSON
+                const data = JSON.parse(text);
+
+                // Validate the data structure
+                if (data.composition && Array.isArray(data.composition)) {
+                    restoreComposition(data);
+                    alert('Composition imported successfully! 🎵');
+                } else {
+                    alert('Invalid composition format in clipboard!');
+                }
+            } catch (e) {
+                console.error('Import error:', e);
+                alert('Failed to import composition. Make sure clipboard contains valid JSON data.');
+            }
+        }
+
+        function addSecondStaff() {
+            secondStaffActive = true;
+            MAX_BEATS = 32;
+            document.getElementById('staffCanvas2').style.display = 'block';
+            document.getElementById('addStaffBtn').style.display = 'none';
+            updateBeatCounter();
+            drawStaff();
+        }
+
+        function updateAddStaffButton() {
+            const totalBeats = composition.reduce((sum, item) => sum + item.beats, 0);
+            const btn = document.getElementById('addStaffBtn');
+
+            if (totalBeats >= 16 && !secondStaffActive) {
+                btn.style.display = 'block';
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+
+        function toggleStaffPosition() {
+            const container = document.querySelector('.container');
+            staffLowered = !staffLowered;
+
+            if (staffLowered) {
+                container.style.marginTop = '200px';
+            } else {
+                container.style.marginTop = '0';
+            }
+        }
+
+        function finishComposition() {
+            if (composition.length === 0) {
+                alert('Please add some notes first!');
+                return;
+            }
+
+            // Sort the composition
+            sortComposition();
+
+            // Show completion message
+            alert('Composition finished! Great work! 🎵');
+            notifyParent();
+        }
+
+        function playComposition() {
+            if (composition.length === 0) {
+                alert('Please add some notes to play!');
+                return;
+            }
+
+            // Sort the composition before playing
+            sortComposition();
+
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const beatDuration = 60 / tempo; // Duration of one beat in seconds
+            let currentTime = audioContext.currentTime;
+
+            composition.forEach(item => {
+                if (item.rhythm === 'ti-ti' && item.pitch && noteFrequencies[item.pitch]) {
+                    // Play two eighth notes (0.5 beats each)
+                    playNote(noteFrequencies[item.pitch], currentTime, beatDuration * 0.5);
+                    playNote(noteFrequencies[item.pitch], currentTime + (beatDuration * 0.5), beatDuration * 0.5);
+                } else if (item.pitch && noteFrequencies[item.pitch]) {
+                    // Play single note (ta = 1 beat)
+                    playNote(noteFrequencies[item.pitch], currentTime, beatDuration * item.beats);
+                }
+                currentTime += beatDuration * item.beats;
+            });
+        }
+
+        function playNote(frequency, startTime, duration) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = frequency;
+            oscillator.type = 'sine';
+
+            // Envelope for smoother sound
+            gainNode.gain.setValueAtTime(0, startTime);
+            gainNode.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
+            gainNode.gain.linearRampToValueAtTime(0.2, startTime + duration - 0.1);
+            gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
+
+            oscillator.start(startTime);
+            oscillator.stop(startTime + duration);
+        }
+
+        function getCurrentResponse() {
+            const response = {
+                composition: composition,
+                meter: currentMeter,
+                tempo: tempo,
+                isSorted: isSorted,
+                secondStaffActive: secondStaffActive,
+                score: '1/1'
+            };
+            return JSON.stringify(response);
+        }
+
+        function restoreComposition(saved) {
+            composition = saved.composition || [];
+            currentMeter = saved.meter || 4;
+            tempo = saved.tempo || 100;
+            isSorted = saved.isSorted || false;
+            secondStaffActive = saved.secondStaffActive || false;
+
+            if (secondStaffActive) {
+                MAX_BEATS = 32;
+                document.getElementById('staffCanvas2').style.display = 'block';
+            }
+
+            setMeter(currentMeter);
+            document.getElementById('tempoSlider').value = tempo;
+            updateTempo(tempo);
+            drawStaff();
+            updateBeatCounter();
+        }
+
+        function notifyParent() {
+            window.parent.postMessage({
+                type: 'taskmodule:response',
+                value: getCurrentResponse(),
+                isComplete: true
+            }, '*');
+        }
+
+        // Initialize
+        init();
+    </script>
+</body>
+
+</html>
