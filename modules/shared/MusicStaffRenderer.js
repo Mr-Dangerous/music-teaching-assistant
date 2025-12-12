@@ -33,7 +33,7 @@ export class MusicStaffRenderer {
 
         // Dynamic spacing based on number of pitches
         const numLines = 2 + Math.floor((pitches.length - 3) / 2); // 2 lines for 3 pitches, 3 for 5 pitches
-        const lineSpacing = numLines === 2 ? 70 * scale : 35 * scale;
+        const lineSpacing = numLines === 2 ? 70 * scale : 50 * scale;
 
         const positions = {};
 
