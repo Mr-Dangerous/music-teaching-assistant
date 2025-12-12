@@ -345,7 +345,7 @@
             const canvasY = event.clientY - canvasRect.top;
             const positions = renderer.getStaffPositions();
 
-            if (item.rhythm === 'ti-ti' && item.editPitch2) {
+            if (item.rhythm === 'ti-ti' && state.editSecondNote) {
                 // Editing second note - apply step constraint
                 const targetPitch = MusicNotation.snapToPitch(canvasY, positions);
                 const validPitch = MusicNotation.getClosestValidPitch(
@@ -355,13 +355,19 @@
                     config.pitches
                 );
                 item.pitch2 = validPitch;
-                delete item.editPitch2;
+
+                // Don't move the whole note - just update pitch2
+                delete item.hidden;
             } else {
                 // Normal repositioning
                 originalUpdateRepositionedNote(index, event, canvasRect);
 
-                // If eighth note, apply step constraint to pitch2
-                if (item.rhythm === 'ti-ti' && item.pitch2) {
+                // If eighth note, ensure pitch2 exists and is valid
+                if (item.rhythm === 'ti-ti') {
+                    if (!item.pitch2) {
+                        item.pitch2 = item.pitch; // Initialize if not set
+                    }
+                    // Apply step constraint
                     item.pitch2 = MusicNotation.getClosestValidPitch(
                         item.pitch2,
                         item.pitch,
@@ -370,6 +376,9 @@
                     );
                 }
             }
+
+            // Clear the flag
+            delete state.editSecondNote;
 
             renderer.drawStaff(state.composition, state);
         };

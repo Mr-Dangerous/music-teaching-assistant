@@ -220,10 +220,11 @@ export class DragDropHandler {
         const clickX = event.clientX - canvasRect.left;
         const clickY = event.clientY - canvasRect.top;
 
-        const clickedIndex = this.findItemAtPosition(clickX, clickY);
+        const result = this.findItemAtPosition(clickX, clickY);
 
-        if (clickedIndex !== -1) {
-            this.state.longPressTarget = clickedIndex;
+        if (result.index !== -1) {
+            this.state.longPressTarget = result.index;
+            this.state.editSecondNote = result.editSecondNote; // Store which half
             this.state.longPressTimer = setTimeout(() => {
                 this.startRepositioning(this.state.longPressTarget, event);
                 if (navigator.vibrate) navigator.vibrate(50);
@@ -242,15 +243,32 @@ export class DragDropHandler {
     }
 
     /**
-     * Find item at position
+     * Find item at position - returns {index, editSecondNote}
      */
     findItemAtPosition(x, y) {
+        const scale = this.renderer.getScale();
+        const noteSpacing = 18 * scale; // Same as in renderer
+
         for (let i = this.state.composition.length - 1; i >= 0; i--) {
             const item = this.state.composition[i];
-            const distance = Math.sqrt(Math.pow(x - item.x, 2) + Math.pow(y - item.y, 2));
-            if (distance < 40) return i;
+
+            if (item.rhythm === 'ti-ti') {
+                // Check both halves of eighth note
+                const leftNoteX = item.x - noteSpacing;
+                const rightNoteX = item.x + noteSpacing;
+
+                const distLeft = Math.sqrt(Math.pow(x - leftNoteX, 2) + Math.pow(y - item.y, 2));
+                const distRight = Math.sqrt(Math.pow(x - rightNoteX, 2) + Math.pow(y - item.y, 2));
+
+                if (distLeft < 40) return { index: i, editSecondNote: false };
+                if (distRight < 40) return { index: i, editSecondNote: true };
+            } else {
+                // Single note or rest
+                const distance = Math.sqrt(Math.pow(x - item.x, 2) + Math.pow(y - item.y, 2));
+                if (distance < 40) return { index: i, editSecondNote: false };
+            }
         }
-        return -1;
+        return { index: -1, editSecondNote: false };
     }
 
     /**
