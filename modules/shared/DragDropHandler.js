@@ -39,11 +39,17 @@ export class DragDropHandler {
 
         // Canvas long press
         this.canvas.addEventListener('mousedown', (e) => this.startLongPress(e));
-        this.canvas.addEventListener('touchstart', (e) => this.startLongPress(e.touches[0]), { passive: true });
+        this.canvas.addEventListener('touchstart', (e) => {
+            this.startLongPress(e.touches[0]);
+            e.preventDefault(); // Prevent context menu on smartboard
+        }, { passive: false });
         this.canvas.addEventListener('mouseup', () => this.clearLongPress());
         this.canvas.addEventListener('mousemove', () => this.clearLongPress());
         this.canvas.addEventListener('touchend', () => this.clearLongPress());
         this.canvas.addEventListener('touchmove', () => this.clearLongPress());
+
+        // Prevent context menu (right-click menu) on canvas
+        this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
     }
 
     /**

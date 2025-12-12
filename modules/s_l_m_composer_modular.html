@@ -108,6 +108,11 @@
             background-color: white;
             max-width: 100%;
             cursor: crosshair;
+            touch-action: none;
+            /* Prevent default touch behaviors */
+            -webkit-user-select: none;
+            /* Prevent text selection */
+            user-select: none;
         }
 
         .rhythm-palette {
