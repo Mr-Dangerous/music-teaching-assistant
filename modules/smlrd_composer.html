@@ -346,35 +346,20 @@
             const positions = renderer.getStaffPositions();
 
             if (item.rhythm === 'ti-ti' && state.editSecondNote) {
-                // Editing second note - apply step constraint
+                // Editing SECOND note only - just change pitch2, no constraints!
                 const targetPitch = MusicNotation.snapToPitch(canvasY, positions);
-                const validPitch = MusicNotation.getClosestValidPitch(
-                    targetPitch,
-                    item.pitch,
-                    1, // Max 1 step apart
-                    config.pitches
-                );
-                item.pitch2 = validPitch;
+                item.pitch2 = targetPitch;
 
-                // Don't move the whole note - just update pitch2
+                // Don't move the note position or change pitch1
                 delete item.hidden;
-            } else {
-                // Normal repositioning
+            } else if (item.rhythm === 'ti-ti' && !state.editSecondNote) {
+                // Editing FIRST note - reposition whole pair but keep pitch2 independent
+                const savedPitch2 = item.pitch2; // Save second note's pitch
                 originalUpdateRepositionedNote(index, event, canvasRect);
-
-                // If eighth note, ensure pitch2 exists and is valid
-                if (item.rhythm === 'ti-ti') {
-                    if (!item.pitch2) {
-                        item.pitch2 = item.pitch; // Initialize if not set
-                    }
-                    // Apply step constraint
-                    item.pitch2 = MusicNotation.getClosestValidPitch(
-                        item.pitch2,
-                        item.pitch,
-                        1,
-                        config.pitches
-                    );
-                }
+                item.pitch2 = savedPitch2 || item.pitch; // Restore or initialize
+            } else {
+                // Not a ti-ti note, normal repositioning
+                originalUpdateRepositionedNote(index, event, canvasRect);
             }
 
             // Clear the flag
