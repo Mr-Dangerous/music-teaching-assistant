@@ -123,7 +123,11 @@ export class MusicStaffRenderer {
         ctx.textBaseline = 'middle';
 
         Object.entries(positions).forEach(([pitch, y]) => {
-            ctx.fillText(pitch.charAt(0).toUpperCase() + pitch.slice(1), staffLeft - (15 * scale), y);
+            // Use config.labels if available, otherwise capitalize pitch
+            const label = this.config.labels && this.config.labels[pitch]
+                ? this.config.labels[pitch]
+                : pitch.charAt(0).toUpperCase() + pitch.slice(1);
+            ctx.fillText(label, staffLeft - (15 * scale), y);
         });
 
         // Draw bar lines if sorted
