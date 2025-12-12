@@ -148,7 +148,7 @@ export class DragDropHandler {
             rhythm: rhythm,
             pitch: pitch,
             pitch2: null, // For split eighth notes
-            beats: rhythm === 'ti-ti' ? 1 : 1,
+            beats: rhythm === 'ti-ti' || rhythm === 'ti' ? 0.5 : 1,
             x: canvasX,
             y: canvasY
         };
