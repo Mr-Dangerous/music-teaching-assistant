@@ -267,6 +267,7 @@
         import { AudioPlayer } from './shared/AudioPlayer.js';
         import { ComposerJSON } from './shared/ComposerJSON.js';
         import { ComposerScreenshot } from './shared/ComposerScreenshot.js';
+        import { VersionDisplay } from './shared/VersionDisplay.js';
 
         // Configuration for SMLRD (5 notes)
         const config = {
@@ -345,15 +346,20 @@
             const canvasY = event.clientY - canvasRect.top;
             const positions = renderer.getStaffPositions();
 
+            console.log('Editing ti-ti:', item.rhythm === 'ti-ti', 'editSecondNote:', state.editSecondNote);
+
             if (item.rhythm === 'ti-ti' && state.editSecondNote) {
                 // Editing SECOND note only - just change pitch2, no constraints!
+                console.log('Editing second note - canvasY:', canvasY);
                 const targetPitch = MusicNotation.snapToPitch(canvasY, positions);
+                console.log('Target pitch:', targetPitch, 'Positions:', positions);
                 item.pitch2 = targetPitch;
 
                 // Don't move the note position or change pitch1
                 delete item.hidden;
             } else if (item.rhythm === 'ti-ti' && !state.editSecondNote) {
                 // Editing FIRST note - reposition whole pair but keep pitch2 independent
+                console.log('Editing first note');
                 const savedPitch2 = item.pitch2; // Save second note's pitch
                 originalUpdateRepositionedNote(index, event, canvasRect);
                 item.pitch2 = savedPitch2 || item.pitch; // Restore or initialize
@@ -398,6 +404,7 @@
         dragHandler.setup();
         renderer.drawStaff(state.composition, state);
         updateBeatCounter();
+        VersionDisplay.show(); // Show version
 
         // UI Functions
         window.clearStaff = () => {
