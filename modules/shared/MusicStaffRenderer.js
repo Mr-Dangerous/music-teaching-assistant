@@ -61,7 +61,7 @@ export class MusicStaffRenderer {
             positions.do = centerY + spacing;            // Line 2 - Do
             positions.mi = centerY;                      // Line 3 (middle) - Mi
             positions.so = centerY - spacing;            // Line 4 - So
-            // Line 5 would be at centerY - (spacing * 2) but unused for now (future Ti)
+            positions.ti = centerY - (spacing * 2);      // Line 5 (top) - Ti (empty for now)
 
             // Spaces
             positions.so1 = centerY + (spacing * 2.5);         // Space below staff - So,
@@ -97,7 +97,7 @@ export class MusicStaffRenderer {
         } else if (this.config.pitches.length === 5) {
             linePitches = ['so', 'mi', 'do'];
         } else if (this.config.pitches.length === 8) {
-            linePitches = ['la1', 'do', 'mi', 'so']; // 4 lines
+            linePitches = ['la1', 'do', 'mi', 'so', 'ti']; // 5 lines
         }
 
         const lines = linePitches.filter(p => positions[p] && this.config.pitches.includes(p));
