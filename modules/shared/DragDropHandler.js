@@ -243,32 +243,43 @@ export class DragDropHandler {
     }
 
     /**
-     * Find item at position - returns {index, editSecondNote}
-     */
     findItemAtPosition(x, y) {
         const scale = this.renderer.getScale();
         const noteSpacing = 18 * scale; // Same as in renderer
-
+        const hitRadius = 50; // Larger hit zone
+        
         for (let i = this.state.composition.length - 1; i >= 0; i--) {
             const item = this.state.composition[i];
-
+            
             if (item.rhythm === 'ti-ti') {
                 // Check both halves of eighth note
                 const leftNoteX = item.x - noteSpacing;
                 const rightNoteX = item.x + noteSpacing;
-
-                const distLeft = Math.sqrt(Math.pow(x - leftNoteX, 2) + Math.pow(y - item.y, 2));
-                const distRight = Math.sqrt(Math.pow(x - rightNoteX, 2) + Math.pow(y - item.y, 2));
-
-                if (distLeft < 40) return { index: i, editSecondNote: false };
-                if (distRight < 40) return { index: i, editSecondNote: true };
+                
+                // USE X POSITION to determine which half, then check Y
+                // If click is right of center, prioritize second note
+                if (x >= item.x) {
+                    // Right side - check second note first
+                    const distRight = Math.sqrt(Math.pow(x - rightNoteX, 2) + Math.pow(y - item.y, 2));
+                    if (distRight < hitRadius) return {index: i, editSecondNote: true};
+                    
+                    const distLeft = Math.sqrt(Math.pow(x - leftNoteX, 2) + Math.pow(y - item.y, 2));
+                    if (distLeft < hitRadius) return {index: i, editSecondNote: false};
+                } else {
+                    // Left side - check first note first
+                    const distLeft = Math.sqrt(Math.pow(x - leftNoteX, 2) + Math.pow(y - item.y, 2));
+                    if (distLeft < hitRadius) return {index: i, editSecondNote: false};
+                    
+                    const distRight = Math.sqrt(Math.pow(x - rightNoteX, 2) + Math.pow(y - item.y, 2));
+                    if (distRight < hitRadius) return {index: i, editSecondNote: true};
+                }
             } else {
                 // Single note or rest
                 const distance = Math.sqrt(Math.pow(x - item.x, 2) + Math.pow(y - item.y, 2));
-                if (distance < 40) return { index: i, editSecondNote: false };
+                if (distance < hitRadius) return {index: i, editSecondNote: false};
             }
         }
-        return { index: -1, editSecondNote: false };
+        return {index: -1, editSecondNote: false};
     }
 
     /**
