@@ -50,31 +50,24 @@ export class MusicStaffRenderer {
             positions.la = positions.so - 20 * scale;
             positions.re = (positions.mi + positions.do) / 2;
         } else if (pitches.length === 8) {
-            // Pentatonic: 5 lines (traditional staff)
+            // Pentatonic: 5 lines (but only 4 used for notes)
+            // Lines (bottom to top): La,, Do, Mi, So, (5th line empty for future Ti)
+            // Spaces: So, (below), Re (space 2), La (space 4), Do' (above)
             const centerY = canvasHeight / 2;
-            positions.so = centerY - (lineSpacing * 2);      // Top line
-            positions.mi = centerY - lineSpacing;            // 2nd line
-            positions.do = centerY;                          // Middle line (3rd)
-            positions.la1 = centerY + lineSpacing;           // 4th line (low la)
+            const spacing = lineSpacing;
+
+            // Lines (only 4 lines have notes, 5th is empty)
+            positions.la1 = centerY + (spacing * 2);     // Line 1 (bottom) - La,
+            positions.do = centerY + spacing;            // Line 2 - Do
+            positions.mi = centerY;                      // Line 3 (middle) - Mi
+            positions.so = centerY - spacing;            // Line 4 - So
+            // Line 5 would be at centerY - (spacing * 2) but unused for now (future Ti)
 
             // Spaces
-            positions.la = positions.so - lineSpacing / 2;   // Space above So
-            positions.do2 = positions.la - lineSpacing / 2;  // Space above la (high do)
-            positions.re = positions.mi + lineSpacing / 2;   // Space between Mi and Do
-            positions.so1 = positions.la1 + lineSpacing / 2; // Space below La, (low so)
-        } else if (pitches.length === 8) {
-            // Pentatonic: 5 lines (traditional staff)
-            const centerY = canvasHeight / 2;
-            positions.so = centerY - (lineSpacing * 2);      // Top line
-            positions.mi = centerY - lineSpacing;            // 2nd line
-            positions.do = centerY;                          // Middle line (3rd)
-            positions.la1 = centerY + lineSpacing;           // 4th line (low la)
-
-            // Spaces
-            positions.la = positions.so - lineSpacing / 2;   // Space above So
-            positions.do2 = positions.la - lineSpacing / 2;  // Space above la (high do)
-            positions.re = positions.mi + lineSpacing / 2;   // Space between Mi and Do
-            positions.so1 = positions.la1 + lineSpacing / 2; // Space below La, (low so)
+            positions.so1 = centerY + (spacing * 2.5);         // Space below staff - So,
+            positions.re = (positions.do + positions.mi) / 2;  // Space 2 (between Do and Mi) - Re
+            positions.la = (positions.so + (centerY - spacing * 2)) / 2; // Space 4 (between So and line 5) - La
+            positions.do2 = centerY - (spacing * 2.5);         // Space above staff - Do'
         }
 
         return positions;
