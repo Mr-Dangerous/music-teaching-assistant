@@ -222,6 +222,7 @@
             <button class="btn btn-secondary" onclick="importFromClipboard()">📋 Import</button>
             <button class="btn btn-secondary" onclick="toggleNoteNames()">🏷️ Note Names</button>
             <button class="btn btn-success" onclick="finishComposition()">✓ Finished!</button>
+            <button class="btn btn-success" onclick="photoAndFinish()">📷 Photo & Finish</button>
             <button class="btn btn-warning" onclick="playComposition()">▶ Play</button>
 
             <div class="meter-selector">
@@ -265,6 +266,7 @@
         import { DragDropHandler } from './shared/DragDropHandler.js';
         import { AudioPlayer } from './shared/AudioPlayer.js';
         import { ComposerJSON } from './shared/ComposerJSON.js';
+        import { ComposerScreenshot } from './shared/ComposerScreenshot.js';
 
         // Configuration for SMLRD (5 notes)
         const config = {
@@ -312,6 +314,7 @@
         });
 
         const audioPlayer = new AudioPlayer();
+        const screenshot = new ComposerScreenshot(canvas);
 
         // Detect parent resolution
         try {
@@ -477,7 +480,28 @@
                 alert('Failed to import from clipboard');
             }
         };
+
+        window.photoAndFinish = async () => {
+            // Get student name from context
+            const studentName = ComposerScreenshot.getStudentName(window.TaskModule.context);
+
+            // Capture and download screenshot
+            await screenshot.captureAndDownload(studentName);
+
+            // Also finish the composition (notify parent)
+            const json = ComposerJSON.toJSON(state.composition, state, config);
+
+            // Notify parent if in iframe
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'taskmodule:response',
+                    value: json,
+                    isComplete: true
+                }, '*');
+            }
+        };
     </script>
 </body>
 
 </html>
+```
