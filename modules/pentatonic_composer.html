@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pentatonic Composer</title>
+    <style>
+        :root {
+            --module-scale: 1;
+        }
+
+        body.resolution-4k,
+        :root.resolution-4k {
+            --module-scale: 2;
+            transform: scale(2);
+            transform-origin: top left;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            padding: calc(5px * var(--module-scale));
+            overflow: auto;
+        }
+
+        .container {
+            width: 100%;
+            max-width: calc(1100px * var(--module-scale));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: calc(5px * var(--module-scale));
+        }
+
+        .controls {
+            display: flex;
+            gap: calc(10px * var(--module-scale));
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .btn {
+            font-size: calc(20px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            border: none;
+            padding: calc(12px * var(--module-scale)) calc(24px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary {
+            background-color: #3498db;
+        }
+
+        .btn-primary:hover {
+            background-color: #2980b9;
+        }
+
+        .btn-success {
+            background-color: #27ae60;
+        }
+
+        .btn-success:hover {
+            background-color: #229954;
+        }
+
+        .btn-warning {
+            background-color: #e67e22;
+        }
+
+        .btn-warning:hover {
+            background-color: #d35400;
+        }
+
+        .btn-secondary {
+            background-color: #9b59b6;
+        }
+
+        .btn-secondary:hover {
+            background-color: #8e44ad;
+        }
+
+        #staffCanvas {
+            display: block;
+            border: 3px solid #3498db;
+            border-radius: 5px;
+            background-color: white;
+            max-width: 100%;
+            cursor: crosshair;
+            touch-action: none;
+            /* Prevent default touch behaviors */
+            -webkit-user-select: none;
+            /* Prevent text selection */
+            user-select: none;
+        }
+
+        .rhythm-palette {
+            display: flex;
+            gap: calc(15px * var(--module-scale));
+            padding: calc(10px * var(--module-scale));
+            background-color: #ecf0f1;
+            border-radius: calc(8px * var(--module-scale));
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .rhythm-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: calc(5px * var(--module-scale));
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+            padding: calc(8px * var(--module-scale));
+            background-color: white;
+            border: calc(3px * var(--module-scale)) solid #34495e;
+            border-radius: calc(8px * var(--module-scale));
+            transition: transform 0.2s;
+        }
+
+        .rhythm-item:hover {
+            transform: scale(1.05);
+            box-shadow: 0 calc(4px * var(--module-scale)) calc(8px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .rhythm-item:active {
+            cursor: grabbing;
+        }
+
+        .rhythm-item.dragging {
+            opacity: 0.7;
+            position: fixed;
+            z-index: 1000;
+            pointer-events: none;
+        }
+
+        .rhythm-symbol {
+            font-size: calc(28px * var(--module-scale));
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .rhythm-label {
+            font-size: calc(14px * var(--module-scale));
+            color: #7f8c8d;
+        }
+
+        .tempo-control {
+            display: flex;
+            align-items: center;
+            gap: calc(10px * var(--module-scale));
+        }
+
+        .tempo-slider {
+            width: calc(150px * var(--module-scale));
+        }
+
+        .tempo-label {
+            font-size: calc(18px * var(--module-scale));
+            font-weight: bold;
+            color: #2c3e50;
+            min-width: calc(120px * var(--module-scale));
+        }
+
+        .meter-selector {
+            display: flex;
+            gap: calc(5px * var(--module-scale));
+        }
+
+        .meter-btn {
+            font-size: calc(18px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #34495e;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(18px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+        }
+
+        .meter-btn.active {
+            background-color: #e74c3c;
+        }
+
+        .meter-btn:hover {
+            opacity: 0.8;
+        }
+
+        .beat-counter {
+            font-size: calc(20px * var(--module-scale));
+            font-weight: bold;
+            color: #2c3e50;
+            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
+            background-color: #ecf0f1;
+            border-radius: calc(5px * var(--module-scale));
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="controls">
+            <button class="btn btn-primary" onclick="clearStaff()">🔄 Clear</button>
+            <button class="btn btn-secondary" onclick="sortComposition()">📊 Sort</button>
+            <button class="btn btn-secondary" onclick="importFromClipboard()">📋 Import</button>
+            <button class="btn btn-secondary" onclick="toggleNoteNames()">🏷️ Note Names</button>
+            <button class="btn btn-success" onclick="finishComposition()">✓ Finished!</button>
+            <button class="btn btn-success" onclick="photoAndFinish()">📷 Photo & Finish</button>
+            <button class="btn btn-warning" onclick="playComposition()">▶ Play</button>
+
+            <div class="meter-selector">
+                <span style="font-weight: bold; margin-right: 5px;">Meter:</span>
+                <button class="meter-btn" data-meter="2" onclick="setMeter(2)">2</button>
+                <button class="meter-btn" data-meter="3" onclick="setMeter(3)">3</button>
+                <button class="meter-btn active" data-meter="4" onclick="setMeter(4)">4</button>
+            </div>
+
+            <div class="beat-counter" id="beatCounter">Beats: 0/16</div>
+        </div>
+
+        <div class="tempo-control">
+            <span class="tempo-label">Tempo: <span id="tempoValue">100</span> BPM</span>
+            <input type="range" class="tempo-slider" id="tempoSlider" min="60" max="180" value="100"
+                oninput="updateTempo(this.value)">
+        </div>
+
+        <canvas id="staffCanvas" width="1100" height="380"></canvas>
+
+        <div class="rhythm-palette">
+            <div class="rhythm-item" data-rhythm="ta" draggable="false">
+                <div class="rhythm-symbol">TA</div>
+                <div class="rhythm-label">quarter note</div>
+            </div>
+            <div class="rhythm-item" data-rhythm="ti-ti" draggable="false">
+                <div class="rhythm-symbol">TI-TI</div>
+                <div class="rhythm-label">eighth notes</div>
+            </div>
+            <div class="rhythm-item" data-rhythm="ti" draggable="false">
+                <div class="rhythm-symbol">TI</div>
+                <div class="rhythm-label">eighth note</div>
+            </div>
+            <div class="rhythm-item" data-rhythm="shh" draggable="false">
+                <div class="rhythm-symbol">SHH</div>
+                <div class="rhythm-label">rest</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { MusicNotation } from './shared/MusicNotation.js';
+        import { ComposerState } from './shared/ComposerState.js';
+        import { MusicStaffRenderer } from './shared/MusicStaffRenderer.js';
+        import { DragDropHandler } from './shared/DragDropHandler.js';
+        import { AudioPlayer } from './shared/AudioPlayer.js';
+        import { ComposerJSON } from './shared/ComposerJSON.js';
+        import { ComposerScreenshot } from './shared/ComposerScreenshot.js';
+        import { VersionDisplay } from './shared/VersionDisplay.js';
+
+        // Configuration for Pentatonic (8 notes)
+        const config = {
+            type: 'pentatonic',
+            pitches: ['do2', 'so', 'la', 'mi', 're', 'do', 'la1', 'so1'], // do2=Do', so1=So,, la1=La,
+            labels: {
+                'do2': "Do'",
+                'so': 'So',
+                'la': 'La',
+                'mi': 'Mi',
+                're': 'Re',
+                'do': 'Do',
+                'la1': 'La,',
+                'so1': 'So,'
+            },
+            noteFrequencies: {
+                'do2': 523.25,  // C5 (high do)
+                'so': 392.00,   // G4
+                'la': 440.00,   // A4
+                'mi': 329.63,   // E4
+                're': 293.66,   // D4
+                'do': 261.63,   // C4
+                'la1': 220.00,  // A3 (low la)
+                'so1': 196.00   // G3 (low so)
+            }
+        };
+
+        // Initialize modules
+        const canvas = document.getElementById('staffCanvas');
+        const state = new ComposerState(16);
+        const renderer = new MusicStaffRenderer(canvas, config);
+
+        // Custom drag handler with split eighth note support
+        const dragHandler = new DragDropHandler(canvas, state, renderer, {
+            onCompositionChange: () => {
+                renderer.drawStaff(state.composition, state);
+                updateBeatCounter();
+            },
+            onLongPress: (index, event) => {
+                const item = state.composition[index];
+
+                // For eighth notes, detect which half was pressed
+                if (item.rhythm === 'ti-ti') {
+                    const canvasRect = canvas.getBoundingClientRect();
+                    const clickX = event.clientX - canvasRect.left;
+                    const noteSpacing = 18 * renderer.getScale();
+                    const relativeX = clickX - item.x;
+
+                    // Determine if editing second note
+                    const editingSecondNote = relativeX > 0;
+
+                    if (editingSecondNote && item.pitch2) {
+                        // Allow repositioning with pitch2 constraint
+                        item.editPitch2 = true;
+                    }
+                }
+            }
+        });
+
+        const audioPlayer = new AudioPlayer();
+        const screenshot = new ComposerScreenshot(canvas);
+
+        // Detect parent resolution
+        try {
+            if (window.parent && window.parent !== window) {
+                const parentBody = window.parent.document.body;
+                if (parentBody.classList.contains('resolution-4k')) {
+                    document.body.classList.add('resolution-4k');
+                }
+            }
+        } catch (e) { }
+
+        // Override addToComposition to handle split eighth notes with step constraint
+        const originalAddToComposition = dragHandler.addToComposition.bind(dragHandler);
+        dragHandler.addToComposition = function (rhythm, event, canvasRect) {
+            originalAddToComposition(rhythm, event, canvasRect);
+
+            // For eighth notes, set pitch2 to same as pitch initially
+            if (rhythm === 'ti-ti') {
+                const lastNote = state.composition[state.composition.length - 1];
+                lastNote.pitch2 = lastNote.pitch;
+            }
+        };
+
+        // Override updateRepositionedNote for split eighth note editing
+        const originalUpdateRepositionedNote = dragHandler.updateRepositionedNote.bind(dragHandler);
+        dragHandler.updateRepositionedNote = function (index, event, canvasRect) {
+            const item = state.composition[index];
+            const canvasY = event.clientY - canvasRect.top;
+            const positions = renderer.getStaffPositions();
+
+            if (item.rhythm === 'ti-ti' && state.editSecondNote) {
+                // Editing SECOND note only - just change pitch2, no constraints!
+                const targetPitch = MusicNotation.snapToPitch(canvasY, positions);
+                item.pitch2 = targetPitch;
+
+                // Don't move the note position or change pitch1
+                delete item.hidden;
+            } else if (item.rhythm === 'ti-ti' && !state.editSecondNote) {
+                // Editing FIRST note - reposition whole pair but keep pitch2 independent
+                const savedPitch2 = item.pitch2; // Save second note's pitch
+                originalUpdateRepositionedNote(index, event, canvasRect);
+                item.pitch2 = savedPitch2 || item.pitch; // Restore or initialize
+            } else {
+                // Not a ti-ti note, normal repositioning
+                originalUpdateRepositionedNote(index, event, canvasRect);
+            }
+
+            // Clear the flag
+            delete state.editSecondNote;
+
+            renderer.drawStaff(state.composition, state);
+        };
+
+        // TaskModule interface
+        window.TaskModule = {
+            context: null,
+            init(context) {
+                this.context = context;
+                if (context.existingResponse) {
+                    try {
+                        const saved = JSON.parse(context.existingResponse);
+                        const data = ComposerJSON.fromJSON(saved);
+                        if (data) {
+                            state.composition = data.composition;
+                            state.tempo = data.tempo;
+                            state.currentMeter = data.meter;
+                            renderer.drawStaff(state.composition, state);
+                            updateBeatCounter();
+                        }
+                    } catch (e) { }
+                }
+            },
+            getResponse() {
+                return ComposerJSON.toJSON(state.composition, state, config);
+            },
+            isComplete() { return true; },
+            reset() { clearStaff(); }
+        };
+
+        // Initialize
+        dragHandler.setup();
+        renderer.drawStaff(state.composition, state);
+        updateBeatCounter();
+        VersionDisplay.show(); // Show version
+
+        // UI Functions
+        window.clearStaff = () => {
+            state.clear();
+            renderer.drawStaff(state.composition, state);
+            updateBeatCounter();
+        };
+
+        window.sortComposition = () => {
+            state.isSorted = !state.isSorted;
+            if (state.isSorted) state.sort();
+            renderer.drawStaff(state.composition, state);
+            event.target.textContent = state.isSorted ? '📊 Unsort' : '📊 Sort';
+        };
+
+        window.toggleNoteNames = () => {
+            state.showNoteNames = !state.showNoteNames;
+            renderer.drawStaff(state.composition, state);
+        };
+
+        window.setMeter = (meter) => {
+            state.currentMeter = meter;
+            document.querySelectorAll('.meter-btn').forEach(btn => {
+                btn.classList.toggle('active', parseInt(btn.dataset.meter) === meter);
+            });
+            renderer.drawStaff(state.composition, state);
+        };
+
+        window.updateTempo = (value) => {
+            state.tempo = parseInt(value);
+            document.getElementById('tempoValue').textContent = value;
+        };
+
+        function updateBeatCounter() {
+            const beats = state.getTotalBeats();
+            document.getElementById('beatCounter').textContent = `Beats: ${beats}/16`;
+        }
+
+        window.playComposition = () => {
+            if (state.composition.length === 0) return;
+            audioPlayer.playComposition(state.composition, state.tempo, config.noteFrequencies);
+        };
+
+        window.finishComposition = async () => {
+            const json = ComposerJSON.toJSON(state.composition, state, config);
+            try {
+                await navigator.clipboard.writeText(json);
+                alert('Composition copied to clipboard!');
+            } catch (e) { }
+
+            // Notify parent if in iframe
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'taskmodule:response',
+                    value: json,
+                    isComplete: true
+                }, '*');
+            }
+        };
+
+        window.importFromClipboard = async () => {
+            try {
+                const text = await navigator.clipboard.readText();
+                const data = ComposerJSON.fromJSON(text);
+                if (data) {
+                    state.composition = data.composition;
+                    state.tempo = data.tempo;
+                    state.currentMeter = data.meter;
+                    renderer.drawStaff(state.composition, state);
+                    updateBeatCounter();
+                    alert('Composition imported!');
+                }
+            } catch (e) {
+                alert('Failed to import from clipboard');
+            }
+        };
+
+        window.photoAndFinish = async () => {
+            // Get student name from context
+            const studentName = ComposerScreenshot.getStudentName(window.TaskModule.context);
+
+            // Capture and download screenshot
+            await screenshot.captureAndDownload(studentName);
+
+            // Also finish the composition (notify parent)
+            const json = ComposerJSON.toJSON(state.composition, state, config);
+
+            // Notify parent if in iframe
+            if (window.parent && window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'taskmodule:response',
+                    value: json,
+                    isComplete: true
+                }, '*');
+            }
+        };
+    </script>
+</body>
+
+</html>
+```

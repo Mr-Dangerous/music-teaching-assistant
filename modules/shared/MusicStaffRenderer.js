@@ -49,6 +49,32 @@ export class MusicStaffRenderer {
             positions.do = canvasHeight / 2 + lineSpacing;
             positions.la = positions.so - 20 * scale;
             positions.re = (positions.mi + positions.do) / 2;
+        } else if (pitches.length === 8) {
+            // Pentatonic: 5 lines (traditional staff)
+            const centerY = canvasHeight / 2;
+            positions.so = centerY - (lineSpacing * 2);      // Top line
+            positions.mi = centerY - lineSpacing;            // 2nd line
+            positions.do = centerY;                          // Middle line (3rd)
+            positions.la1 = centerY + lineSpacing;           // 4th line (low la)
+
+            // Spaces
+            positions.la = positions.so - lineSpacing / 2;   // Space above So
+            positions.do2 = positions.la - lineSpacing / 2;  // Space above la (high do)
+            positions.re = positions.mi + lineSpacing / 2;   // Space between Mi and Do
+            positions.so1 = positions.la1 + lineSpacing / 2; // Space below La, (low so)
+        } else if (pitches.length === 8) {
+            // Pentatonic: 5 lines (traditional staff)
+            const centerY = canvasHeight / 2;
+            positions.so = centerY - (lineSpacing * 2);      // Top line
+            positions.mi = centerY - lineSpacing;            // 2nd line
+            positions.do = centerY;                          // Middle line (3rd)
+            positions.la1 = centerY + lineSpacing;           // 4th line (low la)
+
+            // Spaces
+            positions.la = positions.so - lineSpacing / 2;   // Space above So
+            positions.do2 = positions.la - lineSpacing / 2;  // Space above la (high do)
+            positions.re = positions.mi + lineSpacing / 2;   // Space between Mi and Do
+            positions.so1 = positions.la1 + lineSpacing / 2; // Space below La, (low so)
         }
 
         return positions;
@@ -71,7 +97,17 @@ export class MusicStaffRenderer {
         ctx.strokeStyle = '#2c3e50';
         ctx.lineWidth = 3 * scale;
 
-        const lines = ['so', 'mi', 'do'].filter(p => positions[p] && this.config.pitches.includes(p));
+        // Determine which pitches have lines
+        let linePitches;
+        if (this.config.pitches.length === 3) {
+            linePitches = ['so', 'mi'];
+        } else if (this.config.pitches.length === 5) {
+            linePitches = ['so', 'mi', 'do'];
+        } else if (this.config.pitches.length === 8) {
+            linePitches = ['so', 'mi', 'do', 'la1']; // 4 lines
+        }
+
+        const lines = linePitches.filter(p => positions[p] && this.config.pitches.includes(p));
         lines.forEach(pitch => {
             const y = positions[pitch];
             ctx.beginPath();
@@ -159,6 +195,8 @@ export class MusicStaffRenderer {
         } else if (item.rhythm === 'ti-ti') {
             const y2 = item.pitch2 ? positions[item.pitch2] : y;
             this.drawEighthNotes(ctx, x, y, y2, item.pitch, item.pitch2, state.showNoteNames, scale);
+        } else if (item.rhythm === 'ti') {
+            this.drawSingleEighthNote(ctx, x, y, item.pitch, state.showNoteNames, scale);
         } else if (item.rhythm === 'shh') {
             this.drawRest(ctx, x, y, scale);
         }
@@ -179,7 +217,7 @@ export class MusicStaffRenderer {
         ctx.lineWidth = 2.5 * scale;
         ctx.beginPath();
         ctx.moveTo(x + noteRadius, y);
-        ctx.lineTo(x + noteRadius, y - (40 * scale));
+        ctx.lineTo(x + noteRadius, y - (65 * scale));
         ctx.stroke();
 
         if (showNames && pitch) {
@@ -214,8 +252,8 @@ export class MusicStaffRenderer {
         ctx.strokeStyle = '#2c3e50';
         ctx.lineWidth = 2.5 * scale;
 
-        const stem1Top = y1 - (40 * scale);
-        const stem2Top = y2 - (40 * scale);
+        const stem1Top = y1 - (65 * scale);
+        const stem2Top = y2 - (65 * scale);
 
         ctx.beginPath();
         ctx.moveTo(x - noteSpacing + noteRadius, y1);
@@ -241,6 +279,47 @@ export class MusicStaffRenderer {
             ctx.textBaseline = 'middle';
             if (pitch1) ctx.fillText(pitch1.substring(0, 2).toUpperCase(), x - noteSpacing, y1);
             if (pitch2) ctx.fillText(pitch2.substring(0, 2).toUpperCase(), x + noteSpacing, y2);
+        }
+    }
+
+    /**
+     * Draw single eighth note (with flag)
+     */
+    drawSingleEighthNote(ctx, x, y, pitch, showNames, scale) {
+        const noteRadius = 16 * scale;
+
+        // Draw note head
+        ctx.fillStyle = '#2c3e50';
+        ctx.beginPath();
+        ctx.ellipse(x, y, noteRadius * 1.2, noteRadius, -Math.PI / 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw stem
+        ctx.strokeStyle = '#2c3e50';
+        ctx.lineWidth = 2.5 * scale;
+        const stemTop = y - (65 * scale);
+        ctx.beginPath();
+        ctx.moveTo(x + noteRadius, y);
+        ctx.lineTo(x + noteRadius, stemTop);
+        ctx.stroke();
+
+        // Draw flag (curved)
+        ctx.beginPath();
+        ctx.moveTo(x + noteRadius, stemTop);
+        ctx.bezierCurveTo(
+            x + noteRadius + (20 * scale), stemTop,
+            x + noteRadius + (25 * scale), stemTop + (15 * scale),
+            x + noteRadius, stemTop + (20 * scale)
+        );
+        ctx.lineWidth = 3 * scale;
+        ctx.stroke();
+
+        if (showNames && pitch) {
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${12 * scale}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(pitch.toUpperCase(), x, y);
         }
     }
 
