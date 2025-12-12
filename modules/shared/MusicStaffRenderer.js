@@ -97,7 +97,7 @@ export class MusicStaffRenderer {
         } else if (this.config.pitches.length === 5) {
             linePitches = ['so', 'mi', 'do'];
         } else if (this.config.pitches.length === 8) {
-            linePitches = ['la', 'so', 'mi', 'do', 'la1']; // 5 lines: La (top), So, Mi, Do, La1 (bottom)
+            linePitches = ['la1', 'do', 'mi', 'so']; // 4 lines
         }
 
         const lines = linePitches.filter(p => positions[p] && this.config.pitches.includes(p));
