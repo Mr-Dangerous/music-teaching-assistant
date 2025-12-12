@@ -250,19 +250,19 @@
 
         <div class="rhythm-palette">
             <div class="rhythm-item" data-rhythm="ta" draggable="false">
-                <div class="rhythm-symbol">TA</div>
+                <canvas class="rhythm-preview" width="60" height="80"></canvas>
                 <div class="rhythm-label">quarter note</div>
             </div>
             <div class="rhythm-item" data-rhythm="ti-ti" draggable="false">
-                <div class="rhythm-symbol">TI-TI</div>
+                <canvas class="rhythm-preview" width="80" height="80"></canvas>
                 <div class="rhythm-label">eighth notes</div>
             </div>
             <div class="rhythm-item" data-rhythm="ti" draggable="false">
-                <div class="rhythm-symbol">TI</div>
+                <canvas class="rhythm-preview" width="60" height="80"></canvas>
                 <div class="rhythm-label">eighth note</div>
             </div>
             <div class="rhythm-item" data-rhythm="shh" draggable="false">
-                <div class="rhythm-symbol">SHH</div>
+                <canvas class="rhythm-preview" width="40" height="80"></canvas>
                 <div class="rhythm-label">rest</div>
             </div>
         </div>
@@ -422,6 +422,32 @@
         renderer.drawStaff(state.composition, state);
         updateBeatCounter();
         VersionDisplay.show(); // Show version
+
+        // Draw rhythm previews in palette
+        function drawRhythmPreviews() {
+            const previews = document.querySelectorAll('.rhythm-preview');
+            previews.forEach(canvas => {
+                const ctx = canvas.getContext('2d');
+                const rhythm = canvas.parentElement.dataset.rhythm;
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+
+                if (rhythm === 'ta') {
+                    // Quarter note
+                    renderer.drawQuarterNote(ctx, centerX, centerY, null, false, 0.8);
+                } else if (rhythm === 'ti-ti') {
+                    // Beamed eighths
+                    renderer.drawEighthNotes(ctx, centerX, centerY, centerY, null, null, false, 0.7);
+                } else if (rhythm === 'ti') {
+                    // Single eighth with flag
+                    renderer.drawSingleEighthNote(ctx, centerX, centerY, null, false, 0.8);
+                } else if (rhythm === 'shh') {
+                    // Rest
+                    renderer.drawRest(ctx, centerX, centerY, 0.6);
+                }
+            });
+        }
+        drawRhythmPreviews();
 
         // UI Functions
         window.clearStaff = () => {

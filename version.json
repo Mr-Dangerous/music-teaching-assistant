@@ -1,5 +1,5 @@
 {
-  "version": "0.1.0",
-  "lastUpdated": "2025-12-11",
-  "description": "Initial modular architecture release"
+  "version": "0.2.0",
+  "lastUpdated": "2025-12-12",
+  "description": "Added pentatonic composer with 8 notes and visual palette"
 }
