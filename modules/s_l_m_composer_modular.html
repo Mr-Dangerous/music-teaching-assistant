@@ -266,6 +266,7 @@
         import { AudioPlayer } from './shared/AudioPlayer.js';
         import { ComposerJSON } from './shared/ComposerJSON.js';
         import { ComposerScreenshot } from './shared/ComposerScreenshot.js';
+        import { VersionDisplay } from './shared/VersionDisplay.js';
 
         // Configuration for So-La-Mi
         const config = {
@@ -331,6 +332,7 @@
         dragHandler.setup();
         renderer.drawStaff(state.composition, state);
         updateBeatCounter();
+        VersionDisplay.show(); // Show version
 
         // UI Functions
         window.clearStaff = () => {
