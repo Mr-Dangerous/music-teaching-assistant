@@ -237,6 +237,17 @@
                 <button class="meter-btn active" data-meter="4" onclick="setMeter(4)">4</button>
             </div>
 
+            <div style="display: flex; gap: 5px; align-items: center;">
+                <span style="font-weight: bold;">Do =</span>
+                <select id="keySelect" onchange="setKey(this.value)"
+                    style="font-size: 16px; padding: 5px; border-radius: 5px;">
+                    <option value="C">C</option>
+                    <option value="F">F</option>
+                    <option value="Bb">B♭</option>
+                    <option value="Eb">E♭</option>
+                </select>
+            </div>
+
             <div class="beat-counter" id="beatCounter">Beats: 0/16</div>
         </div>
 
@@ -303,6 +314,16 @@
                 'so1': 196.00   // G3 (low so)
             }
         };
+
+        // Key transposition mappings (Do = different pitches)
+        const keyFrequencies = {
+            'C': { 'do2': 523.25, 'so': 392.00, 'la': 440.00, 'mi': 329.63, 're': 293.66, 'do': 261.63, 'la1': 220.00, 'so1': 196.00 },
+            'F': { 'do2': 698.46, 'so': 523.25, 'la': 587.33, 'mi': 440.00, 're': 392.00, 'do': 349.23, 'la1': 293.66, 'so1': 261.63 },
+            'Bb': { 'do2': 932.33, 'so': 698.46, 'la': 783.99, 'mi': 587.33, 're': 523.25, 'do': 466.16, 'la1': 392.00, 'so1': 349.23 },
+            'Eb': { 'do2': 622.25, 'so': 466.16, 'la': 523.25, 'mi': 392.00, 're': 349.23, 'do': 311.13, 'la1': 261.63, 'so1': 233.08 }
+        };
+
+        let currentKey = 'C';
 
         // Initialize modules
         const canvas = document.getElementById('staffCanvas');
@@ -474,6 +495,12 @@
                 btn.classList.toggle('active', parseInt(btn.dataset.meter) === meter);
             });
             renderer.drawStaff(state.composition, state);
+        };
+
+        window.setKey = (key) => {
+            currentKey = key;
+            // Update note frequencies based on selected key
+            config.noteFrequencies = keyFrequencies[key];
         };
 
         window.updateTempo = (value) => {
