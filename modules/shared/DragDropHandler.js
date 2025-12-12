@@ -44,9 +44,9 @@ export class DragDropHandler {
             e.preventDefault(); // Prevent context menu on smartboard
         }, { passive: false });
         this.canvas.addEventListener('mouseup', () => this.clearLongPress());
-        this.canvas.addEventListener('mousemove', () => this.clearLongPress());
+        this.canvas.addEventListener('mousemove', (e) => this.checkLongPressMove(e));
         this.canvas.addEventListener('touchend', () => this.clearLongPress());
-        this.canvas.addEventListener('touchmove', () => this.clearLongPress());
+        this.canvas.addEventListener('touchmove', (e) => this.checkLongPressMove(e.touches[0]), { passive: true });
 
         // Prevent context menu (right-click menu) on canvas
         this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
@@ -231,10 +231,29 @@ export class DragDropHandler {
         if (result.index !== -1) {
             this.state.longPressTarget = result.index;
             this.state.editSecondNote = result.editSecondNote; // Store which half
+            this.state.longPressStartX = event.clientX; // Track starting position
+            this.state.longPressStartY = event.clientY;
             this.state.longPressTimer = setTimeout(() => {
                 this.startRepositioning(this.state.longPressTarget, event);
                 if (navigator.vibrate) navigator.vibrate(50);
             }, 800);
+        }
+    }
+
+    /**
+     * Check if movement should cancel long press
+     */
+    checkLongPressMove(event) {
+        if (this.state.longPressTimer && this.state.longPressStartX !== undefined) {
+            // Calculate distance moved
+            const dx = event.clientX - this.state.longPressStartX;
+            const dy = event.clientY - this.state.longPressStartY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // Cancel long press if moved more than 10 pixels
+            if (distance > 10) {
+                this.clearLongPress();
+            }
         }
     }
 
