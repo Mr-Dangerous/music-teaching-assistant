@@ -61,13 +61,17 @@ export class MusicStaffRenderer {
             positions.do = centerY + spacing;            // Line 2 - Do
             positions.mi = centerY;                      // Line 3 (middle) - Mi
             positions.so = centerY - spacing;            // Line 4 - So
-            positions.ti = centerY - (spacing * 2);      // Line 5 (top) - Ti (empty for now)
+            // Line 5 is drawn but has no note position (reserved for future use)
+            const line5Y = centerY - (spacing * 2);      // Calculate for drawing only
 
             // Spaces
             positions.so1 = centerY + (spacing * 2.5);         // Space below staff - So,
             positions.re = (positions.do + positions.mi) / 2;  // Space 2 (between Do and Mi) - Re
-            positions.la = (positions.so + (centerY - spacing * 2)) / 2; // Space 4 (between So and line 5) - La
-            positions.do2 = centerY - (spacing * 2.5);         // Space above staff - Do'
+            positions.la = (positions.so + line5Y) / 2;        // Space 4 (between So and line 5) - La
+            positions.do2 = line5Y - (spacing / 2);            // Space above line 5 - Do'
+
+            // Store line5Y for drawing (but not as a note position)
+            this.line5Y = line5Y;
         }
 
         return positions;
