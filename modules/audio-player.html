@@ -195,12 +195,18 @@
             }
 
             async handleInit(data) {
-                console.log('Audio player initialized with context:', data);
+                console.log('=== Audio player initialized ===');
+                console.log('Full context object:', JSON.stringify(data, null, 2));
 
                 // Store context from parent
                 this.currentStudentId = data.studentId || null;
                 this.currentStudentName = data.studentName || null;
                 this.currentClass = data.class || null;
+
+                console.log('Extracted context:');
+                console.log('  Student ID:', this.currentStudentId);
+                console.log('  Student Name:', this.currentStudentName);
+                console.log('  Class:', this.currentClass);
 
                 // Get folder handle from parent app
                 if (window.parent.app && window.parent.app.fileManager) {
@@ -261,21 +267,46 @@
                 let title = '';
                 let subtitle = '';
 
+                console.log('--- Audio Player Context ---');
+                console.log('Student Name:', this.currentStudentName);
+                console.log('Student ID:', this.currentStudentId);
+                console.log('Class:', this.currentClass);
+                console.log('Total recordings loaded:', this.recordings.length);
+                console.log('Recording names:', this.recordings.map(r => r.name));
+
                 // Case 1: Student is selected - show only that student's recordings
                 if (this.currentStudentName) {
                     const sanitizedName = this.currentStudentName.toLowerCase().replace(/\s+/g, '');
-                    filteredRecordings = this.recordings.filter(r => r.studentName === sanitizedName);
+                    console.log('Filtering for student:', this.currentStudentName);
+                    console.log('Sanitized student name:', sanitizedName);
+
+                    filteredRecordings = this.recordings.filter(r => {
+                        // Try multiple matching strategies
+                        const matches = r.studentName === sanitizedName ||
+                            r.studentName.toLowerCase() === sanitizedName ||
+                            r.name.toLowerCase().startsWith(sanitizedName);
+
+                        console.log(`  Recording: ${r.name}`);
+                        console.log(`    Extracted studentName: "${r.studentName}"`);
+                        console.log(`    Matches: ${matches}`);
+
+                        return matches;
+                    });
 
                     title = this.currentStudentName;
                     subtitle = `${filteredRecordings.length} recording(s)`;
                 }
                 // Case 2: Class is selected but no student - show class-wide recordings (allstudents)
                 else if (this.currentClass) {
+                    console.log('Filtering for class recordings');
                     // Class recordings are named like: allstudents_classname_timestamp.webm
                     const sanitizedClass = this.currentClass.toLowerCase().replace(/\s+/g, '');
+                    console.log('Sanitized class:', sanitizedClass);
+
                     filteredRecordings = this.recordings.filter(r => {
-                        // Check if it's an allstudents recording and matches the class
-                        return r.studentName === 'allstudents' && r.name.toLowerCase().includes(sanitizedClass);
+                        const matches = r.studentName === 'allstudents' && r.name.toLowerCase().includes(sanitizedClass);
+                        console.log(`  Checking ${r.name}: studentName=${r.studentName}, matches=${matches}`);
+                        return matches;
                     });
 
                     title = `${this.currentClass} - Class Recordings`;
@@ -283,10 +314,13 @@
                 }
                 // Case 3: No context - show nothing
                 else {
+                    console.log('No context available');
                     filteredRecordings = [];
                     title = 'No Context Selected';
                     subtitle = 'Select a student or class to view recordings';
                 }
+
+                console.log('Filtered recordings:', filteredRecordings.length);
 
                 // Update header
                 document.getElementById('content-title').textContent = title;
