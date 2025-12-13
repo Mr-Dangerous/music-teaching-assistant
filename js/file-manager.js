@@ -9,6 +9,9 @@ class FileManager {
     this.tasksFileHandle = null;
     this.resultsFileHandle = null;
 
+    // Folder handle for directory-based loading
+    this.folderHandle = null;
+
     // File names
     this.studentsFileName = '';
     this.tasksFileName = '';
@@ -16,6 +19,7 @@ class FileManager {
 
     this.hasUnsavedChanges = false;
     this.supportsFileSystemAccess = 'showOpenFilePicker' in window;
+    this.supportsFolderPicker = 'showDirectoryPicker' in window;
 
     // Try to load remembered file handles from localStorage
     this.loadRememberedHandles();
@@ -31,10 +35,23 @@ class FileManager {
 
   /**
    * Load all three CSV files: students.csv, tasks.csv, and results.csv
+   * Try folder loading first, then fall back to individual file selection
    * @returns {Promise<Object>} - Object with studentsContent, tasksContent, and resultsContent
    */
   async loadFiles() {
-    // Try to load from remembered handles first
+    // Try folder-based loading first
+    if (this.supportsFolderPicker) {
+      try {
+        const folderData = await this.loadFilesFromFolder();
+        if (folderData) {
+          return folderData;
+        }
+      } catch (error) {
+        console.log('Folder loading failed or cancelled, falling back to file selection:', error.message);
+      }
+    }
+
+    // Fall back to original approach: try remembered handles, then batch selection, then individual
     let studentsContent = null;
     let tasksContent = null;
     let resultsContent = null;
@@ -109,6 +126,88 @@ class FileManager {
       tasksContent,
       resultsContent
     };
+  }
+
+  /**
+   * Load all three CSV files from a selected folder
+   * @returns {Promise<Object|null>} - Object with studentsContent, tasksContent, and resultsContent, or null if failed
+   */
+  async loadFilesFromFolder() {
+    try {
+      // Prompt user to select folder
+      const folderHandle = await window.showDirectoryPicker({
+        mode: 'readwrite', // Request write permission for future video saves
+        startIn: 'documents'
+      });
+
+      this.folderHandle = folderHandle;
+
+      // Look for the three CSV files in the folder
+      const requiredFiles = {
+        students: null,
+        tasks: null,
+        results: null
+      };
+
+      // Iterate through folder contents
+      for await (const entry of folderHandle.values()) {
+        if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.csv')) {
+          const fileName = entry.name.toLowerCase();
+
+          if (fileName.includes('student')) {
+            requiredFiles.students = entry;
+          } else if (fileName.includes('task')) {
+            requiredFiles.tasks = entry;
+          } else if (fileName.includes('result')) {
+            requiredFiles.results = entry;
+          }
+        }
+      }
+
+      // Check if all required files were found
+      if (!requiredFiles.students || !requiredFiles.tasks || !requiredFiles.results) {
+        const missing = [];
+        if (!requiredFiles.students) missing.push('students.csv');
+        if (!requiredFiles.tasks) missing.push('tasks.csv');
+        if (!requiredFiles.results) missing.push('results.csv');
+
+        throw new Error(`Missing files in folder: ${missing.join(', ')}`);
+      }
+
+      // Read all three files
+      const studentsFile = await requiredFiles.students.getFile();
+      const tasksFile = await requiredFiles.tasks.getFile();
+      const resultsFile = await requiredFiles.results.getFile();
+
+      const studentsContent = await studentsFile.text();
+      const tasksContent = await tasksFile.text();
+      const resultsContent = await resultsFile.text();
+
+      // Store file handles for future saves
+      this.studentsFileHandle = requiredFiles.students;
+      this.tasksFileHandle = requiredFiles.tasks;
+      this.resultsFileHandle = requiredFiles.results;
+
+      this.studentsFileName = requiredFiles.students.name;
+      this.tasksFileName = requiredFiles.tasks.name;
+      this.resultsFileName = requiredFiles.results.name;
+
+      console.log(`✓ Loaded files from folder: ${folderHandle.name}`);
+
+      // Remember handles
+      this.rememberHandles();
+
+      return {
+        studentsContent,
+        tasksContent,
+        resultsContent
+      };
+    } catch (error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Folder selection cancelled');
+      }
+      throw error;
+    }
   }
 
   /**
@@ -471,6 +570,124 @@ class FileManager {
       tasks: this.tasksFileName,
       results: this.resultsFileName
     };
+  }
+
+  /**
+   * Get the folder handle for saving additional files (e.g., video recordings)
+   * @returns {FileSystemDirectoryHandle|null}
+   */
+  getFolderHandle() {
+    return this.folderHandle;
+  }
+
+  /**
+   * Save a video or other file to the selected folder
+   * @param {string} fileName - Name of the file to save
+   * @param {Blob} blob - File data as a Blob
+   * @returns {Promise<void>}
+   */
+  async saveFileToFolder(fileName, blob) {
+    if (!this.folderHandle) {
+      throw new Error('No folder selected. Please load files from a folder first.');
+    }
+
+    try {
+      // Request write permission if needed
+      const permission = await this.folderHandle.queryPermission({ mode: 'readwrite' });
+
+      if (permission !== 'granted') {
+        const newPermission = await this.folderHandle.requestPermission({ mode: 'readwrite' });
+        if (newPermission !== 'granted') {
+          throw new Error('Permission to write to folder denied');
+        }
+      }
+
+      // Create file in folder
+      const fileHandle = await this.folderHandle.getFileHandle(fileName, { create: true });
+
+      // Write data
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+
+      console.log(`✓ Saved ${fileName} to folder`);
+    } catch (error) {
+      throw new Error(`Failed to save ${fileName}: ${error.message}`);
+    }
+  }
+
+  /**
+   * Create a subfolder in the data folder
+   * @param {string} folderName - Name of subfolder to create
+   * @returns {Promise<FileSystemDirectoryHandle>}
+   */
+  async createSubfolder(folderName) {
+    if (!this.folderHandle) {
+      throw new Error('No folder selected. Please load files from a folder first.');
+    }
+
+    try {
+      const permission = await this.folderHandle.queryPermission({ mode: 'readwrite' });
+
+      if (permission !== 'granted') {
+        const newPermission = await this.folderHandle.requestPermission({ mode: 'readwrite' });
+        if (newPermission !== 'granted') {
+          throw new Error('Permission to write to folder denied');
+        }
+      }
+
+      // Create or get existing subfolder
+      const subfolderHandle = await this.folderHandle.getDirectoryHandle(folderName, { create: true });
+      console.log(`✓ Subfolder ready: ${folderName}`);
+
+      return subfolderHandle;
+    } catch (error) {
+      throw new Error(`Failed to create subfolder ${folderName}: ${error.message}`);
+    }
+  }
+
+  /**
+   * Get handle to an existing subfolder
+   * @param {string} folderName - Name of subfolder
+   * @returns {Promise<FileSystemDirectoryHandle>}
+   */
+  async getSubfolderHandle(folderName) {
+    if (!this.folderHandle) {
+      throw new Error('No folder selected. Please load files from a folder first.');
+    }
+
+    try {
+      const subfolderHandle = await this.folderHandle.getDirectoryHandle(folderName, { create: false });
+      return subfolderHandle;
+    } catch (error) {
+      throw new Error(`Subfolder ${folderName} not found: ${error.message}`);
+    }
+  }
+
+  /**
+   * Save a file to a subfolder
+   * @param {string} subfolderName - Subfolder name
+   * @param {string} fileName - File name
+   * @param {Blob} blob - File data
+   * @returns {Promise<void>}
+   */
+  async saveFileToSubfolder(subfolderName, fileName, blob) {
+    // Ensure subfolder exists
+    const subfolderHandle = await this.createSubfolder(subfolderName);
+
+    try {
+      // Create file in subfolder
+      const fileHandle = await subfolderHandle.getFileHandle(fileName, { create: true });
+
+      // Write data
+      const writable = await fileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+
+      console.log(`✓ Saved ${fileName} to ${subfolderName}/`);
+    } catch (error) {
+      throw new Error(`Failed to save ${fileName} to subfolder: ${error.message}`);
+    }
   }
 
   /**

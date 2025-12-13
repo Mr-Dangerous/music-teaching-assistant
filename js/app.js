@@ -7,6 +7,7 @@ class TeachingAssistantApp {
     this.fileManager = new FileManager();
     // this.responseHandler = new ResponseHandler(); // Legacy - all tasks now use custom modules
     this.moduleLoader = new ModuleLoader();
+    this.audioManager = new AudioManager(this.fileManager, this.csvHandler);
 
     // New data structure: separate students and results
     this.students = [];        // From students.csv
@@ -145,9 +146,15 @@ class TeachingAssistantApp {
 
     // Back buttons
     const backToClassesBtn = document.getElementById('back-to-classes-btn');
-    if (backToClassesBtn) {
-      backToClassesBtn.addEventListener('click', () => this.showClassScreen());
-    }
+    // Back to class selection
+    document.getElementById('back-to-classes-btn').addEventListener('click', () => {
+      this.showClassScreen();
+    });
+
+    // Recording button toggle
+    document.getElementById('recording-btn').addEventListener('click', async () => {
+      await this.toggleRecording();
+    });
 
     const backToStudentsBtn = document.getElementById('back-to-students-btn');
     if (backToStudentsBtn) {
@@ -245,7 +252,9 @@ class TeachingAssistantApp {
       if (taskSelector && this.tasks.length > 0) {
         taskSelector.style.display = 'inline-block';
       }
-
+      // Show header elements after file load
+      document.getElementById('recording-btn').style.display = 'block';
+      document.getElementById('view-results-btn').style.display = 'block';
       const viewResultsBtn = document.getElementById('view-results-btn');
       if (viewResultsBtn) {
         viewResultsBtn.style.display = 'inline-flex';
@@ -1555,6 +1564,37 @@ class TeachingAssistantApp {
       this.showNoTask(`Failed to load module: ${err.message}`);
     });
   }
+
+  /**
+   * Toggle audio recording on/off
+   */
+  async toggleRecording() {
+    const recordingBtn = document.getElementById('recording-btn');
+
+    try {
+      if (this.audioManager.getIsRecording()) {
+        // Stop recording
+        await this.audioManager.stopRecording();
+        recordingBtn.classList.remove('recording');
+        this.showNotification('Recording stopped and saved', 'success');
+      } else {
+        // Update context before starting
+        this.audioManager.setContext(
+          this.selectedStudent,
+          this.selectedClass
+        );
+
+        // Start recording
+        await this.audioManager.startRecording();
+        recordingBtn.classList.add('recording');
+        this.showNotification('Recording started', 'info');
+      }
+    } catch (error) {
+      console.error('Recording error:', error);
+      this.showNotification(`Recording error: ${error.message}`, 'error');
+      recordingBtn.classList.remove('recording');
+    }
+  }
 }
 
 // Initialize app when page loads
@@ -1562,7 +1602,9 @@ let app;
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
     app = new TeachingAssistantApp();
+    window.app = app; // Expose globally for modules
   });
 } else {
   app = new TeachingAssistantApp();
+  window.app = app; // Expose globally for modules
 }
