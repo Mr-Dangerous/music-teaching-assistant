@@ -846,6 +846,7 @@ class TeachingAssistantApp {
       taskId: taskData.task_id,
       grade: student.grade,
       studentName: student.name,
+      class: student.class,
       question: taskData.question,
       existingResponse: existingResult ? existingResult.response : ''
     };

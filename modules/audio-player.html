@@ -171,9 +171,13 @@
                 this.folderHandle = null;
                 this.audioFolderHandle = null;
                 this.recordings = [];
-                this.students = [];
                 this.selectedStudent = null;
                 this.currentRecordingIndex = -1;
+
+                // Context from parent
+                this.currentStudentId = null;
+                this.currentStudentName = null;
+                this.currentClass = null;
 
                 this.init();
             }
@@ -192,6 +196,11 @@
 
             async handleInit(data) {
                 console.log('Audio player initialized with context:', data);
+
+                // Store context from parent
+                this.currentStudentId = data.studentId || null;
+                this.currentStudentName = data.studentName || null;
+                this.currentClass = data.class || null;
 
                 // Get folder handle from parent app
                 if (window.parent.app && window.parent.app.fileManager) {
@@ -237,17 +246,54 @@
 
                     console.log(`Successfully loaded ${this.recordings.length} recordings`);
 
-                    // Update header and display all recordings
-                    document.getElementById('content-title').textContent = 'All Recordings';
-                    document.getElementById('content-subtitle').textContent =
-                        `${this.recordings.length} total recording(s)`;
-                    this.renderRecordingsList(this.recordings);
+                    // Filter and display based on context
+                    this.displayRecordingsForContext();
 
                 } catch (error) {
                     console.error('Error loading recordings:', error);
                     console.error('Error details:', error.message, error.stack);
                     this.showError(`Error loading recordings: ${error.message}. Check console for details.`);
                 }
+            }
+
+            displayRecordingsForContext() {
+                let filteredRecordings = [];
+                let title = '';
+                let subtitle = '';
+
+                // Case 1: Student is selected - show only that student's recordings
+                if (this.currentStudentName) {
+                    const sanitizedName = this.currentStudentName.toLowerCase().replace(/\s+/g, '');
+                    filteredRecordings = this.recordings.filter(r => r.studentName === sanitizedName);
+
+                    title = this.currentStudentName;
+                    subtitle = `${filteredRecordings.length} recording(s)`;
+                }
+                // Case 2: Class is selected but no student - show class-wide recordings (allstudents)
+                else if (this.currentClass) {
+                    // Class recordings are named like: allstudents_classname_timestamp.webm
+                    const sanitizedClass = this.currentClass.toLowerCase().replace(/\s+/g, '');
+                    filteredRecordings = this.recordings.filter(r => {
+                        // Check if it's an allstudents recording and matches the class
+                        return r.studentName === 'allstudents' && r.name.toLowerCase().includes(sanitizedClass);
+                    });
+
+                    title = `${this.currentClass} - Class Recordings`;
+                    subtitle = `${filteredRecordings.length} recording(s)`;
+                }
+                // Case 3: No context - show nothing
+                else {
+                    filteredRecordings = [];
+                    title = 'No Context Selected';
+                    subtitle = 'Select a student or class to view recordings';
+                }
+
+                // Update header
+                document.getElementById('content-title').textContent = title;
+                document.getElementById('content-subtitle').textContent = subtitle;
+
+                // Display the filtered recordings
+                this.renderRecordingsList(filteredRecordings);
             }
 
             isAudioFile(filename) {
