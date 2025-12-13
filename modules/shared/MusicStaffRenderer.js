@@ -180,18 +180,12 @@ export class MusicStaffRenderer {
     }
 
     /**
-     * Draw a single note
+     * Draw a single note item
      */
-    drawNote(ctx, item, index, positions, totalNotes, state, scale) {
-        // Calculate x position
-        let x;
-        if (state.isSorted) {
-            const usableWidth = this.canvas.width - (120 * scale);
-            const spacing = totalNotes > 0 ? usableWidth / totalNotes : usableWidth;
-            x = (60 * scale) + (spacing * index) + spacing / 2;
-        } else {
-            x = item.x;
-        }
+    drawNote(ctx, item, positions, state, scale, index, totalItems) {
+        const usableWidth = this.canvas.width - (120 * scale);
+        const itemWidth = usableWidth / totalItems;
+        const x = (60 * scale) + (itemWidth * index) + (itemWidth / 2);
 
         // Get y position
         const y = item.rhythm === 'shh' ?
@@ -202,30 +196,36 @@ export class MusicStaffRenderer {
         item.x = x;
         item.y = y;
 
+        // Get pitch names if available
+        const pitchName = state.showPitchNames && state.pitchNames ? state.pitchNames[item.pitch] : null;
+        const pitch2Name = state.showPitchNames && state.pitchNames && item.pitch2 ? state.pitchNames[item.pitch2] : null;
+
         // Draw based on rhythm
         if (item.rhythm === 'ta') {
-            this.drawQuarterNote(ctx, x, y, item.pitch, state.showNoteNames, scale);
+            this.drawQuarterNote(ctx, x, y, item.pitch, state.showNoteNames, scale, pitchName);
         } else if (item.rhythm === 'ti-ti') {
             const y2 = item.pitch2 ? positions[item.pitch2] : y;
-            this.drawEighthNotes(ctx, x, y, y2, item.pitch, item.pitch2, state.showNoteNames, scale);
+            this.drawEighthNotes(ctx, x, y, y2, item.pitch, item.pitch2, state.showNoteNames, scale, pitchName, pitch2Name);
         } else if (item.rhythm === 'ti') {
-            this.drawSingleEighthNote(ctx, x, y, item.pitch, state.showNoteNames, scale);
+            this.drawSingleEighthNote(ctx, x, y, item.pitch, state.showNoteNames, scale, pitchName);
         } else if (item.rhythm === 'shh') {
             this.drawRest(ctx, x, y, scale);
         }
     }
 
     /**
-     * Draw quarter note
+     * Draw quarter note (filled note head with stem)
      */
-    drawQuarterNote(ctx, x, y, pitch, showNames, scale) {
+    drawQuarterNote(ctx, x, y, pitch, showNames, scale, pitchName) {
         const noteRadius = 16 * scale;
 
+        // Draw note head
         ctx.fillStyle = '#2c3e50';
         ctx.beginPath();
         ctx.ellipse(x, y, noteRadius * 1.2, noteRadius, -Math.PI / 4, 0, Math.PI * 2);
         ctx.fill();
 
+        // Draw stem
         ctx.strokeStyle = '#2c3e50';
         ctx.lineWidth = 2.5 * scale;
         ctx.beginPath();
@@ -233,19 +233,26 @@ export class MusicStaffRenderer {
         ctx.lineTo(x + noteRadius, y - (65 * scale));
         ctx.stroke();
 
+        // Draw label (solfege or pitch name)
         if (showNames && pitch) {
             ctx.fillStyle = 'white';
             ctx.font = `bold ${12 * scale}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(pitch.toUpperCase(), x, y);
+        } else if (pitchName) {
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${10 * scale}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(pitchName, x, y);
         }
     }
 
     /**
      * Draw eighth notes (potentially split pitches)
      */
-    drawEighthNotes(ctx, x, y1, y2, pitch1, pitch2, showNames, scale) {
+    drawEighthNotes(ctx, x, y1, y2, pitch1, pitch2, showNames, scale, pitchName1, pitchName2) {
         const noteRadius = 16 * scale;
         const noteSpacing = 18 * scale;
 
@@ -292,13 +299,20 @@ export class MusicStaffRenderer {
             ctx.textBaseline = 'middle';
             if (pitch1) ctx.fillText(pitch1.substring(0, 2).toUpperCase(), x - noteSpacing, y1);
             if (pitch2) ctx.fillText(pitch2.substring(0, 2).toUpperCase(), x + noteSpacing, y2);
+        } else if (pitchName1 || pitchName2) {
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${9 * scale}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            if (pitchName1) ctx.fillText(pitchName1, x - noteSpacing, y1);
+            if (pitchName2) ctx.fillText(pitchName2, x + noteSpacing, y2);
         }
     }
 
     /**
      * Draw single eighth note (with flag)
      */
-    drawSingleEighthNote(ctx, x, y, pitch, showNames, scale) {
+    drawSingleEighthNote(ctx, x, y, pitch, showNames, scale, pitchName) {
         const noteRadius = 16 * scale;
 
         // Draw note head
