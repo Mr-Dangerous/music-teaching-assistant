@@ -146,6 +146,11 @@ export class MusicStaffRenderer {
                 this.drawNote(ctx, item, positions, state, scale, index, composition.length);
             }
         });
+
+        // Draw drag indicator if visible
+        if (state.dragIndicator && state.dragIndicator.visible) {
+            this.drawDragIndicator(ctx, state.dragIndicator, scale);
+        }
     }
 
     /**
@@ -371,5 +376,44 @@ export class MusicStaffRenderer {
             ctx.textBaseline = 'middle';
             ctx.fillText('REST', x, y);
         }
+    }
+
+    /**
+     * Draw drag indicator (tooltip showing pitch name during drag)
+     */
+    drawDragIndicator(ctx, indicator, scale) {
+        const padding = 8 * scale;
+        const fontSize = 14 * scale;
+
+        // Get label text (prefer pitch name if available)
+        const label = indicator.pitchName || (indicator.pitch ? indicator.pitch.toUpperCase() : '');
+        if (!label) return;
+
+        // Measure text
+        ctx.font = `bold ${fontSize}px Arial`;
+        const metrics = ctx.measureText(label);
+        const width = metrics.width + (padding * 2);
+        const height = fontSize + (padding * 2);
+
+        // Position (offset from cursor to avoid covering it)
+        const x = indicator.x + 20 * scale;
+        const y = indicator.y - 20 * scale;
+
+        // Draw background
+        ctx.fillStyle = 'rgba(52, 73, 94, 0.9)';
+        ctx.beginPath();
+        ctx.roundRect(x, y, width, height, 5 * scale);
+        ctx.fill();
+
+        // Draw border
+        ctx.strokeStyle = '#3498db';
+        ctx.lineWidth = 2 * scale;
+        ctx.stroke();
+
+        // Draw text
+        ctx.fillStyle = 'white';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        ctx.fillText(label, x + padding, y + padding);
     }
 }

@@ -345,6 +345,8 @@
         // Custom drag handler with split eighth note support
         const dragHandler = new DragDropHandler(canvas, state, renderer, {
             onCompositionChange: () => {
+                // Link drag indicator to state for rendering
+                state.dragIndicator = dragHandler.dragIndicator;
                 renderer.drawStaff(state.composition, state);
                 updateBeatCounter();
             },

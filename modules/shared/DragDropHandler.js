@@ -11,6 +11,23 @@ export class DragDropHandler {
         this.state = state;
         this.renderer = renderer;
         this.callbacks = callbacks; // {onCompositionChange, onLongPress}
+        this.draggedItem = null;
+        this.dragOffset = { x: 0, y: 0 };
+        this.originalPosition = null;
+        this.isDragging = false;
+        this.isLongPress = false;
+        this.longPressTimer = null;
+        this.longPressStartX = 0;
+        this.longPressStartY = 0;
+
+        // Drag indicator for showing pitch name
+        this.dragIndicator = {
+            visible: false,
+            x: 0,
+            y: 0,
+            pitch: null,
+            pitchName: null
+        };
     }
 
     /**
@@ -84,6 +101,35 @@ export class DragDropHandler {
         } else if (this.state.draggedExistingNote && this.state.draggedExistingNote.element) {
             this.state.draggedExistingNote.element.style.left = (event.clientX - 20) + 'px';
             this.state.draggedExistingNote.element.style.top = (event.clientY - 20) + 'px';
+        }
+    }
+
+    /**
+     * Update drag indicator during note repositioning
+     */
+    repositionNote(event) {
+        if (!this.isLongPress || this.draggedIndex === null) return;
+
+        const canvasRect = this.canvas.getBoundingClientRect();
+        const canvasY = (event.clientY || event.touches[0].clientY) - canvasRect.top;
+        const canvasX = (event.clientX || event.touches[0].clientX) - canvasRect.left;
+
+        const positions = this.renderer.getStaffPositions();
+        const targetPitch = MusicNotation.snapToPitch(canvasY, positions);
+
+        // Update drag indicator
+        this.dragIndicator.visible = true;
+        this.dragIndicator.x = canvasX;
+        this.dragIndicator.y = canvasY;
+        this.dragIndicator.pitch = targetPitch;
+        this.dragIndicator.pitchName = this.state.pitchNames ? this.state.pitchNames[targetPitch] : null;
+
+        // Actually reposition the note
+        this.updateRepositionedNote(this.draggedIndex, event, canvasRect);
+
+        // Redraw to show indicator
+        if (this.callbacks.onCompositionChange) {
+            this.callbacks.onCompositionChange();
         }
     }
 
