@@ -21,87 +21,13 @@
 
         .container {
             display: flex;
-            gap: 20px;
+            flex-direction: column;
             height: calc(100vh - 40px);
             background: white;
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-        }
-
-        /* Left Sidebar - Student Roster */
-        .sidebar {
-            width: 280px;
-            background: linear-gradient(180deg, #fef3c7 0%, #fed7aa 100%);
             padding: 20px;
-            overflow-y: auto;
-            border-right: 3px solid #fbbf24;
-        }
-
-        .sidebar h2 {
-            font-size: 24px;
-            color: #3b82f6;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #3b82f6;
-        }
-
-        .student-list {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .student-btn {
-            padding: 12px 16px;
-            background: linear-gradient(135deg, #ddd6fe 0%, #c7d2fe 100%);
-            border: 2px solid #e0e7ff;
-            border-radius: 10px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            color: #4c1d95;
-            transition: all 0.2s;
-            text-align: left;
-        }
-
-        .student-btn:hover {
-            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
-            color: white;
-            transform: translateX(5px);
-        }
-
-        .student-btn.active {
-            background: linear-gradient(135deg, #ec4899 0%, #f43f5e 100%);
-            color: white;
-            border-color: white;
-        }
-
-        /* Green indicator for students with recordings */
-        .student-btn.has-recording {
-            background: linear-gradient(135deg, #6ee7b7 0%, #34d399 100%);
-            border-color: #10b981;
-            color: #065f46;
-        }
-
-        .student-btn.has-recording:hover {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            color: white;
-        }
-
-        .all-students-btn {
-            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-            color: white;
-            border: 2px solid white;
-            padding: 14px;
-            font-size: 18px;
-            font-weight: 700;
-            margin-bottom: 20px;
-        }
-
-        .all-students-btn:hover {
-            background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
-            transform: translateX(0) scale(1.02);
         }
 
         /* Main Content Area */
@@ -109,7 +35,6 @@
             flex: 1;
             display: flex;
             flex-direction: column;
-            padding: 20px;
             overflow: hidden;
         }
 
@@ -217,22 +142,11 @@
 
 <body>
     <div class="container">
-        <!-- Left Sidebar -->
-        <div class="sidebar">
-            <h2>Select Student</h2>
-            <button class="student-btn all-students-btn" id="all-students-btn">
-                📢 All Students
-            </button>
-            <div class="student-list" id="student-list">
-                <!-- Student buttons will be populated here -->
-            </div>
-        </div>
-
         <!-- Main Content -->
         <div class="main-content">
             <div class="content-header">
                 <h1 id="content-title">Audio Recordings</h1>
-                <p id="content-subtitle">Select a student or view all recordings</p>
+                <p id="content-subtitle">Loading recordings...</p>
             </div>
 
             <div class="recordings-list" id="recordings-list">
@@ -272,11 +186,6 @@
                     }
                 });
 
-                // Setup UI event listeners
-                document.getElementById('all-students-btn').addEventListener('click', () => {
-                    this.showAllStudents();
-                });
-
                 // Request initialization from parent
                 window.parent.postMessage({ type: 'taskmodule:ready' }, '*');
             }
@@ -295,12 +204,6 @@
                     }
                 } else {
                     this.showError('App not initialized properly.');
-                }
-
-                // Get students list
-                if (window.parent.app && window.parent.app.students) {
-                    this.students = window.parent.app.students;
-                    this.renderStudentList();
                 }
             }
 
@@ -334,8 +237,11 @@
 
                     console.log(`Successfully loaded ${this.recordings.length} recordings`);
 
-                    // Show all recordings by default
-                    this.showAllStudents();
+                    // Update header and display all recordings
+                    document.getElementById('content-title').textContent = 'All Recordings';
+                    document.getElementById('content-subtitle').textContent =
+                        `${this.recordings.length} total recording(s)`;
+                    this.renderRecordingsList(this.recordings);
 
                 } catch (error) {
                     console.error('Error loading recordings:', error);
@@ -356,77 +262,6 @@
                     return parts[0];
                 }
                 return 'allstudents';
-            }
-
-            renderStudentList() {
-                const listContainer = document.getElementById('student-list');
-                listContainer.innerHTML = '';
-
-                // Sort students by name
-                const sortedStudents = [...this.students].sort((a, b) =>
-                    a.name.localeCompare(b.name)
-                );
-
-                sortedStudents.forEach(student => {
-                    const hasRecording = this.hasRecordingForStudent(student.name);
-
-                    const btn = document.createElement('button');
-                    btn.className = `student-btn ${hasRecording ? 'has-recording' : ''}`;
-                    btn.textContent = student.name;
-                    btn.dataset.studentId = student.student_id;
-                    btn.dataset.studentName = student.name;
-
-                    btn.addEventListener('click', () => {
-                        this.selectStudent(student);
-                    });
-
-                    listContainer.appendChild(btn);
-                });
-            }
-
-            hasRecordingForStudent(studentName) {
-                const sanitizedName = studentName.toLowerCase().replace(/\s+/g, '');
-                return this.recordings.some(r => r.studentName === sanitizedName);
-            }
-
-            selectStudent(student) {
-                this.selectedStudent = student;
-
-                // Update active button
-                document.querySelectorAll('.student-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                event.target.classList.add('active');
-
-                // Filter and show recordings
-                const sanitizedName = student.name.toLowerCase().replace(/\s+/g, '');
-                const studentRecordings = this.recordings.filter(r =>
-                    r.studentName === sanitizedName
-                );
-
-                // Update header
-                document.getElementById('content-title').textContent = student.name;
-                document.getElementById('content-subtitle').textContent =
-                    `${studentRecordings.length} recording(s)`;
-
-                this.renderRecordingsList(studentRecordings);
-            }
-
-            showAllStudents() {
-                this.selectedStudent = null;
-
-                // Update active button
-                document.querySelectorAll('.student-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                document.getElementById('all-students-btn').classList.add('active');
-
-                // Show all recordings
-                document.getElementById('content-title').textContent = 'All Recordings';
-                document.getElementById('content-subtitle').textContent =
-                    `${this.recordings.length} total recording(s)`;
-
-                this.renderRecordingsList(this.recordings);
             }
 
             renderRecordingsList(recordings) {
