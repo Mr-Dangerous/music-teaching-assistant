@@ -1188,42 +1188,42 @@ body {
 
 /* Fullscreen class view adjustments */
 :fullscreen .class-view-container {
-  height: calc(100vh - 180px);
+  height: calc(100vh - 120px);
 }
 
 :-webkit-full-screen .class-view-container {
-  height: calc(100vh - 180px);
+  height: calc(100vh - 120px);
 }
 
 :-moz-full-screen .class-view-container {
-  height: calc(100vh - 180px);
+  height: calc(100vh - 120px);
 }
 
 :fullscreen .student-roster {
-  max-height: calc(100vh - 200px);
+  max-height: calc(100vh - 140px);
 }
 
 :-webkit-full-screen .student-roster {
-  max-height: calc(100vh - 200px);
+  max-height: calc(100vh - 140px);
 }
 
 :-moz-full-screen .student-roster {
-  max-height: calc(100vh - 200px);
+  max-height: calc(100vh - 140px);
 }
 
 :fullscreen .task-image-container {
-  min-height: calc(100vh - 350px);
-  max-height: calc(100vh - 350px);
+  min-height: calc(100vh - 220px);
+  max-height: calc(100vh - 220px);
 }
 
 :-webkit-full-screen .task-image-container {
-  min-height: calc(100vh - 350px);
-  max-height: calc(100vh - 350px);
+  min-height: calc(100vh - 220px);
+  max-height: calc(100vh - 220px);
 }
 
 :-moz-full-screen .task-image-container {
-  min-height: calc(100vh - 350px);
-  max-height: calc(100vh - 350px);
+  min-height: calc(100vh - 220px);
+  max-height: calc(100vh - 220px);
 }
 
 :fullscreen .task-image {
