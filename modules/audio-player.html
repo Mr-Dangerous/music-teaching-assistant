@@ -198,10 +198,10 @@
                 console.log('=== Audio player initialized ===');
                 console.log('Full context object:', JSON.stringify(data, null, 2));
 
-                // Store context from parent
-                this.currentStudentId = data.studentId || null;
-                this.currentStudentName = data.studentName || null;
-                this.currentClass = data.class || null;
+                // Store context from parent - FIX: read from data.context!
+                this.currentStudentId = data.context?.studentId || null;
+                this.currentStudentName = data.context?.studentName || null;
+                this.currentClass = data.context?.class || null;
 
                 console.log('Extracted context:');
                 console.log('  Student ID:', this.currentStudentId);
