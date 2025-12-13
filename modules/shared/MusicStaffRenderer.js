@@ -143,7 +143,7 @@ export class MusicStaffRenderer {
         // Draw notes
         composition.forEach((item, index) => {
             if (!item.hidden) {
-                this.drawNote(ctx, item, index, positions, composition.length, state, scale);
+                this.drawNote(ctx, item, positions, state, scale, index, composition.length);
             }
         });
     }

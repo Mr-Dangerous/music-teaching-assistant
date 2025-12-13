@@ -225,7 +225,8 @@
             <button class="btn btn-primary" onclick="clearStaff()">🔄 Clear</button>
             <button class="btn btn-secondary" onclick="sortComposition()">📊 Sort</button>
             <button class="btn btn-secondary" onclick="importFromClipboard()">📋 Import</button>
-            <button class="btn btn-secondary" onclick="toggleNoteNames()">🏷️ Note Names</button>
+            <button class="btn btn-secondary" onclick="toggleSolfege()">🏷️ Solfege</button>
+            <button class="btn btn-secondary" onclick="togglePitchNames()">� Pitch Names</button>
             <button class="btn btn-success" onclick="finishComposition()">✓ Finished!</button>
             <button class="btn btn-success" onclick="photoAndFinish()">📷 Photo & Finish</button>
             <button class="btn btn-warning" onclick="playComposition()">▶ Play</button>
@@ -324,10 +325,21 @@
         };
 
         let currentKey = 'C';
+        let showSolfege = false;
+        let showPitchNames = false;
+
+        // Pitch name mappings for each key
+        const pitchNamesByKey = {
+            'C': { 'do2': "C'", 'so': 'G', 'la': 'A', 'mi': 'E', 're': 'D', 'do': 'C', 'la1': 'A,', 'so1': 'G,' },
+            'F': { 'do2': "F'", 'so': 'C', 'la': 'D', 'mi': 'A', 're': 'G', 'do': 'F', 'la1': 'D,', 'so1': 'C,' },
+            'Bb': { 'do2': "B♭'", 'so': 'F', 'la': 'G', 'mi': 'D', 're': 'C', 'do': 'B♭', 'la1': 'G,', 'so1': 'F,' },
+            'Eb': { 'do2': "E♭'", 'so': 'B♭', 'la': 'C', 'mi': 'G', 're': 'F', 'do': 'E♭', 'la1': 'C,', 'so1': 'B♭,' }
+        };
 
         // Initialize modules
         const canvas = document.getElementById('staffCanvas');
         const state = new ComposerState(16);
+        state.pitchNames = pitchNamesByKey[currentKey]; // Add pitch names to state
         const renderer = new MusicStaffRenderer(canvas, config);
 
         // Custom drag handler with split eighth note support
@@ -455,16 +467,16 @@
 
                 if (rhythm === 'ta') {
                     // Quarter note
-                    renderer.drawQuarterNote(ctx, centerX, centerY, null, false, 0.8);
+                    renderer.drawQuarterNote(ctx, centerX, centerY, null, false, 0.6);
                 } else if (rhythm === 'ti-ti') {
                     // Beamed eighths
-                    renderer.drawEighthNotes(ctx, centerX, centerY, centerY, null, null, false, 0.7);
+                    renderer.drawEighthNotes(ctx, centerX, centerY, centerY, null, null, false, 0.5);
                 } else if (rhythm === 'ti') {
                     // Single eighth with flag
-                    renderer.drawSingleEighthNote(ctx, centerX, centerY, null, false, 0.8);
+                    renderer.drawSingleEighthNote(ctx, centerX, centerY, null, false, 0.6);
                 } else if (rhythm === 'shh') {
                     // Rest
-                    renderer.drawRest(ctx, centerX, centerY, 0.6);
+                    renderer.drawRest(ctx, centerX, centerY, 0.5);
                 }
             });
         }
@@ -484,8 +496,15 @@
             event.target.textContent = state.isSorted ? '📊 Unsort' : '📊 Sort';
         };
 
-        window.toggleNoteNames = () => {
-            state.showNoteNames = !state.showNoteNames;
+        window.toggleSolfege = () => {
+            showSolfege = !showSolfege;
+            state.showNoteNames = showSolfege; // Solfege uses existing showNoteNames
+            renderer.drawStaff(state.composition, state);
+        };
+
+        window.togglePitchNames = () => {
+            showPitchNames = !showPitchNames;
+            state.showPitchNames = showPitchNames;
             renderer.drawStaff(state.composition, state);
         };
 
@@ -501,6 +520,9 @@
             currentKey = key;
             // Update note frequencies based on selected key
             config.noteFrequencies = keyFrequencies[key];
+            // Update pitch names for display
+            state.pitchNames = pitchNamesByKey[key];
+            renderer.drawStaff(state.composition, state);
         };
 
         window.updateTempo = (value) => {
