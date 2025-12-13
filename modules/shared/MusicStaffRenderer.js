@@ -113,6 +113,14 @@ export class MusicStaffRenderer {
             ctx.stroke();
         });
 
+        // For pentatonic: manually draw 5th line (it has no note position assigned)
+        if (this.config.pitches.length === 8 && this.line5Y) {
+            ctx.beginPath();
+            ctx.moveTo(staffLeft, this.line5Y);
+            ctx.lineTo(staffRight, this.line5Y);
+            ctx.stroke();
+        }
+
         // Draw labels
         ctx.font = `bold ${32 * scale}px Arial`;
         ctx.fillStyle = '#2c3e50';
