@@ -188,17 +188,27 @@ export class MusicStaffRenderer {
      * Draw a single note item
      */
     drawNote(ctx, item, positions, state, scale, index, totalItems) {
-        const usableWidth = this.canvas.width - (120 * scale);
-        const itemWidth = usableWidth / totalItems;
-        const x = (60 * scale) + (itemWidth * index) + (itemWidth / 2);
+        // Calculate x position
+        let x;
+        if (state.isSorted) {
+            // Sorted: evenly spaced
+            const usableWidth = this.canvas.width - (120 * scale);
+            const spacing = totalItems > 0 ? usableWidth / totalItems : usableWidth;
+            x = (60 * scale) + (spacing * index) + spacing / 2;
+        } else {
+            // Unsorted: use stored x position (drag-and-drop placement)
+            x = item.x;
+        }
 
         // Get y position
         const y = item.rhythm === 'shh' ?
             (positions.so + positions.mi) / 2 :
             positions[item.pitch];
 
-        // Update stored position
-        item.x = x;
+        // Update stored position (only update x when sorted)
+        if (state.isSorted) {
+            item.x = x;
+        }
         item.y = y;
 
         // Get pitch names if available
