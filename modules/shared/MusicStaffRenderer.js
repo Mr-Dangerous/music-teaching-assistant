@@ -95,28 +95,6 @@ export class MusicStaffRenderer {
         ctx.lineWidth = 3 * scale;
 
         // Determine which pitches have lines
-        let linePitches;
-        if (this.config.pitches.length === 3) {
-            linePitches = ['so', 'mi'];
-        } else if (this.config.pitches.length === 5) {
-            linePitches = ['so', 'mi', 'do'];
-        } else if (this.config.pitches.length === 8) {
-            linePitches = ['la1', 'do', 'mi', 'so', 'ti']; // 5 lines
-        }
-
-        const lines = linePitches.filter(p => positions[p] && this.config.pitches.includes(p));
-        lines.forEach(pitch => {
-            const y = positions[pitch];
-            ctx.beginPath();
-            ctx.moveTo(staffLeft, y);
-            ctx.lineTo(staffRight, y);
-            ctx.stroke();
-        });
-
-        // Draw labels
-        ctx.font = `bold ${32 * scale}px Arial`;
-        ctx.fillStyle = '#2c3e50';
-        ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
 
         Object.entries(positions).forEach(([pitch, y]) => {
