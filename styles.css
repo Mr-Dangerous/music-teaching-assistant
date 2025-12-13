@@ -565,7 +565,7 @@ body {
   justify-content: center;
   background-color: var(--color-background-alt);
   border-radius: 6px;
-  padding: var(--spacing-sm);
+  padding: 0;
   flex: 1;
   min-width: 0;
 }
@@ -1138,15 +1138,15 @@ body {
   }
 
   .class-view-container {
-    height: calc(100vh - 180px);
+    height: calc(100vh - 120px);
   }
 
   .student-roster {
-    max-height: calc(100vh - 200px);
+    max-height: calc(100vh - 140px);
   }
 
   .task-image-container {
-    min-height: calc(100vh - 350px);
+    min-height: calc(100vh - 220px);
   }
 }
 
