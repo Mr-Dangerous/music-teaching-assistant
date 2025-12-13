@@ -8,6 +8,7 @@ class TeachingAssistantApp {
     // this.responseHandler = new ResponseHandler(); // Legacy - all tasks now use custom modules
     this.moduleLoader = new ModuleLoader();
     this.audioManager = new AudioManager(this.fileManager, this.csvHandler);
+    this.videoManager = new VideoManager(this.fileManager, this.csvHandler);
 
     // New data structure: separate students and results
     this.students = [];        // From students.csv
@@ -156,6 +157,11 @@ class TeachingAssistantApp {
       await this.toggleRecording();
     });
 
+    // Video recording button toggle
+    document.getElementById('video-recording-btn').addEventListener('click', async () => {
+      await this.toggleVideoRecording();
+    });
+
     const backToStudentsBtn = document.getElementById('back-to-students-btn');
     if (backToStudentsBtn) {
       backToStudentsBtn.addEventListener('click', () => this.showStudentScreen());
@@ -254,6 +260,7 @@ class TeachingAssistantApp {
       }
       // Show header elements after file load
       document.getElementById('recording-btn').style.display = 'block';
+      document.getElementById('video-recording-btn').style.display = 'block';
       document.getElementById('view-results-btn').style.display = 'block';
       const viewResultsBtn = document.getElementById('view-results-btn');
       if (viewResultsBtn) {
@@ -1594,6 +1601,37 @@ class TeachingAssistantApp {
       console.error('Recording error:', error);
       this.showNotification(`Recording error: ${error.message}`, 'error');
       recordingBtn.classList.remove('recording');
+    }
+  }
+
+  /**
+   * Toggle video recording on/off
+   */
+  async toggleVideoRecording() {
+    const videoRecordingBtn = document.getElementById('video-recording-btn');
+
+    try {
+      if (this.videoManager.getIsRecording()) {
+        // Stop recording
+        await this.videoManager.stopRecording();
+        videoRecordingBtn.classList.remove('recording');
+        this.showNotification('Video recording stopped and saved', 'success');
+      } else {
+        // Update context before starting
+        this.videoManager.setContext(
+          this.selectedStudent,
+          this.selectedClass
+        );
+
+        // Start recording
+        await this.videoManager.startRecording();
+        videoRecordingBtn.classList.add('recording');
+        this.showNotification('Video recording started', 'info');
+      }
+    } catch (error) {
+      console.error('Video recording error:', error);
+      this.showNotification(`Video recording error: ${error.message}`, 'error');
+      videoRecordingBtn.classList.remove('recording');
     }
   }
 }

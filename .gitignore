@@ -8,6 +8,7 @@ results.csv
 # Data folder (contains all student data and recordings)
 data/
 audio_files/
+video_files/
 
 # Task Images (may contain student work)
 tasks/*/
