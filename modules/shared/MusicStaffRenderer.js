@@ -347,6 +347,12 @@ export class MusicStaffRenderer {
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(pitch.toUpperCase(), x, y);
+        } else if (pitchName) {
+            ctx.fillStyle = 'white';
+            ctx.font = `bold ${10 * scale}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(pitchName, x, y);
         }
     }
 
