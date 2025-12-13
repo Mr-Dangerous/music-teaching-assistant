@@ -251,13 +251,13 @@ export class MusicStaffRenderer {
         // Draw label (solfege or pitch name)
         if (showNames && pitch) {
             ctx.fillStyle = 'white';
-            ctx.font = `bold ${12 * scale}px Arial`;
+            ctx.font = `bold ${21 * scale}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(pitch.toUpperCase(), x, y);
         } else if (pitchName) {
             ctx.fillStyle = 'white';
-            ctx.font = `bold ${10 * scale}px Arial`;
+            ctx.font = `bold ${17 * scale}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(pitchName, x, y);
@@ -309,14 +309,14 @@ export class MusicStaffRenderer {
 
         if (showNames) {
             ctx.fillStyle = 'white';
-            ctx.font = `bold ${10 * scale}px Arial`;
+            ctx.font = `bold ${17 * scale}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             if (pitch1) ctx.fillText(pitch1.substring(0, 2).toUpperCase(), x - noteSpacing, y1);
             if (pitch2) ctx.fillText(pitch2.substring(0, 2).toUpperCase(), x + noteSpacing, y2);
         } else if (pitchName1 || pitchName2) {
             ctx.fillStyle = 'white';
-            ctx.font = `bold ${9 * scale}px Arial`;
+            ctx.font = `bold ${16 * scale}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             if (pitchName1) ctx.fillText(pitchName1, x - noteSpacing, y1);
@@ -358,13 +358,13 @@ export class MusicStaffRenderer {
 
         if (showNames && pitch) {
             ctx.fillStyle = 'white';
-            ctx.font = `bold ${12 * scale}px Arial`;
+            ctx.font = `bold ${21 * scale}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(pitch.toUpperCase(), x, y);
         } else if (pitchName) {
             ctx.fillStyle = 'white';
-            ctx.font = `bold ${10 * scale}px Arial`;
+            ctx.font = `bold ${17 * scale}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(pitchName, x, y);
