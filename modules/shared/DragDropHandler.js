@@ -98,6 +98,30 @@ export class DragDropHandler {
         if (this.state.draggedItem) {
             this.state.draggedItem.element.style.left = (event.clientX - this.state.dragOffset.x) + 'px';
             this.state.draggedItem.element.style.top = (event.clientY - this.state.dragOffset.y) + 'px';
+
+            // Show drag indicator when over canvas
+            const canvasRect = this.canvas.getBoundingClientRect();
+            const canvasX = event.clientX - canvasRect.left;
+            const canvasY = event.clientY - canvasRect.top;
+
+            if (canvasX >= 0 && canvasX <= this.canvas.width &&
+                canvasY >= 0 && canvasY <= this.canvas.height) {
+
+                const positions = this.renderer.getStaffPositions();
+                const targetPitch = MusicNotation.snapToPitch(canvasY, positions);
+
+                // Update drag indicator
+                this.dragIndicator.visible = true;
+                this.dragIndicator.x = canvasX;
+                this.dragIndicator.y = canvasY;
+                this.dragIndicator.pitch = targetPitch;
+                this.dragIndicator.pitchName = this.state.pitchNames ? this.state.pitchNames[targetPitch] : null;
+
+                // Redraw to show indicator
+                if (this.callbacks.onCompositionChange) {
+                    this.callbacks.onCompositionChange();
+                }
+            }
         } else if (this.state.draggedExistingNote && this.state.draggedExistingNote.element) {
             this.state.draggedExistingNote.element.style.left = (event.clientX - 20) + 'px';
             this.state.draggedExistingNote.element.style.top = (event.clientY - 20) + 'px';
