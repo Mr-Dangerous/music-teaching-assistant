@@ -395,8 +395,10 @@ export class MusicStaffRenderer {
         const padding = 8 * scale;
         const fontSize = 14 * scale;
 
-        // Get label text (prefer pitch name if available)
-        const label = indicator.pitchName || (indicator.pitch ? indicator.pitch.toUpperCase() : '');
+        // Get label text - prefer solfege unless pitch names are enabled
+        const label = (indicator.showPitchNames && indicator.pitchName)
+            ? indicator.pitchName
+            : (indicator.pitch ? indicator.pitch.toUpperCase() : indicator.pitchName || '');
         if (!label) return;
 
         // Measure text

@@ -243,9 +243,13 @@
                 <select id="keySelect" onchange="setKey(this.value)"
                     style="font-size: 16px; padding: 5px; border-radius: 5px;">
                     <option value="C">C</option>
-                    <option value="F">F</option>
-                    <option value="Bb">B♭</option>
+                    <option value="D">D</option>
                     <option value="Eb">E♭</option>
+                    <option value="E">E</option>
+                    <option value="F">F</option>
+                    <option value="G">G</option>
+                    <option value="A">A</option>
+                    <option value="Bb">B♭</option>
                 </select>
             </div>
 
@@ -319,9 +323,13 @@
         // Key transposition mappings (Do = different pitches)
         const keyFrequencies = {
             'C': { 'do2': 523.25, 'so': 392.00, 'la': 440.00, 'mi': 329.63, 're': 293.66, 'do': 261.63, 'la1': 220.00, 'so1': 196.00 },
+            'D': { 'do2': 587.33, 'so': 440.00, 'la': 493.88, 'mi': 369.99, 're': 329.63, 'do': 293.66, 'la1': 246.94, 'so1': 220.00 },
+            'Eb': { 'do2': 622.25, 'so': 466.16, 'la': 523.25, 'mi': 392.00, 're': 349.23, 'do': 311.13, 'la1': 261.63, 'so1': 233.08 },
+            'E': { 'do2': 659.25, 'so': 493.88, 'la': 554.37, 'mi': 415.30, 're': 369.99, 'do': 329.63, 'la1': 277.18, 'so1': 246.94 },
             'F': { 'do2': 698.46, 'so': 523.25, 'la': 587.33, 'mi': 440.00, 're': 392.00, 'do': 349.23, 'la1': 293.66, 'so1': 261.63 },
-            'Bb': { 'do2': 932.33, 'so': 698.46, 'la': 783.99, 'mi': 587.33, 're': 523.25, 'do': 466.16, 'la1': 392.00, 'so1': 349.23 },
-            'Eb': { 'do2': 622.25, 'so': 466.16, 'la': 523.25, 'mi': 392.00, 're': 349.23, 'do': 311.13, 'la1': 261.63, 'so1': 233.08 }
+            'G': { 'do2': 783.99, 'so': 587.33, 'la': 659.25, 'mi': 493.88, 're': 440.00, 'do': 392.00, 'la1': 329.63, 'so1': 293.66 },
+            'A': { 'do2': 880.00, 'so': 659.25, 'la': 739.99, 'mi': 554.37, 're': 493.88, 'do': 440.00, 'la1': 369.99, 'so1': 329.63 },
+            'Bb': { 'do2': 932.33, 'so': 698.46, 'la': 783.99, 'mi': 587.33, 're': 523.25, 'do': 466.16, 'la1': 392.00, 'so1': 349.23 }
         };
 
         let currentKey = 'C';
@@ -331,9 +339,13 @@
         // Pitch name mappings for each key
         const pitchNamesByKey = {
             'C': { 'do2': "C'", 'so': 'G', 'la': 'A', 'mi': 'E', 're': 'D', 'do': 'C', 'la1': 'A,', 'so1': 'G,' },
+            'D': { 'do2': "D'", 'so': 'A', 'la': 'B', 'mi': 'F♯', 're': 'E', 'do': 'D', 'la1': 'B,', 'so1': 'A,' },
+            'Eb': { 'do2': "E♭'", 'so': 'B♭', 'la': 'C', 'mi': 'G', 're': 'F', 'do': 'E♭', 'la1': 'C,', 'so1': 'B♭,' },
+            'E': { 'do2': "E'", 'so': 'B', 'la': 'C♯', 'mi': 'G♯', 're': 'F♯', 'do': 'E', 'la1': 'C♯,', 'so1': 'B,' },
             'F': { 'do2': "F'", 'so': 'C', 'la': 'D', 'mi': 'A', 're': 'G', 'do': 'F', 'la1': 'D,', 'so1': 'C,' },
-            'Bb': { 'do2': "B♭'", 'so': 'F', 'la': 'G', 'mi': 'D', 're': 'C', 'do': 'B♭', 'la1': 'G,', 'so1': 'F,' },
-            'Eb': { 'do2': "E♭'", 'so': 'B♭', 'la': 'C', 'mi': 'G', 're': 'F', 'do': 'E♭', 'la1': 'C,', 'so1': 'B♭,' }
+            'G': { 'do2': "G'", 'so': 'D', 'la': 'E', 'mi': 'B', 're': 'A', 'do': 'G', 'la1': 'E,', 'so1': 'D,' },
+            'A': { 'do2': "A'", 'so': 'E', 'la': 'F♯', 'mi': 'C♯', 're': 'B', 'do': 'A', 'la1': 'F♯,', 'so1': 'E,' },
+            'Bb': { 'do2': "B♭'", 'so': 'F', 'la': 'G', 'mi': 'D', 're': 'C', 'do': 'B♭', 'la1': 'G,', 'so1': 'F,' }
         };
 
         // Initialize modules

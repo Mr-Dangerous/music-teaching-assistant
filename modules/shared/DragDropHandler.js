@@ -116,6 +116,7 @@ export class DragDropHandler {
                 this.dragIndicator.y = canvasY;
                 this.dragIndicator.pitch = targetPitch;
                 this.dragIndicator.pitchName = this.state.pitchNames ? this.state.pitchNames[targetPitch] : null;
+                this.dragIndicator.showPitchNames = this.state.showPitchNames;
 
                 // Redraw to show indicator
                 if (this.callbacks.onCompositionChange) {
@@ -147,6 +148,7 @@ export class DragDropHandler {
         this.dragIndicator.y = canvasY;
         this.dragIndicator.pitch = targetPitch;
         this.dragIndicator.pitchName = this.state.pitchNames ? this.state.pitchNames[targetPitch] : null;
+        this.dragIndicator.showPitchNames = this.state.showPitchNames;
 
         // Actually reposition the note
         this.updateRepositionedNote(this.draggedIndex, event, canvasRect);
