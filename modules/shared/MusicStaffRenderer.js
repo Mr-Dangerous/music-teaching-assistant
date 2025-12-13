@@ -396,9 +396,17 @@ export class MusicStaffRenderer {
         const fontSize = 14 * scale;
 
         // Get label text - prefer solfege unless pitch names are enabled
-        const label = (indicator.showPitchNames && indicator.pitchName)
-            ? indicator.pitchName
-            : (indicator.pitch ? indicator.pitch.toUpperCase() : indicator.pitchName || '');
+        let label;
+        if (indicator.showPitchNames && indicator.pitchName) {
+            label = indicator.pitchName;
+        } else if (indicator.pitch) {
+            // Use config.labels for proper solfege (La, instead of la1)
+            label = this.config.labels && this.config.labels[indicator.pitch]
+                ? this.config.labels[indicator.pitch]
+                : indicator.pitch.toUpperCase();
+        } else {
+            label = indicator.pitchName || '';
+        }
         if (!label) return;
 
         // Measure text
