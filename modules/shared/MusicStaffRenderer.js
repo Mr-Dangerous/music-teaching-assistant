@@ -160,7 +160,11 @@ export class MusicStaffRenderer {
         ctx.lineWidth = 2 * scale;
 
         const sortedPositions = Object.values(positions).sort((a, b) => a - b);
-        const topY = sortedPositions[0] - 30 * scale;
+
+        // For pentatonic with 5th line, extend to include it
+        const topY = (this.config.pitches.length === 8 && this.line5Y)
+            ? this.line5Y - 30 * scale
+            : sortedPositions[0] - 30 * scale;
         const bottomY = sortedPositions[sortedPositions.length - 1] + 30 * scale;
 
         composition.forEach((item, index) => {
