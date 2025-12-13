@@ -48,21 +48,23 @@ class VideoManager {
             // Request camera and microphone access
             this.stream = await navigator.mediaDevices.getUserMedia({
                 video: {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    facingMode: 'user'
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 },
+                    facingMode: 'user',
+                    frameRate: { ideal: 30 }
                 },
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
-                    sampleRate: 44100
+                    sampleRate: 48000  // Higher quality audio
                 }
             });
 
             // Create MediaRecorder with WebM format (video + audio)
             const mimeType = this.getSupportedMimeType();
             this.mediaRecorder = new MediaRecorder(this.stream, {
-                mimeType: mimeType
+                mimeType: mimeType,
+                videoBitsPerSecond: 5000000  // 5 Mbps for high quality
             });
 
             this.videoChunks = [];
