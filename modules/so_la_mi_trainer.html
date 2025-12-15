@@ -478,7 +478,6 @@
                     }
                     if (savedSettings.numberOfNotes !== undefined) {
                         numberOfNotes = savedSettings.numberOfNotes;
-                        updateNoteCountButton();
                     }
                     if (savedSettings.customPattern !== undefined) {
                         customPattern = savedSettings.customPattern;
@@ -488,12 +487,14 @@
                             if (parsed) {
                                 currentPattern = parsed;
                                 numberOfNotes = parsed.length;
-                                updateNoteCountButton();
                             }
                         }
                     }
                     console.log('Restored settings:', savedSettings);
                 }
+
+                // Now initialize the UI with restored settings
+                init();
 
                 // Check if there's an existing response to restore
                 if (context.existingResponse) {
@@ -506,9 +507,6 @@
                     } catch (e) {
                         console.log('No valid existing response to restore');
                     }
-                } else {
-                    // Generate initial pattern with current settings
-                    resetModule();
                 }
             },
 
@@ -1117,9 +1115,6 @@
                 window.TaskModule.init(event.data.context, event.data.savedSettings);
             }
         });
-
-        // Initialize when page loads
-        init();
     </script>
 </body>
 
