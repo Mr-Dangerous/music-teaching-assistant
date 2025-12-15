@@ -418,8 +418,9 @@ class TeachingAssistantApp {
 
   /**
    * Save results.csv file
+   * @param {boolean} silent - If true, don't show success notification
    */
-  async saveFile() {
+  async saveFile(silent = false) {
     try {
       this.showLoading(true);
 
@@ -429,7 +430,9 @@ class TeachingAssistantApp {
       // Save results file
       await this.fileManager.saveResults(csvContent);
 
-      this.showNotification('Results saved successfully!', 'success');
+      if (!silent) {
+        this.showNotification('Results saved successfully!', 'success');
+      }
 
       // Update save indicator
       this.updateSaveIndicator();

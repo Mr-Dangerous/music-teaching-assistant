@@ -264,7 +264,7 @@ class AudioManager {
 
             // Trigger save to CSV file
             try {
-                await window.app.saveFile();
+                await window.app.saveFile(true);  // Silent save
                 console.log('Results CSV saved successfully');
             } catch (error) {
                 console.error('Failed to save results CSV:', error);
