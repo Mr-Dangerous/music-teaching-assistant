@@ -642,8 +642,8 @@
             Object.entries(labelPlacements).forEach(([noteIndex, labelNote]) => {
                 const notePos = notePositions[noteIndex];
                 if (notePos) {
-                    // Create a clone of the original label
-                    const originalLabel = document.querySelector(`[data-note="${labelNote}"]`);
+                    // Create a clone of the original label from the palette
+                    const originalLabel = document.querySelector(`#labelContainer [data-note="${labelNote}"]`);
                     if (originalLabel) {
                         const clone = originalLabel.cloneNode(true);
                         clone.classList.remove('dragging');
