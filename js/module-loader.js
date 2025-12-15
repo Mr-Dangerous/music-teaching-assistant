@@ -30,8 +30,13 @@ class ModuleLoader {
         // Wait for module to be ready
         setTimeout(() => {
           try {
+            // Normalize moduleUrl to just the filename (e.g., "modules/so_la_mi_trainer.html" -> "so_la_mi_trainer.html")
+            const moduleFileName = moduleUrl.split('/').pop();
+
             // Get saved settings for this module (if any)
-            const savedSettings = window.app?.getModuleSettings?.(moduleUrl) || null;
+            const savedSettings = window.app?.getModuleSettings?.(moduleFileName) || null;
+
+            console.log('Loading module:', moduleFileName, 'with settings:', savedSettings);
 
             // Send init context to module with saved settings
             iframe.contentWindow.postMessage({
