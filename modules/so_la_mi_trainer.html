@@ -627,16 +627,41 @@
         function restorePattern(pattern, placements) {
             currentPattern = pattern;
             labelPlacements = placements || {};
-            drawStaff();
 
-            // Move labels to their saved positions
-            Object.entries(labelPlacements).forEach(([noteIndex, labelNote]) => {
-                const label = document.querySelector(`[data-note="${labelNote}"]`);
-                const notePos = notePositions[noteIndex];
-                if (label && notePos) {
-                    positionLabelOnNote(label, notePos);
+            // Clear any existing placed labels first
+            placedLabels.forEach(label => {
+                if (label && label.parentNode) {
+                    label.remove();
                 }
             });
+            placedLabels = [];
+
+            drawStaff();
+
+            // Recreate and position the placed labels
+            Object.entries(labelPlacements).forEach(([noteIndex, labelNote]) => {
+                const notePos = notePositions[noteIndex];
+                if (notePos) {
+                    // Create a clone of the original label
+                    const originalLabel = document.querySelector(`[data-note="${labelNote}"]`);
+                    if (originalLabel) {
+                        const clone = originalLabel.cloneNode(true);
+                        clone.classList.remove('dragging');
+                        clone.classList.add('placed');
+                        clone.style.position = 'fixed';
+                        document.body.appendChild(clone);
+
+                        // Position it on the note
+                        positionLabelOnNote(clone, notePos);
+
+                        // Track this placed label
+                        placedLabels.push(clone);
+                    }
+                }
+            });
+
+            // Update completion indicator
+            updateCompletionIndicator();
         }
 
         // Get current scale factor based on resolution mode
