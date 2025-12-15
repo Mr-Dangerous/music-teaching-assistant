@@ -36,23 +36,42 @@ class VideoManager {
 
     /**
      * Start video recording
+     * @param {string} quality - 'high' for max quality, 'low' for 720p/30fps
      * @returns {Promise<void>}
      */
-    async startRecording() {
+    async startRecording(quality = 'high') {
         if (this.isRecording) {
             console.warn('Already recording');
             return;
         }
 
         try {
-            // Request camera and microphone access
-            this.stream = await navigator.mediaDevices.getUserMedia({
-                video: {
+            // Configure settings based on quality
+            let videoConstraints, videoBitrate;
+
+            if (quality === 'low') {
+                // Low quality: 720p at 30fps
+                videoConstraints = {
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 },
+                    facingMode: 'user',
+                    frameRate: { ideal: 30 }
+                };
+                videoBitrate = 2500000; // 2.5 Mbps
+            } else {
+                // High quality: Max resolution at 60fps
+                videoConstraints = {
                     width: { ideal: 1920 },
                     height: { ideal: 1080 },
                     facingMode: 'user',
-                    frameRate: { ideal: 30 }
-                },
+                    frameRate: { ideal: 60 }
+                };
+                videoBitrate = 8000000; // 8 Mbps for higher quality
+            }
+
+            // Request camera and microphone access
+            this.stream = await navigator.mediaDevices.getUserMedia({
+                video: videoConstraints,
                 audio: {
                     echoCancellation: true,
                     noiseSuppression: true,
@@ -64,7 +83,7 @@ class VideoManager {
             const mimeType = this.getSupportedMimeType();
             this.mediaRecorder = new MediaRecorder(this.stream, {
                 mimeType: mimeType,
-                videoBitsPerSecond: 5000000  // 5 Mbps for high quality
+                videoBitsPerSecond: videoBitrate
             });
 
             this.videoChunks = [];

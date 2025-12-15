@@ -467,9 +467,21 @@
         window.TaskModule = {
             context: null,
 
-            init(context) {
+            init(context, savedSettings) {
                 this.context = context;
                 console.log('So La Mi Trainer initialized with context:', context);
+
+                // Restore saved settings if provided (and not in practice mode)
+                if (savedSettings && context.studentId !== 'practice') {
+                    if (savedSettings.firstNote !== undefined) {
+                        firstNote = savedSettings.firstNote;
+                    }
+                    if (savedSettings.numberOfNotes !== undefined) {
+                        numberOfNotes = savedSettings.numberOfNotes;
+                        updateNoteCountButton();
+                    }
+                    console.log('Restored settings:', savedSettings);
+                }
 
                 // Check if there's an existing response to restore
                 if (context.existingResponse) {
@@ -482,6 +494,9 @@
                     } catch (e) {
                         console.log('No valid existing response to restore');
                     }
+                } else {
+                    // Generate initial pattern with current settings
+                    resetModule();
                 }
             },
 
@@ -497,6 +512,25 @@
                 resetModule();
             }
         };
+
+        // Save current settings to parent app
+        function saveSettings() {
+            const settings = {
+                firstNote: firstNote,
+                numberOfNotes: numberOfNotes
+            };
+
+            // Get module path from window location
+            const modulePath = window.location.pathname.split('/').pop();
+
+            window.parent.postMessage({
+                type: 'taskmodule:settings',
+                modulePath: modulePath,
+                settings: settings
+            }, '*');
+
+            console.log('Saved settings to parent:', settings);
+        }
 
         // Configuration
         const noteColors = {
@@ -905,6 +939,7 @@
                 numberOfNotes = 3;
             }
             updateNoteCountButton();
+            saveSettings(); // Save settings to parent
             resetModule();
         }
 
@@ -951,6 +986,7 @@
             if (selected) {
                 firstNote = selected.value === 'none' ? null : selected.value;
             }
+            saveSettings(); // Save settings to parent
             closeModal('firstNoteModal');
             resetModule();
         }

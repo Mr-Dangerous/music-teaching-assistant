@@ -30,10 +30,14 @@ class ModuleLoader {
         // Wait for module to be ready
         setTimeout(() => {
           try {
-            // Send init context to module
+            // Get saved settings for this module (if any)
+            const savedSettings = window.app?.getModuleSettings?.(moduleUrl) || null;
+
+            // Send init context to module with saved settings
             iframe.contentWindow.postMessage({
               type: 'taskmodule:init',
-              context: context
+              context: context,
+              savedSettings: savedSettings  // Include saved settings
             }, '*');
             resolve(iframe);
           } catch (e) {

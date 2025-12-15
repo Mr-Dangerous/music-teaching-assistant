@@ -22,6 +22,9 @@ class TeachingAssistantApp {
     this.currentResponse = '';
     this.practiceMode = false; // When true, operates without student context
 
+    // Module settings storage (per module path, session only)
+    this.moduleSettings = {};
+
     this.countdownTimer = null;
     this.countdownInterval = null;
     this.countdownPaused = false;
@@ -102,34 +105,24 @@ class TeachingAssistantApp {
     document.addEventListener('mozfullscreenchange', () => this.updateFullscreenButton());
     document.addEventListener('MSFullscreenChange', () => this.updateFullscreenButton());
 
-    // Listen for messages from custom modules
+    // Listen for messages from modules
     window.addEventListener('message', (event) => {
       if (event.data.type === 'taskmodule:response') {
-        // Module reported a response change
-        this.currentResponse = event.data.value;
-
-        // Only save if not in practice mode
-        if (!this.practiceMode && this.selectedStudent && this.selectedTask && event.data.isComplete) {
-          // Create a NEW result entry for each completion
-          // This allows multiple attempts per session
-          const newResult = {
-            student_id: this.selectedStudent.student_id,
-            task_id: this.selectedTask,
-            response: event.data.value,
-            completed_date: new Date().toISOString()
-          };
-
-          // Add to results array
-          this.results.push(newResult);
-
-          this.markUnsaved();
-
-          // Update localStorage with new results data
-          this.updateLocalStorage();
-
-          // Start countdown
-          this.startCountdown();
-        }
+        // Module has sent a response - save it
+        this.handleModuleResponse(event.data);
+      } else if (event.data.type === 'taskmodule:settings') {
+        // Module has updated its settings - save them
+        this.handleModuleSettings(event.data);
+      } else if (event.data.type === 'taskmodule:ready') {
+        // Module is ready to receive additional commands
+        console.log('Module ready:', event.data);
+      } else if (event.data.type === 'taskmodule:log') {
+        // Module is sending a log message
+        console.log('Module log:', event.data.message);
+      } else if (event.data.type === 'taskmodule:error') {
+        // Module encountered an error
+        console.error('Module error:', event.data.message);
+        this.showNotification(`Module error: ${event.data.message}`, 'error');
       }
     });
 
@@ -147,19 +140,22 @@ class TeachingAssistantApp {
 
     // Back buttons
     const backToClassesBtn = document.getElementById('back-to-classes-btn');
-    // Back to class selection
-    document.getElementById('back-to-classes-btn').addEventListener('click', () => {
-      this.showClassScreen();
-    });
+    if (backToClassesBtn) {
+      backToClassesBtn.addEventListener('click', () => this.showClassScreen());
+    }
 
     // Recording button toggle
     document.getElementById('recording-btn').addEventListener('click', async () => {
       await this.toggleRecording();
     });
 
-    // Video recording button toggle
-    document.getElementById('video-recording-btn').addEventListener('click', async () => {
-      await this.toggleVideoRecording();
+    // Video recording buttons toggle
+    document.getElementById('video-recording-hq-btn').addEventListener('click', async () => {
+      await this.toggleVideoRecording('high');
+    });
+
+    document.getElementById('video-recording-lq-btn').addEventListener('click', async () => {
+      await this.toggleVideoRecording('low');
     });
 
     const backToStudentsBtn = document.getElementById('back-to-students-btn');
@@ -260,7 +256,8 @@ class TeachingAssistantApp {
       }
       // Show header elements after file load
       document.getElementById('recording-btn').style.display = 'block';
-      document.getElementById('video-recording-btn').style.display = 'block';
+      document.getElementById('video-recording-hq-btn').style.display = 'block';
+      document.getElementById('video-recording-lq-btn').style.display = 'block';
       document.getElementById('view-results-btn').style.display = 'block';
       const viewResultsBtn = document.getElementById('view-results-btn');
       if (viewResultsBtn) {
@@ -1606,15 +1603,22 @@ class TeachingAssistantApp {
 
   /**
    * Toggle video recording on/off
+   * @param {string} quality - 'high' or 'low' quality mode
    */
-  async toggleVideoRecording() {
-    const videoRecordingBtn = document.getElementById('video-recording-btn');
+  async toggleVideoRecording(quality = 'high') {
+    const hqBtn = document.getElementById('video-recording-hq-btn');
+    const lqBtn = document.getElementById('video-recording-lq-btn');
+    const activeBtn = quality === 'high' ? hqBtn : lqBtn;
+    const otherBtn = quality === 'high' ? lqBtn : hqBtn;
 
     try {
       if (this.videoManager.getIsRecording()) {
         // Stop recording
         await this.videoManager.stopRecording();
-        videoRecordingBtn.classList.remove('recording');
+        hqBtn.classList.remove('recording');
+        lqBtn.classList.remove('recording');
+        hqBtn.disabled = false;
+        lqBtn.disabled = false;
         this.showNotification('Video recording stopped and saved', 'success');
       } else {
         // Update context before starting
@@ -1623,16 +1627,74 @@ class TeachingAssistantApp {
           this.selectedClass
         );
 
-        // Start recording
-        await this.videoManager.startRecording();
-        videoRecordingBtn.classList.add('recording');
-        this.showNotification('Video recording started', 'info');
+        // Start recording with specified quality
+        await this.videoManager.startRecording(quality);
+        activeBtn.classList.add('recording');
+        otherBtn.disabled = true; // Disable other quality button while recording
+        const qualityLabel = quality === 'high' ? 'High Quality (1080p 60fps)' : 'Low Quality (720p 30fps)';
+        this.showNotification(`Video recording started - ${qualityLabel}`, 'info');
       }
     } catch (error) {
       console.error('Video recording error:', error);
       this.showNotification(`Video recording error: ${error.message}`, 'error');
-      videoRecordingBtn.classList.remove('recording');
+      hqBtn.classList.remove('recording');
+      lqBtn.classList.remove('recording');
+      hqBtn.disabled = false;
+      lqBtn.disabled = false;
     }
+  }
+
+  /**
+   * Handle module response message
+   * @param {Object} data - Response data from module
+   */
+  handleModuleResponse(data) {
+    // Module reported a response change
+    this.currentResponse = data.value;
+
+    // Only save if not in practice mode
+    if (!this.practiceMode && this.selectedStudent && this.selectedTask && data.isComplete) {
+      // Create a NEW result entry for each completion
+      // This allows multiple attempts per session
+      const newResult = {
+        student_id: this.selectedStudent.student_id,
+        task_id: this.selectedTask,
+        response: data.value,
+        completed_date: new Date().toISOString()
+      };
+
+      // Add to results array
+      this.results.push(newResult);
+
+      this.markUnsaved();
+
+      // Update localStorage with new results data
+      this.updateLocalStorage();
+
+      // Start countdown
+      this.startCountdown();
+    }
+  }
+
+  /**
+   * Handle module settings update
+   * @param {Object} data - Settings data from module
+   */
+  handleModuleSettings(data) {
+    if (data.modulePath && data.settings) {
+      // Store settings for this module
+      this.moduleSettings[data.modulePath] = data.settings;
+      console.log('Saved settings for module:', data.modulePath, data.settings);
+    }
+  }
+
+  /**
+   * Get saved settings for a module
+   * @param {string} modulePath - Path to the module
+   * @returns {Object|null} - Saved settings or null
+   */
+  getModuleSettings(modulePath) {
+    return this.moduleSettings[modulePath] || null;
   }
 }
 

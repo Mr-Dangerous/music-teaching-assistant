@@ -1343,6 +1343,12 @@ body {
   background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
 }
 
+.recording-btn-video:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background: linear-gradient(135deg, #9ca3af 0%, #6b7280 100%);
+}
+
 .btn-practice:hover {
   background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
 }
