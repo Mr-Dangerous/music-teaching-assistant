@@ -1581,7 +1581,6 @@ class TeachingAssistantApp {
         // Stop recording
         await this.audioManager.stopRecording();
         recordingBtn.classList.remove('recording');
-        this.showNotification('Recording stopped and saved', 'success');
       } else {
         // Update context before starting
         this.audioManager.setContext(
@@ -1592,7 +1591,6 @@ class TeachingAssistantApp {
         // Start recording
         await this.audioManager.startRecording();
         recordingBtn.classList.add('recording');
-        this.showNotification('Recording started', 'info');
       }
     } catch (error) {
       console.error('Recording error:', error);
@@ -1619,7 +1617,6 @@ class TeachingAssistantApp {
         lqBtn.classList.remove('recording');
         hqBtn.disabled = false;
         lqBtn.disabled = false;
-        this.showNotification('Video recording stopped and saved', 'success');
       } else {
         // Update context before starting
         this.videoManager.setContext(
@@ -1631,8 +1628,6 @@ class TeachingAssistantApp {
         await this.videoManager.startRecording(quality);
         activeBtn.classList.add('recording');
         otherBtn.disabled = true; // Disable other quality button while recording
-        const qualityLabel = quality === 'high' ? 'High Quality (1080p 60fps)' : 'Low Quality (720p 30fps)';
-        this.showNotification(`Video recording started - ${qualityLabel}`, 'info');
       }
     } catch (error) {
       console.error('Video recording error:', error);
