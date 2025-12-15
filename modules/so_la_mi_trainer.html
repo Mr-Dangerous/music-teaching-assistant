@@ -480,6 +480,18 @@
                         numberOfNotes = savedSettings.numberOfNotes;
                         updateNoteCountButton();
                     }
+                    if (savedSettings.customPattern !== undefined) {
+                        customPattern = savedSettings.customPattern;
+                        // If there's a custom pattern, apply it
+                        if (customPattern) {
+                            const parsed = parseCustomPattern(customPattern);
+                            if (parsed) {
+                                currentPattern = parsed;
+                                numberOfNotes = parsed.length;
+                                updateNoteCountButton();
+                            }
+                        }
+                    }
                     console.log('Restored settings:', savedSettings);
                 }
 
@@ -513,11 +525,22 @@
             }
         };
 
+        // Handle messages from parent frame
+        function handleMessage(event) {
+            // Ensure the message is from a trusted origin if possible
+            // For this example, we'll trust all messages, but in production,
+            // you might want to check event.origin
+            if (event.data && event.data.type === 'taskmodule:save-settings') {
+                saveSettings();
+            }
+        }
+
         // Save current settings to parent app
         function saveSettings() {
             const settings = {
                 firstNote: firstNote,
-                numberOfNotes: numberOfNotes
+                numberOfNotes: numberOfNotes,
+                customPattern: customPattern
             };
 
             // Get module path from window location
@@ -548,8 +571,9 @@
         let labelOriginalPositions = {};
         let staffLabelsState = 'off'; // 'off', 'so', 'all'
         let placedLabels = []; // Track cloned labels that were placed on notes
-        let firstNote = null; // Which note should always be first (or null for random)
+        let firstNote = 'so'; // Default to 'so' as first note
         let numberOfNotes = 3; // Number of notes to generate (3-6)
+        let customPattern = null; // Store custom pattern if set
 
         // Initialize
         function init() {
@@ -1052,6 +1076,7 @@
             // Apply the pattern
             currentPattern = parsed;
             numberOfNotes = parsed.length;
+            customPattern = input; // Save the custom pattern
             updateNoteCountButton();
 
             // Reset placements
@@ -1063,6 +1088,7 @@
             placedLabels = [];
             labelPlacements = {};
 
+            saveSettings(); // Save settings including custom pattern
             closeModal('customPatternModal');
             drawStaff();
         }
@@ -1083,6 +1109,14 @@
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('show');
         }
+
+        // Listen for init message from parent
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'taskmodule:init') {
+                // Call TaskModule.init with context and savedSettings
+                window.TaskModule.init(event.data.context, event.data.savedSettings);
+            }
+        });
 
         // Initialize when page loads
         init();
