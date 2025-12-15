@@ -586,17 +586,37 @@
             const notes = ['so', 'la', 'mi'];
             currentPattern = [];
 
+            // Helper function to pick a random note that's not the same as the last two
+            function getNextNote() {
+                const patternLength = currentPattern.length;
+
+                // If we have at least 2 notes, check if they're the same
+                if (patternLength >= 2) {
+                    const lastNote = currentPattern[patternLength - 1];
+                    const secondLastNote = currentPattern[patternLength - 2];
+
+                    // If last two notes are the same, don't allow that note again
+                    if (lastNote === secondLastNote) {
+                        const availableNotes = notes.filter(n => n !== lastNote);
+                        return availableNotes[Math.floor(Math.random() * availableNotes.length)];
+                    }
+                }
+
+                // Otherwise, any random note is fine
+                return notes[Math.floor(Math.random() * notes.length)];
+            }
+
             // If first note is set, start with it
             if (firstNote) {
                 currentPattern.push(firstNote);
                 // Fill remaining slots
                 for (let i = 1; i < numberOfNotes; i++) {
-                    currentPattern.push(notes[Math.floor(Math.random() * notes.length)]);
+                    currentPattern.push(getNextNote());
                 }
             } else {
                 // Randomly select notes
                 for (let i = 0; i < numberOfNotes; i++) {
-                    currentPattern.push(notes[Math.floor(Math.random() * notes.length)]);
+                    currentPattern.push(getNextNote());
                 }
             }
 
