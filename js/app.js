@@ -1692,6 +1692,9 @@ class TeachingAssistantApp {
    * @returns {Object|null} - Saved settings or null
    */
   getModuleSettings(modulePath) {
+    console.log('Getting settings for:', modulePath);
+    console.log('All stored settings:', this.moduleSettings);
+    console.log('Retrieved settings:', this.moduleSettings[modulePath]);
     return this.moduleSettings[modulePath] || null;
   }
 }
