@@ -247,6 +247,9 @@ class TeachingAssistantApp {
       console.log(`Loaded ${this.tasks.length} tasks`);
       console.log(`Loaded ${this.results.length} responses`);
 
+      // Populate session trackers from results
+      this.populateSessionTrackersFromResults();
+
       // Load presentation links (optional file)
       await this.loadPresentationLinks();
 
@@ -395,6 +398,32 @@ class TeachingAssistantApp {
     }
 
     return results;
+  }
+
+  /**
+   * Populate session trackers from results.csv records
+   * This loads ATTENDANCE, FORGOT_INSTRUMENT, and EARNED_STOOL records into session trackers
+   */
+  populateSessionTrackersFromResults() {
+    // Clear existing trackers
+    this.sessionAbsentStudents.clear();
+    this.sessionForgotInstrument.clear();
+    this.sessionEarnedStool.clear();
+
+    // Populate from results
+    this.results.forEach(result => {
+      if (result.task_id === 'ATTENDANCE' && result.response === 'absent') {
+        this.sessionAbsentStudents.add(result.student_id);
+      } else if (result.task_id === 'FORGOT_INSTRUMENT' && result.response === 'true') {
+        this.sessionForgotInstrument.add(result.student_id);
+      } else if (result.task_id === 'EARNED_STOOL' && result.response === 'true') {
+        this.sessionEarnedStool.add(result.student_id);
+      }
+    });
+
+    console.log(`Loaded ${this.sessionAbsentStudents.size} absent students`);
+    console.log(`Loaded ${this.sessionForgotInstrument.size} students who forgot instruments`);
+    console.log(`Loaded ${this.sessionEarnedStool.size} students who earned stools`);
   }
 
   /**
@@ -672,11 +701,14 @@ class TeachingAssistantApp {
       // Long-press detection for context menu
       let pressTimer = null;
       let touchMoved = false;
+      let longPressTriggered = false;
 
       const startPress = (e) => {
         touchMoved = false;
+        longPressTriggered = false;
         pressTimer = setTimeout(() => {
           // Long press detected - show context menu
+          longPressTriggered = true;
           this.showStudentContextMenu(student, e);
 
           // Provide haptic feedback if available
@@ -717,7 +749,15 @@ class TeachingAssistantApp {
       button.addEventListener('touchend', endPress);
 
       // Regular click handler
-      button.addEventListener('click', () => {
+      button.addEventListener('click', (e) => {
+        // If long press was triggered, don't handle the click
+        if (longPressTriggered) {
+          longPressTriggered = false;
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+
         // Don't select absent students for tasks
         if (button.classList.contains('absent')) {
           this.showNotification(`${student.name} is marked absent`, 'warning');
