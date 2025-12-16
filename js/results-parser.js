@@ -9,6 +9,8 @@ class ResultsParser {
             'so_la_mi_re_do_trainer': this.parseSoLaMi.bind(this), // Same format as so_la_mi_trainer
             'piano_octave_1': this.parsePianoOctave1.bind(this),
             'ATTENDANCE': this.parseAttendance.bind(this), // Special case for attendance
+            'FORGOT_INSTRUMENT': this.parseForgotInstrument.bind(this), // Special case for forgot instrument
+            'EARNED_STOOL': this.parseEarnedStool.bind(this), // Special case for earned stool
             // Add more module parsers here as needed
         };
     }
@@ -27,6 +29,16 @@ class ResultsParser {
         // Special case: ATTENDANCE records don't have a task in tasks.csv
         if (result.task_id === 'ATTENDANCE') {
             return this.parseAttendance(result, null);
+        }
+
+        // Special case: FORGOT_INSTRUMENT records don't have a task in tasks.csv
+        if (result.task_id === 'FORGOT_INSTRUMENT') {
+            return this.parseForgotInstrument(result, null);
+        }
+
+        // Special case: EARNED_STOOL records don't have a task in tasks.csv
+        if (result.task_id === 'EARNED_STOOL') {
+            return this.parseEarnedStool(result, null);
         }
 
         // Extract module name from module_path
@@ -168,6 +180,32 @@ class ResultsParser {
     }
 
     /**
+     * Parse Forgot Instrument records
+     * Response format: "true"
+     */
+    parseForgotInstrument(result, task) {
+        return {
+            question: 'Forgot Instrument',
+            answer: '❌ Forgot Instrument',
+            score: '—',
+            timestamp: result.completed_date || ''
+        };
+    }
+
+    /**
+     * Parse Earned Stool records
+     * Response format: "true"
+     */
+    parseEarnedStool(result, task) {
+        return {
+            question: 'Earned Stool',
+            answer: '⭐ Earned Stool',
+            score: '—',
+            timestamp: result.completed_date || ''
+        };
+    }
+
+    /**
      * Default parser for unknown modules
      */
     parseDefault(result, task) {
@@ -186,6 +224,16 @@ class ResultsParser {
         // Special case for ATTENDANCE
         if (modulePath === 'ATTENDANCE') {
             return 'Attendance';
+        }
+
+        // Special case for FORGOT_INSTRUMENT
+        if (modulePath === 'FORGOT_INSTRUMENT') {
+            return 'Forgot Instrument';
+        }
+
+        // Special case for EARNED_STOOL
+        if (modulePath === 'EARNED_STOOL') {
+            return 'Earned Stool';
         }
 
         const moduleName = this.extractModuleName(modulePath);
