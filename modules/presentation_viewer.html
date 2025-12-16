@@ -403,36 +403,25 @@
                 new Date(b.timestamp) - new Date(a.timestamp)
             );
 
-            savedPresentationsContainer.innerHTML = sorted.map((pres, index) => `
-                <div class="presentation-card" onclick="loadSavedPresentation(${index})">
+            savedPresentationsContainer.innerHTML = sorted.map((pres) => `
+                <div class="presentation-card" onclick="loadSavedPresentationByUrl('${pres.url.replace(/'/g, "\\'")}')>
                     <div class="presentation-card-title" title="${pres.title}">${pres.title}</div>
-                    <button class="delete-btn" onclick="event.stopPropagation(); deletePresentation(${index})" title="Delete">×</button>
+                    <button class="delete-btn" onclick="event.stopPropagation(); deletePresentationByUrl('${pres.url.replace(/'/g, "\\'")}', '${pres.title.replace(/'/g, "\\'")}')" title="Delete">×</button>
                 </div>
             `).join('');
         }
 
-        // Load a saved presentation
-        function loadSavedPresentation(index) {
-            const sorted = [...savedPresentations].sort((a, b) =>
-                new Date(b.timestamp) - new Date(a.timestamp)
-            );
-            const pres = sorted[index];
-            if (pres) {
-                urlInput.value = pres.url;
-                loadPresentation(pres.url);
-            }
+        // Load a saved presentation by URL
+        function loadSavedPresentationByUrl(url) {
+            urlInput.value = url;
+            loadPresentation(url);
         }
 
-        // Delete a presentation
-        async function deletePresentation(index) {
-            const sorted = [...savedPresentations].sort((a, b) =>
-                new Date(b.timestamp) - new Date(a.timestamp)
-            );
-            const pres = sorted[index];
-
-            if (confirm(`Delete "${pres.title}"?`)) {
+        // Delete a presentation by URL
+        async function deletePresentationByUrl(url, title) {
+            if (confirm(`Delete "${title}"?`)) {
                 try {
-                    await window.parent.deletePresentationLink(pres.url);
+                    await window.parent.deletePresentationLink(url);
                     await loadSavedPresentations();
                 } catch (error) {
                     alert('Error deleting presentation: ' + error.message);

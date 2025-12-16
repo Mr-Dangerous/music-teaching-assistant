@@ -1888,13 +1888,20 @@ class TeachingAssistantApp {
    */
   async loadPresentationLinks() {
     try {
-      const handle = await this.fileManager.directoryHandle.getFileHandle('presentation_links.csv');
+      if (!this.fileManager.folderHandle) {
+        console.log('No folder selected yet - presentations will load after folder is selected');
+        this.presentationLinks = [];
+        return;
+      }
+
+      const handle = await this.fileManager.folderHandle.getFileHandle('presentation_links.csv');
       const file = await handle.getFile();
       const text = await file.text();
 
       const lines = text.split('\n').filter(line => line.trim());
       if (lines.length <= 1) {
         this.presentationLinks = [];
+        console.log('Presentation links file is empty');
         return;
       }
 
@@ -1904,10 +1911,14 @@ class TeachingAssistantApp {
         return { timestamp, url, title };
       });
 
-      console.log('Loaded presentation links:', this.presentationLinks);
+      console.log(`Loaded ${this.presentationLinks.length} presentation links:`, this.presentationLinks);
+      if (this.presentationLinks.length > 0) {
+        this.showNotification(`Loaded ${this.presentationLinks.length} saved presentations`, 'success');
+      }
     } catch (error) {
       console.log('No presentation links file found or error:', error);
       this.presentationLinks = [];
+      // Don't show error notification - file might not exist yet (first run)
     }
   }
 
@@ -1916,6 +1927,10 @@ class TeachingAssistantApp {
    */
   async savePresentationLinks() {
     try {
+      if (!this.fileManager.folderHandle) {
+        throw new Error('No folder selected. Please load your data folder first.');
+      }
+
       // Create CSV content
       const header = 'timestamp,url,title\n';
       const rows = this.presentationLinks.map(pres =>
@@ -1923,13 +1938,13 @@ class TeachingAssistantApp {
       ).join('\n');
       const csvContent = header + rows;
 
-      // Save to file
-      const handle = await this.fileManager.directoryHandle.getFileHandle('presentation_links.csv', { create: true });
+      // Save to file in data folder
+      const handle = await this.fileManager.folderHandle.getFileHandle('presentation_links.csv', { create: true });
       const writable = await handle.createWritable();
       await writable.write(csvContent);
       await writable.close();
 
-      console.log('Saved presentation links');
+      console.log('✓ Saved presentation_links.csv to data folder');
     } catch (error) {
       console.error('Error saving presentation links:', error);
       throw error;
