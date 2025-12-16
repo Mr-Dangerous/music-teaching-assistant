@@ -1952,16 +1952,28 @@ class TeachingAssistantApp {
   }
 
   /**
-   * Save a presentation link
+   * Save a presentation link (updates if URL already exists)
    */
   async savePresentationLink(url, title) {
-    const presentation = {
-      timestamp: new Date().toISOString(),
-      url: url,
-      title: title
-    };
+    // Check if this URL already exists
+    const existingIndex = this.presentationLinks.findIndex(p => p.url === url);
 
-    this.presentationLinks.push(presentation);
+    if (existingIndex !== -1) {
+      // Update existing entry
+      this.presentationLinks[existingIndex].title = title;
+      this.presentationLinks[existingIndex].timestamp = new Date().toISOString();
+      console.log('Updated existing presentation:', title);
+    } else {
+      // Add new entry
+      const presentation = {
+        timestamp: new Date().toISOString(),
+        url: url,
+        title: title
+      };
+      this.presentationLinks.push(presentation);
+      console.log('Added new presentation:', title);
+    }
+
     await this.savePresentationLinks();
   }
 
