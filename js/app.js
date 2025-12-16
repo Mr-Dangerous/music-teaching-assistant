@@ -573,6 +573,9 @@ class TeachingAssistantApp {
     // Update header
     document.getElementById('selected-class-name').textContent = this.selectedClass;
 
+    // Clear student name display in sidebar
+    document.getElementById('selected-student-display').textContent = '';
+
     // Filter students by class
     const classStudents = this.students.filter(s => s.class === this.selectedClass);
 
@@ -923,7 +926,10 @@ class TeachingAssistantApp {
     // Reset any loaded modules
     this.moduleLoader.reset();
 
-    // Update student name display
+    // Update student name display in sidebar
+    document.getElementById('selected-student-display').textContent = student.name;
+
+    // Update student name display (keeping for backward compatibility, but hidden)
     document.getElementById('current-student-name').textContent = student.name;
 
     // Check if this student has this task assigned
