@@ -614,7 +614,7 @@ class TeachingAssistantApp {
       // Add status indicators
       const statusIndicator = document.createElement('span');
       statusIndicator.className = 'student-status-indicator';
-      
+
       if (this.sessionForgotInstrument.has(student.student_id)) {
         const forgot = document.createElement('span');
         forgot.className = 'status-forgot';
@@ -622,7 +622,7 @@ class TeachingAssistantApp {
         forgot.title = 'Forgot instrument';
         statusIndicator.appendChild(forgot);
       }
-      
+
       if (this.sessionEarnedStool.has(student.student_id)) {
         const stool = document.createElement('span');
         stool.className = 'status-stool';
@@ -630,7 +630,7 @@ class TeachingAssistantApp {
         stool.title = 'Earned stool';
         statusIndicator.appendChild(stool);
       }
-      
+
       if (statusIndicator.children.length > 0) {
         button.appendChild(statusIndicator);
       }
@@ -791,7 +791,7 @@ class TeachingAssistantApp {
     // Position the menu
     const x = event.clientX || (event.touches && event.touches[0].clientX) || 0;
     const y = event.clientY || (event.touches && event.touches[0].clientY) || 0;
-    
+
     menu.style.left = `${x}px`;
     menu.style.top = `${y}px`;
     menu.style.display = 'block';
@@ -804,6 +804,7 @@ class TeachingAssistantApp {
       if (!menu.contains(e.target)) {
         menu.style.display = 'none';
         document.removeEventListener('click', closeMenu);
+        document.removeEventListener('mouseup', closeMenu);
         document.removeEventListener('touchstart', closeMenu);
       }
     };
@@ -811,8 +812,9 @@ class TeachingAssistantApp {
     // Delay adding the close listeners to avoid immediate close
     setTimeout(() => {
       document.addEventListener('click', closeMenu);
+      document.addEventListener('mouseup', closeMenu);
       document.addEventListener('touchstart', closeMenu);
-    }, 100);
+    }, 300);
 
     // Handle menu item clicks
     const menuItems = menu.querySelectorAll('.context-menu-item');
@@ -821,8 +823,8 @@ class TeachingAssistantApp {
         e.stopPropagation();
         const action = item.dataset.action;
         menu.style.display = 'none';
-        
-        switch(action) {
+
+        switch (action) {
           case 'absent':
             this.toggleAbsentStatus(student);
             break;
@@ -846,7 +848,7 @@ class TeachingAssistantApp {
     if (hasForgot) {
       // Remove from session tracker
       this.sessionForgotInstrument.delete(student.student_id);
-      
+
       // Remove from results
       this.results = this.results.filter(r =>
         !(r.student_id === student.student_id && r.task_id === 'FORGOT_INSTRUMENT')
@@ -855,7 +857,7 @@ class TeachingAssistantApp {
     } else {
       // Add to session tracker
       this.sessionForgotInstrument.add(student.student_id);
-      
+
       // Create record for CSV
       const record = {
         student_id: student.student_id,
@@ -882,7 +884,7 @@ class TeachingAssistantApp {
     if (hasStool) {
       // Remove from session tracker
       this.sessionEarnedStool.delete(student.student_id);
-      
+
       // Remove from results
       this.results = this.results.filter(r =>
         !(r.student_id === student.student_id && r.task_id === 'EARNED_STOOL')
@@ -891,7 +893,7 @@ class TeachingAssistantApp {
     } else {
       // Add to session tracker
       this.sessionEarnedStool.add(student.student_id);
-      
+
       // Create record for CSV
       const record = {
         student_id: student.student_id,
