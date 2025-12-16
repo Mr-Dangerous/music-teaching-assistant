@@ -1323,6 +1323,75 @@ body {
   display: inline-block;
 }
 
+/* === Mic Gain Control === */
+.mic-gain-control {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  background: rgba(255, 255, 255, 0.15);
+  padding: var(--spacing-xs) var(--spacing-md);
+  border-radius: 12px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.mic-gain-label {
+  font-size: var(--font-normal);
+  cursor: default;
+}
+
+.mic-gain-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+.mic-gain-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.mic-gain-slider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.mic-gain-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: white;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: all 0.2s ease;
+}
+
+.mic-gain-slider::-moz-range-thumb:hover {
+  transform: scale(1.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.mic-gain-value {
+  font-size: var(--font-small);
+  font-weight: 700;
+  color: white;
+  min-width: 45px;
+  text-align: right;
+}
+
+
 @keyframes pulse {
   0% {
     box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);

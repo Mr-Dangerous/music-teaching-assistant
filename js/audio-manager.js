@@ -11,10 +11,17 @@ class AudioManager {
         this.isRecording = false;
         this.stream = null;
 
+        // Audio context and gain control
+        this.audioContext = null;
+        this.gainNode = null;
+        this.source = null;
+        this.destination = null;
+
         // Current context for recording
         this.currentStudent = null;
         this.currentClass = null;
     }
+
 
     /**
      * Set the current recording context
@@ -33,6 +40,20 @@ class AudioManager {
     getIsRecording() {
         return this.isRecording;
     }
+
+    /**
+     * Set the gain (volume) for the microphone input
+     * @param {number} gainPercent - Gain percentage (0-200, where 100 is normal)
+     */
+    setGain(gainPercent) {
+        if (this.gainNode) {
+            // Convert percentage to gain value (100% = 1.0, 200% = 2.0, 50% = 0.5)
+            const gainValue = gainPercent / 100;
+            this.gainNode.gain.value = gainValue;
+            console.log(`🎤 Mic gain set to ${gainPercent}% (${gainValue.toFixed(2)})`);
+        }
+    }
+
 
     /**
      * Start audio recording
@@ -54,9 +75,26 @@ class AudioManager {
                 }
             });
 
-            // Create MediaRecorder with WebM format
+            // Create audio context and gain node for volume control
+            this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            this.gainNode = this.audioContext.createGain();
+
+            // Set initial gain (default 100% = 1.0)
+            this.gainNode.gain.value = 1.0;
+
+            // Create source from microphone stream
+            this.source = this.audioContext.createMediaStreamSource(this.stream);
+
+            // Create destination to capture processed audio
+            this.destination = this.audioContext.createMediaStreamDestination();
+
+            // Connect: source -> gain -> destination
+            this.source.connect(this.gainNode);
+            this.gainNode.connect(this.destination);
+
+            // Create MediaRecorder with WebM format from the processed stream
             const mimeType = this.getSupportedMimeType();
-            this.mediaRecorder = new MediaRecorder(this.stream, {
+            this.mediaRecorder = new MediaRecorder(this.destination.stream, {
                 mimeType: mimeType
             });
 
@@ -85,6 +123,7 @@ class AudioManager {
         }
     }
 
+
     /**
      * Stop audio recording
      * @returns {Promise<void>}
@@ -101,12 +140,29 @@ class AudioManager {
         // Stop all tracks to release the microphone
         if (this.stream) {
             this.stream.getTracks().forEach(track => track.stop());
-            this.stream = null;
+        }
+
+        // Clean up Web Audio API resources
+        if (this.source) {
+            this.source.disconnect();
+            this.source = null;
+        }
+        if (this.gainNode) {
+            this.gainNode.disconnect();
+            this.gainNode = null;
+        }
+        if (this.destination) {
+            this.destination = null;
+        }
+        if (this.audioContext && this.audioContext.state !== 'closed') {
+            this.audioContext.close();
+            this.audioContext = null;
         }
 
         this.isRecording = false;
         console.log('🎤 Recording stopped');
     }
+
 
     /**
      * Save the recorded audio to folder
@@ -281,10 +337,29 @@ class AudioManager {
             this.stream.getTracks().forEach(track => track.stop());
             this.stream = null;
         }
+
+        // Clean up Web Audio API resources
+        if (this.source) {
+            this.source.disconnect();
+            this.source = null;
+        }
+        if (this.gainNode) {
+            this.gainNode.disconnect();
+            this.gainNode = null;
+        }
+        if (this.destination) {
+            this.destination = null;
+        }
+        if (this.audioContext && this.audioContext.state !== 'closed') {
+            this.audioContext.close();
+            this.audioContext = null;
+        }
+
         this.mediaRecorder = null;
         this.audioChunks = [];
         this.isRecording = false;
     }
+
 }
 
 // Export for use in other modules

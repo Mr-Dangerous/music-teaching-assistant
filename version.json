@@ -1,5 +1,5 @@
 {
-  "version": "0.3.6",
+  "version": "0.3.7",
   "lastUpdated": "2025-12-16",
-  "description": "Added keyboard navigation toggle and duplicate URL prevention"
+  "description": "Added microphone gain slider for input level adjustment"
 }

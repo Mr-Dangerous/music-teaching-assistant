@@ -30,6 +30,11 @@
         <option value="">Select Task...</option>
       </select>
       <span id="save-indicator" class="save-indicator"></span>
+      <div id="mic-gain-control" class="mic-gain-control" style="display: none;">
+        <label for="mic-gain-slider" class="mic-gain-label">🎤</label>
+        <input type="range" id="mic-gain-slider" class="mic-gain-slider" min="0" max="200" value="100" step="5">
+        <span id="mic-gain-value" class="mic-gain-value">100%</span>
+      </div>
       <button id="recording-btn" class="btn btn-secondary recording-btn" title="Record Audio" style="display: none;">
         <span class="recording-icon">M</span>
       </button>

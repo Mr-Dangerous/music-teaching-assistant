@@ -157,6 +157,18 @@ class TeachingAssistantApp {
       await this.toggleRecording();
     });
 
+    // Mic gain slider
+    const micGainSlider = document.getElementById('mic-gain-slider');
+    const micGainValue = document.getElementById('mic-gain-value');
+    if (micGainSlider && micGainValue) {
+      micGainSlider.addEventListener('input', (e) => {
+        const gainPercent = parseInt(e.target.value);
+        micGainValue.textContent = `${gainPercent}%`;
+        // Update gain in real-time if audio context exists
+        this.audioManager.setGain(gainPercent);
+      });
+    }
+
     // Video recording buttons toggle
     document.getElementById('video-recording-hq-btn').addEventListener('click', async () => {
       await this.toggleVideoRecording('high');
@@ -267,6 +279,7 @@ class TeachingAssistantApp {
       }
       // Show header elements after file load
       document.getElementById('recording-btn').style.display = 'block';
+      document.getElementById('mic-gain-control').style.display = 'flex';
       document.getElementById('video-recording-hq-btn').style.display = 'block';
       document.getElementById('video-recording-lq-btn').style.display = 'block';
       document.getElementById('view-results-btn').style.display = 'block';
