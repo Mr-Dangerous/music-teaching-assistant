@@ -269,6 +269,48 @@
             color: #999;
             font-size: 13px;
         }
+
+        /* Context menu for presentation cards */
+        .presentation-context-menu {
+            display: none;
+            position: fixed;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            min-width: 150px;
+        }
+
+        .presentation-context-menu.show {
+            display: block;
+        }
+
+        .context-menu-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: background 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .context-menu-item:first-child {
+            border-radius: 8px 8px 0 0;
+        }
+
+        .context-menu-item:last-child {
+            border-radius: 0 0 8px 8px;
+        }
+
+        .context-menu-item:hover {
+            background: #f5f5f5;
+        }
+
+        .context-menu-item.danger:hover {
+            background: #ffebee;
+            color: #f44336;
+        }
     </style>
 </head>
 
@@ -313,6 +355,24 @@
                 <button class="modal-btn modal-btn-primary" onclick="confirmSave()">Save</button>
             </div>
         </div>
+    </div>
+
+    <!-- Rename Modal -->
+    <div id="renameModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Rename Presentation</div>
+            <input type="text" id="renameInput" class="modal-input" placeholder="Enter new title">
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" onclick="closeRenameModal()">Cancel</button>
+                <button class="modal-btn modal-btn-primary" onclick="confirmRename()">Rename</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="presentationContextMenu" class="presentation-context-menu">
+        <div class="context-menu-item" data-action="rename">✏️ Rename</div>
+        <div class="context-menu-item danger" data-action="delete">🗑️ Delete</div>
     </div>
 
     <script>
@@ -403,12 +463,19 @@
                 new Date(b.timestamp) - new Date(a.timestamp)
             );
 
-            savedPresentationsContainer.innerHTML = sorted.map((pres) => `
-                <div class="presentation-card" onclick="loadSavedPresentationByUrl('${pres.url.replace(/'/g, "\\'")}')>
+            savedPresentationsContainer.innerHTML = sorted.map((pres) => {
+                return `<div class="presentation-card" 
+                    data-url="${pres.url.replace(/"/g, '&quot;')}" 
+                    data-title="${pres.title.replace(/"/g, '&quot;')}">
                     <div class="presentation-card-title" title="${pres.title}">${pres.title}</div>
-                    <button class="delete-btn" onclick="event.stopPropagation(); deletePresentationByUrl('${pres.url.replace(/'/g, "\\'")}', '${pres.title.replace(/'/g, "\\'")}')" title="Delete">×</button>
-                </div>
-            `).join('');
+                </div>`;
+            }).join('');
+
+            // Add long-press handlers to each card
+            const cards = savedPresentationsContainer.querySelectorAll('.presentation-card');
+            cards.forEach(card => {
+                addLongPressHandler(card);
+            });
         }
 
         // Load a saved presentation by URL
@@ -428,6 +495,151 @@
                 }
             }
         }
+
+        // Add long-press handler to a presentation card
+        function addLongPressHandler(card) {
+            let pressTimer = null;
+            let touchMoved = false;
+
+            const startPress = (e) => {
+                touchMoved = false;
+                pressTimer = setTimeout(() => {
+                    // Long press detected - show context menu
+                    showPresentationContextMenu(card, e);
+
+                    // Haptic feedback if available
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                }, 800);
+            };
+
+            const cancelPress = () => {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+            };
+
+            const endPress = () => {
+                if (pressTimer && !touchMoved) {
+                    // Regular click - load presentation
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                    const url = card.dataset.url;
+                    loadSavedPresentationByUrl(url);
+                }
+            };
+
+            // Mouse events
+            card.addEventListener('mousedown', startPress);
+            card.addEventListener('mouseup', endPress);
+            card.addEventListener('mouseleave', cancelPress);
+
+            // Touch events
+            card.addEventListener('touchstart', startPress);
+            card.addEventListener('touchmove', () => { touchMoved = true; });
+            card.addEventListener('touchend', endPress);
+        }
+
+        // Show context menu for presentation card
+        function showPresentationContextMenu(card, event) {
+            const menu = document.getElementById('presentationContextMenu');
+            if (!menu) return;
+
+            const url = card.dataset.url;
+            const title = card.dataset.title;
+
+            // Position menu
+            const x = event.clientX || (event.touches && event.touches[0].clientX) || 0;
+            const y = event.clientY || (event.touches && event.touches[0].clientY) || 0;
+
+            menu.style.left = `${x}px`;
+            menu.style.top = `${y}px`;
+            menu.classList.add('show');
+
+            // Store current presentation for menu actions
+            menu.dataset.currentUrl = url;
+            menu.dataset.currentTitle = title;
+
+            // Close menu when clicking outside
+            const closeMenu = (e) => {
+                if (!menu.contains(e.target)) {
+                    menu.classList.remove('show');
+                    document.removeEventListener('click', closeMenu);
+                    document.removeEventListener('touchstart', closeMenu);
+                }
+            };
+
+            // Delay to avoid immediate close
+            setTimeout(() => {
+                document.addEventListener('click', closeMenu);
+                document.addEventListener('touchstart', closeMenu);
+            }, 300);
+
+            // Handle menu item clicks
+            const menuItems = menu.querySelectorAll('.context-menu-item');
+            menuItems.forEach(item => {
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    const action = item.dataset.action;
+                    menu.classList.remove('show');
+
+                    if (action === 'rename') {
+                        showRenameModal(url, title);
+                    } else if (action === 'delete') {
+                        deletePresentationByUrl(url, title);
+                    }
+                };
+            });
+        }
+
+        // Show rename modal
+        function showRenameModal(url, currentTitle) {
+            const modal = document.getElementById('renameModal');
+            const input = document.getElementById('renameInput');
+
+            input.value = currentTitle;
+            modal.classList.add('show');
+            input.focus();
+            input.select();
+
+            // Store URL for confirm function
+            modal.dataset.renameUrl = url;
+        }
+
+        // Close rename modal
+        function closeRenameModal() {
+            document.getElementById('renameModal').classList.remove('show');
+        }
+
+        // Confirm rename
+        async function confirmRename() {
+            const modal = document.getElementById('renameModal');
+            const input = document.getElementById('renameInput');
+            const newTitle = input.value.trim();
+            const url = modal.dataset.renameUrl;
+
+            if (!newTitle) {
+                alert('Please enter a title');
+                return;
+            }
+
+            try {
+                // Find and update the presentation
+                const presentation = savedPresentations.find(p => p.url === url);
+                if (presentation) {
+                    presentation.title = newTitle;
+                    await window.parent.savePresentationLink(url, newTitle);
+                    await loadSavedPresentations();
+                    closeRenameModal();
+                }
+            } catch (error) {
+                alert('Error renaming presentation: ' + error.message);
+            }
+        }
+
+
 
         // Convert various URLs to embeddable format
         function convertToEmbedUrl(url) {
