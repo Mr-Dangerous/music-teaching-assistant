@@ -73,8 +73,9 @@ class VideoManager {
             this.stream = await navigator.mediaDevices.getUserMedia({
                 video: videoConstraints,
                 audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
+                    echoCancellation: false,  // Disabled for music - preserves full frequency range
+                    noiseSuppression: false,  // Disabled for music - prevents suppression of musical content
+                    autoGainControl: false,   // Disabled for consistent audio levels
                     sampleRate: 48000  // Higher quality audio
                 }
             });
