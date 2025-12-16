@@ -1,5 +1,5 @@
 {
-  "version": "0.3.10",
+  "version": "0.3.11",
   "lastUpdated": "2025-12-16",
-  "description": "Added forgot instrument and earned stool to results viewer"
+  "description": "Fixed results viewer to properly display forgot instrument and earned stool events"
 }

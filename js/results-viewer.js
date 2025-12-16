@@ -255,6 +255,18 @@ class ResultsViewerApp {
             modules.push('ATTENDANCE');
         }
 
+        // Check if there are any FORGOT_INSTRUMENT records
+        const hasForgotInstrument = this.results.some(r => r.task_id === 'FORGOT_INSTRUMENT');
+        if (hasForgotInstrument) {
+            modules.push('FORGOT_INSTRUMENT');
+        }
+
+        // Check if there are any EARNED_STOOL records
+        const hasEarnedStool = this.results.some(r => r.task_id === 'EARNED_STOOL');
+        if (hasEarnedStool) {
+            modules.push('EARNED_STOOL');
+        }
+
         modules.forEach(modulePath => {
             const option = document.createElement('option');
             option.value = modulePath;
@@ -292,6 +304,12 @@ class ResultsViewerApp {
             if (this.selectedModule === 'ATTENDANCE') {
                 // Filter for attendance records specifically
                 filteredResults = filteredResults.filter(r => r.task_id === 'ATTENDANCE');
+            } else if (this.selectedModule === 'FORGOT_INSTRUMENT') {
+                // Filter for forgot instrument records specifically
+                filteredResults = filteredResults.filter(r => r.task_id === 'FORGOT_INSTRUMENT');
+            } else if (this.selectedModule === 'EARNED_STOOL') {
+                // Filter for earned stool records specifically
+                filteredResults = filteredResults.filter(r => r.task_id === 'EARNED_STOOL');
             } else {
                 // Filter by tasks that use this module
                 const moduleTasks = this.tasks
@@ -316,6 +334,30 @@ class ResultsViewerApp {
                     return {
                         ...parsed,
                         modulePath: 'ATTENDANCE',
+                        studentId: result.student_id
+                    };
+                }
+
+                // Special case: FORGOT_INSTRUMENT records don't have a task
+                if (result.task_id === 'FORGOT_INSTRUMENT') {
+                    const parsed = this.resultsParser.parseResult(result, null);
+                    if (!parsed) return null;
+
+                    return {
+                        ...parsed,
+                        modulePath: 'FORGOT_INSTRUMENT',
+                        studentId: result.student_id
+                    };
+                }
+
+                // Special case: EARNED_STOOL records don't have a task
+                if (result.task_id === 'EARNED_STOOL') {
+                    const parsed = this.resultsParser.parseResult(result, null);
+                    if (!parsed) return null;
+
+                    return {
+                        ...parsed,
+                        modulePath: 'EARNED_STOOL',
                         studentId: result.student_id
                     };
                 }
