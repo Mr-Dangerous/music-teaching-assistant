@@ -32,7 +32,22 @@ _(Add any future feature requests here)_
 
 ## Known Bugs
 
-_(Add any other bugs discovered here)_
+### Context Menu - Mouse Long-Click Not Working
+**Status:** Partial - Works on smartboard/touch, not working with mouse long-click
+**Problem:** Student roster context menu (long-press feature) works perfectly on smartboard/touchscreen but does not trigger with a long mouse click.
+
+**What Works:**
+- ✅ Long-press on touchscreen/smartboard (800ms hold)
+- ✅ Context menu display and interaction
+- ✅ All three menu options (Absent, Forgot Instrument, Earned Stool)
+- ✅ Visual indicators (❌ ⭐) appear correctly
+- ✅ Data saves to results.csv
+
+**What Doesn't Work:**
+- ❌ Long-click with regular mouse (holding mouse button down for 800ms)
+
+**File Location:** `js/app.js` lines 649-698 (student button event handlers)
+**Related:** Context menu implementation starting at line 788
 
 ---
 
