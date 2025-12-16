@@ -804,7 +804,6 @@ class TeachingAssistantApp {
       if (!menu.contains(e.target)) {
         menu.style.display = 'none';
         document.removeEventListener('click', closeMenu);
-        document.removeEventListener('mouseup', closeMenu);
         document.removeEventListener('touchstart', closeMenu);
       }
     };
@@ -812,7 +811,6 @@ class TeachingAssistantApp {
     // Delay adding the close listeners to avoid immediate close
     setTimeout(() => {
       document.addEventListener('click', closeMenu);
-      document.addEventListener('mouseup', closeMenu);
       document.addEventListener('touchstart', closeMenu);
     }, 300);
 
