@@ -288,6 +288,26 @@ Countdown timer is a global overlay, shown after response submission via `startC
 - Description of latest changes
 - Referenced by modules that display version badges
 
+### Semantic Versioning Rules
+
+Version format: `MAJOR.MINOR.PATCH` (e.g., 0.3.0)
+
+**When to increment:**
+- **MAJOR.MINOR.0** → User requests new feature or significant change
+  - Example: User asks for new module or major UX change → 0.3.0 → 0.4.0
+- **MAJOR.MINOR.PATCH** → Claude commits/pushes code changes
+  - Example: Bug fix or incremental update → 0.3.0 → 0.3.1
+
+**Process:**
+1. User requests change → Claude increments MINOR version
+2. Claude commits/pushes → Claude increments PATCH version
+3. Update `version.json` with each version bump
+4. Version displayed in bottom-right corner of app
+5. Forces cache refresh for users
+
+**Current version:** 0.3.0 (Next user request: 0.4.0, Next commit: 0.3.1)
+
+
 ## Fullscreen Mode
 
 The app supports fullscreen mode for immersive student task display:
