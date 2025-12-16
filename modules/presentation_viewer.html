@@ -25,9 +25,13 @@
             background: rgba(255, 255, 255, 0.95);
             padding: 16px 20px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .url-controls {
             display: flex;
             gap: 12px;
             align-items: center;
+            margin-bottom: 12px;
         }
 
         .url-input {
@@ -44,9 +48,8 @@
             border-color: #667eea;
         }
 
-        .load-btn {
+        .btn {
             padding: 12px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
             border-radius: 8px;
@@ -56,30 +59,93 @@
             transition: transform 0.2s, box-shadow 0.2s;
         }
 
-        .load-btn:hover {
+        .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         }
 
-        .load-btn:active {
+        .btn:active {
             transform: translateY(0);
         }
 
+        .load-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .load-btn:hover {
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .save-btn {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+        }
+
+        .save-btn:hover {
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+        }
+
         .clear-btn {
-            padding: 12px 20px;
             background: #f44336;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: transform 0.2s, box-shadow 0.2s;
         }
 
         .clear-btn:hover {
-            transform: translateY(-2px);
             box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+        }
+
+        .saved-presentations {
+            max-height: 120px;
+            overflow-y: auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 8px;
+        }
+
+        .presentation-card {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 10px 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .presentation-card:hover {
+            border-color: #667eea;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .presentation-card-title {
+            flex: 1;
+            font-size: 13px;
+            font-weight: 600;
+            color: #333;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .delete-btn {
+            width: 20px;
+            height: 20px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.2s;
+        }
+
+        .delete-btn:hover {
+            background: #d32f2f;
         }
 
         .viewer-container {
@@ -125,20 +191,96 @@
             font-style: italic;
         }
 
-        .error-message {
-            color: #f44336;
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            font-size: 20px;
+            font-weight: 700;
+            margin-bottom: 16px;
+            color: #333;
+        }
+
+        .modal-input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            margin-bottom: 16px;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+        }
+
+        .modal-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
             font-size: 14px;
             font-weight: 600;
+            cursor: pointer;
+        }
+
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+
+        .modal-btn-secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 20px;
+            color: #999;
+            font-size: 13px;
         }
     </style>
 </head>
 
 <body>
     <div class="controls">
-        <input type="text" id="urlInput" class="url-input"
-            placeholder="Paste any link here (Google Slides, YouTube, images, PDFs, etc.)">
-        <button id="loadBtn" class="load-btn">Load</button>
-        <button id="clearBtn" class="clear-btn">Clear</button>
+        <div class="url-controls">
+            <input type="text" id="urlInput" class="url-input"
+                placeholder="Paste any link here (Google Slides, YouTube, images, PDFs, etc.)">
+            <button id="loadBtn" class="btn load-btn">Load</button>
+            <button id="saveBtn" class="btn save-btn">Save</button>
+            <button id="clearBtn" class="btn clear-btn">Clear</button>
+        </div>
+
+        <div id="savedPresentations" class="saved-presentations">
+            <!-- Saved presentation cards will be inserted here -->
+        </div>
     </div>
 
     <div class="viewer-container">
@@ -157,16 +299,33 @@
         <iframe id="presentationFrame" class="presentation-frame"></iframe>
     </div>
 
+    <!-- Save Title Modal -->
+    <div id="saveTitleModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Save Presentation</div>
+            <input type="text" id="titleInput" class="modal-input" placeholder="Enter a title for this presentation">
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" onclick="closeSaveModal()">Cancel</button>
+                <button class="modal-btn modal-btn-primary" onclick="confirmSave()">Save</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Module state
         let currentUrl = '';
+        let savedPresentations = [];
 
         // DOM elements
         const urlInput = document.getElementById('urlInput');
         const loadBtn = document.getElementById('loadBtn');
+        const saveBtn = document.getElementById('saveBtn');
         const clearBtn = document.getElementById('clearBtn');
         const placeholder = document.getElementById('placeholder');
         const frame = document.getElementById('presentationFrame');
+        const saveTitleModal = document.getElementById('saveTitleModal');
+        const titleInput = document.getElementById('titleInput');
+        const savedPresentationsContainer = document.getElementById('savedPresentations');
 
         // TaskModule interface for parent app
         window.TaskModule = {
@@ -175,6 +334,9 @@
             init(context, savedSettings) {
                 this.context = context;
                 console.log('Presentation Viewer initialized:', context);
+
+                // Load saved presentations from CSV
+                loadSavedPresentations();
 
                 // Restore saved URL if available (and not practice mode)
                 if (savedSettings && savedSettings.url && context.studentId !== 'practice') {
@@ -202,11 +364,72 @@
             }
         };
 
+        // Load saved presentations from parent app
+        async function loadSavedPresentations() {
+            try {
+                const presentations = await window.parent.getPresentationLinks();
+                savedPresentations = presentations || [];
+                renderSavedPresentations();
+            } catch (error) {
+                console.log('No saved presentations or error loading:', error);
+                savedPresentations = [];
+                renderSavedPresentations();
+            }
+        }
+
+        // Render saved presentation cards
+        function renderSavedPresentations() {
+            if (savedPresentations.length === 0) {
+                savedPresentationsContainer.innerHTML = '<div class="empty-state">No saved presentations yet</div>';
+                return;
+            }
+
+            // Sort by timestamp (most recent first)
+            const sorted = [...savedPresentations].sort((a, b) =>
+                new Date(b.timestamp) - new Date(a.timestamp)
+            );
+
+            savedPresentationsContainer.innerHTML = sorted.map((pres, index) => `
+                <div class="presentation-card" onclick="loadSavedPresentation(${index})">
+                    <div class="presentation-card-title" title="${pres.title}">${pres.title}</div>
+                    <button class="delete-btn" onclick="event.stopPropagation(); deletePresentation(${index})" title="Delete">×</button>
+                </div>
+            `).join('');
+        }
+
+        // Load a saved presentation
+        function loadSavedPresentation(index) {
+            const sorted = [...savedPresentations].sort((a, b) =>
+                new Date(b.timestamp) - new Date(a.timestamp)
+            );
+            const pres = sorted[index];
+            if (pres) {
+                urlInput.value = pres.url;
+                loadPresentation(pres.url);
+            }
+        }
+
+        // Delete a presentation
+        async function deletePresentation(index) {
+            const sorted = [...savedPresentations].sort((a, b) =>
+                new Date(b.timestamp) - new Date(a.timestamp)
+            );
+            const pres = sorted[index];
+
+            if (confirm(`Delete "${pres.title}"?`)) {
+                try {
+                    await window.parent.deletePresentationLink(pres.url);
+                    await loadSavedPresentations();
+                } catch (error) {
+                    alert('Error deleting presentation: ' + error.message);
+                }
+            }
+        }
+
         // Convert various URLs to embeddable format
         function convertToEmbedUrl(url) {
             // Google Slides: convert to embed format
             if (url.includes('docs.google.com/presentation')) {
-                // Extract presentation ID
                 const match = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
                 if (match) {
                     return `https://docs.google.com/presentation/d/${match[1]}/embed?start=false&loop=false&delayms=3000`;
@@ -225,6 +448,16 @@
 
             // For other URLs, use as-is
             return url;
+        }
+
+        // Attempt to get title from iframe
+        function getTitleFromIframe() {
+            try {
+                return frame.contentDocument.title || '';
+            } catch (e) {
+                // Cross-origin restriction
+                return '';
+            }
         }
 
         // Load presentation
@@ -259,6 +492,58 @@
             saveSettings();
         }
 
+        // Show save modal
+        function showSaveModal() {
+            if (!currentUrl) {
+                alert('Please load a presentation first');
+                return;
+            }
+
+            // Try to get title from iframe
+            setTimeout(() => {
+                const autoTitle = getTitleFromIframe();
+                titleInput.value = autoTitle || extractTitleFromUrl(currentUrl);
+                saveTitleModal.classList.add('show');
+                titleInput.focus();
+                titleInput.select();
+            }, 500);
+        }
+
+        // Extract title from URL
+        function extractTitleFromUrl(url) {
+            // Try to extract a meaningful title from the URL
+            try {
+                const urlObj = new URL(url);
+                const pathParts = urlObj.pathname.split('/').filter(p => p);
+                return pathParts[pathParts.length - 1] || 'Untitled Presentation';
+            } catch (e) {
+                return 'Untitled Presentation';
+            }
+        }
+
+        // Close save modal
+        function closeSaveModal() {
+            saveTitleModal.classList.remove('show');
+        }
+
+        // Confirm save
+        async function confirmSave() {
+            const title = titleInput.value.trim();
+            if (!title) {
+                alert('Please enter a title');
+                return;
+            }
+
+            try {
+                await window.parent.savePresentationLink(currentUrl, title);
+                closeSaveModal();
+                await loadSavedPresentations();
+                alert('Presentation saved!');
+            } catch (error) {
+                alert('Error saving presentation: ' + error.message);
+            }
+        }
+
         // Save current URL to parent app (session-based)
         function saveSettings() {
             const settings = {
@@ -281,11 +566,19 @@
             loadPresentation(urlInput.value);
         });
 
+        saveBtn.addEventListener('click', showSaveModal);
+
         clearBtn.addEventListener('click', clearPresentation);
 
         urlInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {
                 loadPresentation(urlInput.value);
+            }
+        });
+
+        titleInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                confirmSave();
             }
         });
 

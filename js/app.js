@@ -37,6 +37,10 @@ class TeachingAssistantApp {
     this.sessionForgotInstrument = new Set();
     this.sessionEarnedStool = new Set();
 
+    // Presentation links storage
+    this.presentationLinks = [];  // Array of {timestamp, url, title}
+    this.perClassPresentations = {};  // {className: url} for session persistence
+
     this.initializeApp();
   }
 
@@ -230,6 +234,9 @@ class TeachingAssistantApp {
       console.log(`Loaded ${this.students.length} students`);
       console.log(`Loaded ${this.tasks.length} tasks`);
       console.log(`Loaded ${this.results.length} responses`);
+
+      // Load presentation links (optional file)
+      await this.loadPresentationLinks();
 
       // Default to first task if any exist
       if (this.tasks.length > 0 && !this.selectedTask) {
@@ -1845,6 +1852,12 @@ class TeachingAssistantApp {
       // Store settings for this module
       this.moduleSettings[data.modulePath] = data.settings;
       console.log('Saved settings for module:', data.modulePath, data.settings);
+
+      // If this is presentation_viewer and we have a class selected, track per-class
+      if (data.modulePath === 'presentation_viewer.html' && this.selectedClass && data.settings.url) {
+        this.perClassPresentations[this.selectedClass] = data.settings.url;
+        console.log('Saved presentation for class:', this.selectedClass, data.settings.url);
+      }
     }
   }
 
@@ -1856,8 +1869,100 @@ class TeachingAssistantApp {
   getModuleSettings(modulePath) {
     console.log('Getting settings for:', modulePath);
     console.log('All stored settings:', this.moduleSettings);
+
+    // Special handling for presentation_viewer: return per-class URL if available
+    if (modulePath === 'presentation_viewer.html' && this.selectedClass) {
+      const classUrl = this.perClassPresentations[this.selectedClass];
+      if (classUrl) {
+        console.log('Returning per-class presentation for:', this.selectedClass, classUrl);
+        return { url: classUrl };
+      }
+    }
+
     console.log('Retrieved settings:', this.moduleSettings[modulePath]);
     return this.moduleSettings[modulePath] || null;
+  }
+
+  /**
+   * Load presentation links from CSV
+   */
+  async loadPresentationLinks() {
+    try {
+      const handle = await this.fileManager.directoryHandle.getFileHandle('presentation_links.csv');
+      const file = await handle.getFile();
+      const text = await file.text();
+
+      const lines = text.split('\n').filter(line => line.trim());
+      if (lines.length <= 1) {
+        this.presentationLinks = [];
+        return;
+      }
+
+      // Parse CSV (skip header)
+      this.presentationLinks = lines.slice(1).map(line => {
+        const [timestamp, url, title] = this.csvHandler.parseCSVLine(line);
+        return { timestamp, url, title };
+      });
+
+      console.log('Loaded presentation links:', this.presentationLinks);
+    } catch (error) {
+      console.log('No presentation links file found or error:', error);
+      this.presentationLinks = [];
+    }
+  }
+
+  /**
+   * Save presentation links to CSV
+   */
+  async savePresentationLinks() {
+    try {
+      // Create CSV content
+      const header = 'timestamp,url,title\n';
+      const rows = this.presentationLinks.map(pres =>
+        `${pres.timestamp},"${pres.url}","${pres.title}"`
+      ).join('\n');
+      const csvContent = header + rows;
+
+      // Save to file
+      const handle = await this.fileManager.directoryHandle.getFileHandle('presentation_links.csv', { create: true });
+      const writable = await handle.createWritable();
+      await writable.write(csvContent);
+      await writable.close();
+
+      console.log('Saved presentation links');
+    } catch (error) {
+      console.error('Error saving presentation links:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save a presentation link
+   */
+  async savePresentationLink(url, title) {
+    const presentation = {
+      timestamp: new Date().toISOString(),
+      url: url,
+      title: title
+    };
+
+    this.presentationLinks.push(presentation);
+    await this.savePresentationLinks();
+  }
+
+  /**
+   * Delete a presentation link
+   */
+  async deletePresentationLink(url) {
+    this.presentationLinks = this.presentationLinks.filter(p => p.url !== url);
+    await this.savePresentationLinks();
+  }
+
+  /**
+   * Get all presentation links
+   */
+  getPresentationLinks() {
+    return this.presentationLinks;
   }
 }
 
@@ -1872,3 +1977,20 @@ if (document.readyState === 'loading') {
   app = new TeachingAssistantApp();
   window.app = app; // Expose globally for modules
 }
+
+// Global functions for presentation viewer module
+window.getPresentationLinks = function () {
+  return window.app ? window.app.getPresentationLinks() : [];
+};
+
+window.savePresentationLink = async function (url, title) {
+  if (window.app) {
+    await window.app.savePresentationLink(url, title);
+  }
+};
+
+window.deletePresentationLink = async function (url) {
+  if (window.app) {
+    await window.app.deletePresentationLink(url);
+  }
+};
