@@ -1,5 +1,5 @@
 {
-  "version": "0.2.0",
-  "lastUpdated": "2025-12-12",
-  "description": "Added pentatonic composer with 8 notes and visual palette"
+  "version": "0.3.0",
+  "lastUpdated": "2025-12-16",
+  "description": "Added presentation viewer with library, per-class persistence, and UI improvements"
 }
