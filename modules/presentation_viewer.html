@@ -99,6 +99,10 @@
             gap: 8px;
         }
 
+        .saved-presentations.hidden {
+            display: none;
+        }
+
         .presentation-card {
             background: white;
             border: 2px solid #e0e0e0;
@@ -379,6 +383,14 @@
 
         // Render saved presentation cards
         function renderSavedPresentations() {
+            // Hide cards if there's an active presentation
+            if (currentUrl) {
+                savedPresentationsContainer.classList.add('hidden');
+                return;
+            } else {
+                savedPresentationsContainer.classList.remove('hidden');
+            }
+
             if (savedPresentations.length === 0) {
                 savedPresentationsContainer.innerHTML = '<div class="empty-state">No saved presentations yet</div>';
                 return;
@@ -477,6 +489,9 @@
             // Save settings to parent
             saveSettings();
 
+            // Hide cards when presentation is loaded
+            renderSavedPresentations();
+
             console.log('Loaded presentation:', embedUrl);
         }
 
@@ -488,8 +503,11 @@
             urlInput.value = '';
             currentUrl = '';
 
-            // Save cleared state
+            // Save cleared state (this will clear per-class tracking too)
             saveSettings();
+
+            // Show cards again when cleared
+            renderSavedPresentations();
         }
 
         // Show save modal
@@ -536,8 +554,8 @@
 
             try {
                 await window.parent.savePresentationLink(currentUrl, title);
-                closeSaveModal();
                 await loadSavedPresentations();
+                closeSaveModal();  // Close modal AFTER operations complete
                 alert('Presentation saved!');
             } catch (error) {
                 alert('Error saving presentation: ' + error.message);
