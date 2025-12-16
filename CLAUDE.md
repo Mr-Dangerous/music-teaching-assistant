@@ -66,6 +66,11 @@ This replaces an older "wide format" single CSV with artifact_1, artifact_2 colu
 - Supports: `free_type`, `multiple_choice(option1|option2|...)`, custom types
 - Handles keyboard input for free_type responses
 
+**config.js** - Question type configurations (legacy)
+- Defines input renderers for buttons, checkboxes, scales, text
+- UI settings for smartboard (colors, fonts, touch targets)
+- Note: Mostly superseded by custom modules, but still used for some built-in types
+
 **module-loader.js** - Custom module system
 - Loads HTML modules as sandboxed iframes
 - Manages communication via postMessage API
@@ -172,6 +177,42 @@ window.TaskModule = {
 }
 ```
 
+### Shared Module System
+
+For complex modules (especially music composers), reusable ES6 modules are available in `modules/shared/`:
+
+- **MusicNotation.js** - Music theory utilities, pitch ordering, interval calculations
+- **MusicStaffRenderer.js** - Renders musical staff with notes on canvas
+- **AudioPlayer.js** - Web Audio API wrapper for playing notes/melodies
+- **DragDropHandler.js** - Unified drag-and-drop for mouse and touch events
+- **ComposerState.js** - State management for music composition tasks
+- **ComposerJSON.js** - Serialization/deserialization of compositions
+- **ComposerScreenshot.js** - Canvas-to-image conversion for submissions
+- **VersionDisplay.js** - Version badge rendering
+
+**Usage pattern:**
+```html
+<script type="module">
+  import { MusicNotation } from './shared/MusicNotation.js';
+  import { AudioPlayer } from './shared/AudioPlayer.js';
+  // Use in module code
+</script>
+```
+
+**Benefits:**
+- Code reuse across multiple music modules
+- Consistent behavior for common tasks
+- Easier maintenance (fix once, applies everywhere)
+- Smaller individual module file sizes
+
+**4K Display Support:**
+Some modules include responsive scaling via CSS custom properties:
+```css
+:root { --module-scale: 1; }
+body.resolution-4k { --module-scale: 2; }
+```
+This doubles all dimensions on high-resolution displays for better smartboard visibility.
+
 ### Module Integration Points
 
 **app.js integration:**
@@ -234,11 +275,33 @@ Back button visibility managed in:
 
 Countdown timer is a global overlay, shown after response submission via `startCountdown()`.
 
+## Additional Utilities
+
+**results-viewer.html** - Standalone results analysis tool
+- Load results.csv to view student responses
+- Filter by class, task, or student
+- Export filtered views
+- Does not modify data (read-only viewer)
+
+**version.json** - Version tracking
+- Current version and last updated date
+- Description of latest changes
+- Referenced by modules that display version badges
+
+## Fullscreen Mode
+
+The app supports fullscreen mode for immersive student task display:
+- Triggered when displaying task modules
+- Maximizes vertical space for module iframe
+- Header becomes more compact in fullscreen
+- Press ESC to exit fullscreen
+
 ## Notes for Future Changes
 
 - README.md is outdated (describes old single-file system). THREE_FILE_SYSTEM.md is current.
 - Student roster uses two-column layout with duplicate name detection (shows last initial if needed)
 - Response input is dynamically rendered - new input types need updates to response-handler.js
 - Grade filtering assumes students in same class have same grade (uses first student's grade)
-- Custom modules are self-contained (no external dependencies) to ensure offline functionality
+- Custom modules are self-contained (no external dependencies except modules/shared/) to ensure offline functionality
 - Module responses stored as strings in results.csv - for media files, consider data URLs or separate storage
+- Recent commits focus on vertical space optimization for module display

@@ -33,6 +33,10 @@ class TeachingAssistantApp {
     // Track absent students for current session only (not from CSV)
     this.sessionAbsentStudents = new Set();
 
+    // Track forgot instrument and earned stool for current session
+    this.sessionForgotInstrument = new Set();
+    this.sessionEarnedStool = new Set();
+
     this.initializeApp();
   }
 

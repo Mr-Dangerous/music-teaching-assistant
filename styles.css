@@ -1431,4 +1431,58 @@ body {
   .btn {
     display: none;
   }
+}/* === Context Menu === */
+.context-menu {
+    position: fixed;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 4px 0;
+    min-width: 200px;
+    z-index: 10000;
+    border: 1px solid var(--color-border);
+}
+
+.context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    font-size: 14px;
+    color: var(--color-text);
+}
+
+.context-menu-item:hover {
+    background-color: var(--color-hover);
+}
+
+.context-icon {
+    font-size: 18px;
+    width: 24px;
+    text-align: center;
+}
+
+/* Student Button Status Indicators */
+.student-roster-button {
+    position: relative;
+}
+
+.student-status-indicator {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 16px;
+    display: flex;
+    gap: 4px;
+}
+
+.status-forgot {
+    color: #e74c3c;
+}
+
+.status-stool {
+    color: #f39c12;
 }

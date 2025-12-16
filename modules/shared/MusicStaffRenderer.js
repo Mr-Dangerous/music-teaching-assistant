@@ -33,7 +33,7 @@ export class MusicStaffRenderer {
 
         // Dynamic spacing based on number of pitches
         const numLines = 2 + Math.floor((pitches.length - 3) / 2); // 2 lines for 3 pitches, 3 for 5 pitches
-        const lineSpacing = numLines === 2 ? 70 * scale : 50 * scale;
+        const lineSpacing = numLines === 2 ? 56 * scale : 40 * scale;
 
         const positions = {};
 
@@ -122,7 +122,7 @@ export class MusicStaffRenderer {
         }
 
         // Draw labels
-        ctx.font = `bold ${32 * scale}px Arial`;
+        ctx.font = `bold ${24 * scale}px Arial`;
         ctx.fillStyle = '#2c3e50';
         ctx.textAlign = 'right';
         ctx.textBaseline = 'middle';
@@ -232,7 +232,7 @@ export class MusicStaffRenderer {
      * Draw quarter note (filled note head with stem)
      */
     drawQuarterNote(ctx, x, y, pitch, showNames, scale, pitchName) {
-        const noteRadius = 16 * scale;
+        const noteRadius = 12.8 * scale;
 
         // Draw note head
         ctx.fillStyle = '#2c3e50';
@@ -251,13 +251,13 @@ export class MusicStaffRenderer {
         // Draw label (solfege or pitch name)
         if (showNames && pitch) {
             ctx.fillStyle = 'white';
-            ctx.font = `bold ${21 * scale}px Arial`;
+            ctx.font = `bold ${16 * scale}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(pitch.toUpperCase(), x, y);
         } else if (pitchName) {
             ctx.fillStyle = 'white';
-            ctx.font = `bold ${17 * scale}px Arial`;
+            ctx.font = `bold ${14 * scale}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(pitchName, x, y);
@@ -268,7 +268,7 @@ export class MusicStaffRenderer {
      * Draw eighth notes (potentially split pitches)
      */
     drawEighthNotes(ctx, x, y1, y2, pitch1, pitch2, showNames, scale, pitchName1, pitchName2) {
-        const noteRadius = 16 * scale;
+        const noteRadius = 12.8 * scale;
         const noteSpacing = 18 * scale;
 
         ctx.fillStyle = '#2c3e50';
@@ -309,14 +309,14 @@ export class MusicStaffRenderer {
 
         if (showNames) {
             ctx.fillStyle = 'white';
-            ctx.font = `bold ${17 * scale}px Arial`;
+            ctx.font = `bold ${14 * scale}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             if (pitch1) ctx.fillText(pitch1.substring(0, 2).toUpperCase(), x - noteSpacing, y1);
             if (pitch2) ctx.fillText(pitch2.substring(0, 2).toUpperCase(), x + noteSpacing, y2);
         } else if (pitchName1 || pitchName2) {
             ctx.fillStyle = 'white';
-            ctx.font = `bold ${16 * scale}px Arial`;
+            ctx.font = `bold ${13 * scale}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             if (pitchName1) ctx.fillText(pitchName1, x - noteSpacing, y1);
@@ -328,7 +328,7 @@ export class MusicStaffRenderer {
      * Draw single eighth note (with flag)
      */
     drawSingleEighthNote(ctx, x, y, pitch, showNames, scale, pitchName) {
-        const noteRadius = 16 * scale;
+        const noteRadius = 12.8 * scale;
 
         // Draw note head
         ctx.fillStyle = '#2c3e50';
@@ -358,13 +358,13 @@ export class MusicStaffRenderer {
 
         if (showNames && pitch) {
             ctx.fillStyle = 'white';
-            ctx.font = `bold ${21 * scale}px Arial`;
+            ctx.font = `bold ${16 * scale}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(pitch.toUpperCase(), x, y);
         } else if (pitchName) {
             ctx.fillStyle = 'white';
-            ctx.font = `bold ${17 * scale}px Arial`;
+            ctx.font = `bold ${14 * scale}px Arial`;
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText(pitchName, x, y);
