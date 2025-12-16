@@ -247,9 +247,6 @@ class TeachingAssistantApp {
       console.log(`Loaded ${this.tasks.length} tasks`);
       console.log(`Loaded ${this.results.length} responses`);
 
-      // Populate session trackers from results
-      this.populateSessionTrackersFromResults();
-
       // Load presentation links (optional file)
       await this.loadPresentationLinks();
 
@@ -398,32 +395,6 @@ class TeachingAssistantApp {
     }
 
     return results;
-  }
-
-  /**
-   * Populate session trackers from results.csv records
-   * This loads ATTENDANCE, FORGOT_INSTRUMENT, and EARNED_STOOL records into session trackers
-   */
-  populateSessionTrackersFromResults() {
-    // Clear existing trackers
-    this.sessionAbsentStudents.clear();
-    this.sessionForgotInstrument.clear();
-    this.sessionEarnedStool.clear();
-
-    // Populate from results
-    this.results.forEach(result => {
-      if (result.task_id === 'ATTENDANCE' && result.response === 'absent') {
-        this.sessionAbsentStudents.add(result.student_id);
-      } else if (result.task_id === 'FORGOT_INSTRUMENT' && result.response === 'true') {
-        this.sessionForgotInstrument.add(result.student_id);
-      } else if (result.task_id === 'EARNED_STOOL' && result.response === 'true') {
-        this.sessionEarnedStool.add(result.student_id);
-      }
-    });
-
-    console.log(`Loaded ${this.sessionAbsentStudents.size} absent students`);
-    console.log(`Loaded ${this.sessionForgotInstrument.size} students who forgot instruments`);
-    console.log(`Loaded ${this.sessionEarnedStool.size} students who earned stools`);
   }
 
   /**
