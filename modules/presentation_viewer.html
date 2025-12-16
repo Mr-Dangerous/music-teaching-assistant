@@ -371,11 +371,13 @@
         // Load saved presentations from parent app
         async function loadSavedPresentations() {
             try {
+                console.log('Loading presentations from parent...');
                 const presentations = await window.parent.getPresentationLinks();
+                console.log('Loaded presentations:', presentations);
                 savedPresentations = presentations || [];
                 renderSavedPresentations();
             } catch (error) {
-                console.log('No saved presentations or error loading:', error);
+                console.error('Error loading presentations:', error);
                 savedPresentations = [];
                 renderSavedPresentations();
             }
@@ -383,12 +385,12 @@
 
         // Render saved presentation cards
         function renderSavedPresentations() {
-            // Hide cards if there's an active presentation
+            // Hide entire container if there's an active presentation
             if (currentUrl) {
-                savedPresentationsContainer.classList.add('hidden');
+                savedPresentationsContainer.style.display = 'none';
                 return;
             } else {
-                savedPresentationsContainer.classList.remove('hidden');
+                savedPresentationsContainer.style.display = 'grid';
             }
 
             if (savedPresentations.length === 0) {
