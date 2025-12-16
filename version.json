@@ -1,5 +1,5 @@
 {
-  "version": "0.3.7",
+  "version": "0.3.8",
   "lastUpdated": "2025-12-16",
-  "description": "Added microphone gain slider for input level adjustment"
+  "description": "Fixed long-press context menu and session-only status tracking"
 }
