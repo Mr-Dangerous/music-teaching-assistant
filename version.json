@@ -1,5 +1,5 @@
 {
-  "version": "0.4.1",
+  "version": "0.4.2",
   "lastUpdated": "2025-12-17",
-  "description": "Fixed boomwhacker module to load actual students instead of mock data"
+  "description": "Fixed module initialization by adding taskmodule:init listener"
 }
