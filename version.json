@@ -1,5 +1,5 @@
 {
-  "version": "0.8.4",
+  "version": "0.8.5",
   "lastUpdated": "2025-12-17",
-  "description": "Compact student cards: 75% height, smaller chips (18px), minimal padding"
+  "description": "Fixed 2-boomwhacker assignment, narrower cards (220px min) to fit 4 per row"
 }
