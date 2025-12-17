@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boomwhacker Assigner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            max-width: 100%;
+            height: calc(100vh - 40px);
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            color: #2c3e50;
+            margin: 0;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .assign-btn {
+            font-size: 16px;
+            font-weight: bold;
+            color: white;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: none;
+            padding: 10px 25px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .assign-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(245, 87, 108, 0.6);
+        }
+
+        .inventory-section {
+            background: white;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .inventory-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .inventory-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .octave-label {
+            font-weight: bold;
+            color: #2c3e50;
+            min-width: 60px;
+            font-size: 14px;
+        }
+
+        .inventory-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 14px;
+            border-radius: 15px;
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+            user-select: none;
+            position: relative;
+        }
+
+        .inventory-chip.toggled-off {
+            opacity: 0.3;
+            filter: grayscale(80%);
+        }
+
+        .inventory-chip:hover:not(.toggled-off) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .inventory-count {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 2px 6px;
+            border-radius: 8px;
+            font-size: 12px;
+        }
+
+        .student-grid {
+            flex: 1;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 12px;
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .student-card {
+            background: white;
+            border-radius: 12px;
+            padding: 12px 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .student-card.absent {
+            opacity: 0.4;
+            background: #ecf0f1;
+        }
+
+        .student-card:not(.absent):hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+        }
+
+        .student-name {
+            font-size: 17px;
+            font-weight: bold;
+            color: #2c3e50;
+            min-width: 90px;
+            flex-shrink: 0;
+        }
+
+        .boomwhacker-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            flex: 1;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border: 2px dashed #bdc3c7;
+            min-height: 40px;
+        }
+
+        .boomwhacker-list.drag-over {
+            border-color: #3498db;
+            background: #ebf5fb;
+        }
+
+        .boomwhacker-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 8px 14px;
+            border-radius: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: white;
+            cursor: grab;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s ease;
+            user-select: none;
+        }
+
+        .boomwhacker-chip:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+        }
+
+        .boomwhacker-chip.dragging {
+            opacity: 0.5;
+        }
+
+        /* Note colors */
+        .note-C {
+            background-color: #e74c3c;
+        }
+
+        .note-D {
+            background-color: #e67e22;
+        }
+
+        .note-E {
+            background-color: #f1c40f;
+        }
+
+        .note-F {
+            background-color: #3498db;
+        }
+
+        .note-G {
+            background-color: #27ae60;
+        }
+
+        .note-A {
+            background-color: #9b59b6;
+        }
+
+        .note-B {
+            background-color: #e91e63;
+        }
+
+        /* Accidentals */
+        .note-Cs {
+            background-color: #c0392b;
+        }
+
+        .note-Ds {
+            background-color: #d4a017;
+        }
+
+        .note-Fs {
+            background-color: #1f618d;
+        }
+
+        .note-Gs {
+            background-color: #3498db;
+        }
+
+        .note-As {
+            background-color: #ad1457;
+        }
+
+        @keyframes flyAndStay {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: translate(calc(var(--fly-x) * 0.5), calc(var(--fly-y) * 0.5)) scale(1.5);
+                opacity: 0.8;
+            }
+
+            100% {
+                transform: translate(var(--fly-x), var(--fly-y)) scale(1);
+                opacity: 1;
+            }
+        }
+
+        .flying-chip {
+            position: fixed;
+            z-index: 9999;
+            pointer-events: none;
+            animation: flyAndStay 0.8s ease-in-out forwards;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #7f8c8d;
+            font-style: italic;
+            padding: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎵 Boomwhacker Assigner</h1>
+            <div class="button-group">
+                <button class="assign-btn" onclick="assignBoomwhackers(1)">Assign 1 Boomwhacker</button>
+                <button class="assign-btn" onclick="assignBoomwhackers(2)">Assign 2 Boomwhackers</button>
+            </div>
+        </div>
+
+        <div class="inventory-section" id="inventorySection">
+            <!-- Inventory will be rendered here -->
+        </div>
+
+        <div class="student-grid" id="studentGrid">
+            <!-- Student cards will be dynamically generated here -->
+        </div>
+    </div>
+
+    <script>
+        // Listen for init message from parent
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'taskmodule:init') {
+                console.log('Received init message:', event.data);
+                if (window.TaskModule && window.TaskModule.init) {
+                    window.TaskModule.init(event.data.context, event.data.savedSettings);
+                }
+            }
+        });
+
+        // TaskModule interface
+        window.TaskModule = {
+            context: null,
+
+            init(context) {
+                this.context = context;
+                console.log('Boomwhacker Assigner initialized');
+                initModule(context);
+            },
+
+            getResponse() {
+                return getCurrentAssignments();
+            },
+
+            isComplete() {
+                return true;
+            },
+
+            reset() {
+                resetAssignments();
+            }
+        };
+
+        // Chromatic scale in order
+        const chromaticNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+        const octaves = ['low', 'regular', 'high'];
+
+        // State
+        let inventory = {};
+        let inventoryLoaded = false;
+        let availableCounts = {}; // Track current available counts
+        let toggledOn = {}; // Track which notes are toggled on
+        let students = [];
+        let assignments = {}; // studentId -> array of {note, octave}
+        let draggedChip = null;
+        let sourceStudent = null;
+        let dragSource = null; // 'inventory' or 'student'
+
+        // Load inventory from CSV
+        async function loadInventory() {
+            try {
+                const response = await fetch('../boomwhacker_inventory.csv');
+                const csvText = await response.text();
+                const lines = csvText.trim().split('\n');
+
+                for (let i = 1; i < lines.length; i++) {
+                    const [note, octave, quantity] = lines[i].split(',');
+                    if (note && octave && quantity) {
+                        const key = `${note}_${octave}`;
+                        inventory[key] = parseInt(quantity);
+                        availableCounts[key] = parseInt(quantity);
+
+                        // Default: only regular octave toggled on
+                        toggledOn[key] = (octave === 'regular');
+                    }
+                }
+
+                inventoryLoaded = true;
+                console.log('Loaded inventory:', inventory);
+                renderInventory();
+            } catch (error) {
+                console.error('Error loading inventory:', error);
+                inventoryLoaded = true;
+                renderInventory();
+            }
+        }
+
+        function getInventoryKey(noteObj) {
+            return `${noteObj.note}_${noteObj.octave}`;
+        }
+
+        function initModule(context) {
+            loadInventory();
+
+            const grid = document.getElementById('studentGrid');
+            grid.innerHTML = '<div class="empty-state">Loading students...</div>';
+
+            window.addEventListener('message', (event) => {
+                if (event.data.type === 'taskmodule:students-data') {
+                    console.log('Received student data:', event.data.students);
+                    students = event.data.students || [];
+                    renderStudentGrid();
+                }
+            });
+
+            window.parent.postMessage({ type: 'taskmodule:request-students' }, '*');
+
+            if (context && context.existingResponse) {
+                try {
+                    assignments = JSON.parse(context.existingResponse);
+                    console.log('Restored assignments:', assignments);
+                    updateAvailableCounts();
+                } catch (e) {
+                    console.log('No valid existing assignments');
+                    assignments = {};
+                }
+            }
+        }
+
+        function renderInventory() {
+            const section = document.getElementById('inventorySection');
+            section.innerHTML = '';
+
+            if (!inventoryLoaded) {
+                section.innerHTML = '<div class="empty-state">Loading inventory...</div>';
+                return;
+            }
+
+            octaves.forEach(octave => {
+                const row = document.createElement('div');
+                row.className = 'inventory-row';
+
+                const label = document.createElement('div');
+                label.className = 'octave-label';
+                label.textContent = octave === 'low' ? 'Low:' : octave === 'high' ? 'High:' : 'Regular:';
+                row.appendChild(label);
+
+                chromaticNotes.forEach(note => {
+                    const key = `${note}_${octave}`;
+                    const count = inventory[key];
+
+                    if (count !== undefined && count > 0) {
+                        const chip = createInventoryChip({ note, octave }, count, key);
+                        row.appendChild(chip);
+                    }
+                });
+
+                section.appendChild(row);
+            });
+        }
+
+        function createInventoryChip(noteObj, totalCount, key) {
+            const chip = document.createElement('div');
+            const baseNote = noteObj.note.replace('#', 's');
+            chip.className = `inventory-chip note-${baseNote}`;
+            if (!toggledOn[key]) {
+                chip.classList.add('toggled-off');
+            }
+            chip.draggable = !chip.classList.contains('toggled-off');
+            chip.dataset.noteObj = JSON.stringify(noteObj);
+            chip.dataset.key = key;
+
+            const noteText = document.createElement('span');
+            noteText.textContent = formatNoteName(noteObj);
+            chip.appendChild(noteText);
+
+            const countBadge = document.createElement('span');
+            countBadge.className = 'inventory-count';
+            countBadge.id = `count-${key}`;
+            countBadge.textContent = `×${availableCounts[key] || 0}`;
+            chip.appendChild(countBadge);
+
+            // Double-tap to toggle
+            let lastTap = 0;
+            chip.addEventListener('click', (e) => {
+                const currentTime = new Date().getTime();
+                const tapLength = currentTime - lastTap;
+                if (tapLength < 300 && tapLength > 0) {
+                    // Double tap detected
+                    toggleNote(key);
+                }
+                lastTap = currentTime;
+            });
+
+            // Drag from inventory
+            chip.addEventListener('dragstart', (e) => {
+                if (!chip.classList.contains('toggled-off') && availableCounts[key] > 0) {
+                    draggedChip = chip;
+                    dragSource = 'inventory';
+                    chip.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'copy';
+                } else {
+                    e.preventDefault();
+                }
+            });
+
+            chip.addEventListener('dragend', () => {
+                chip.classList.remove('dragging');
+                draggedChip = null;
+                dragSource = null;
+            });
+
+            return chip;
+        }
+
+        function toggleNote(key) {
+            toggledOn[key] = !toggledOn[key];
+
+            // If toggling off, remove all assignments of this note
+            if (!toggledOn[key]) {
+                const noteObj = JSON.parse(document.querySelector(`[data-key="${key}"]`).dataset.noteObj);
+                removeAllAssignmentsOfNote(noteObj);
+            }
+
+            renderInventory();
+            renderStudentGrid();
+        }
+
+        function removeAllAssignmentsOfNote(noteObj) {
+            Object.keys(assignments).forEach(studentId => {
+                const studentNotes = assignments[studentId].notes || [];
+                const filtered = studentNotes.filter(n =>
+                    !(n.note === noteObj.note && n.octave === noteObj.octave)
+                );
+
+                if (filtered.length > 0) {
+                    assignments[studentId] = { notes: filtered };
+                } else {
+                    delete assignments[studentId];
+                }
+            });
+
+            updateAvailableCounts();
+        }
+
+        function updateAvailableCounts() {
+            // Reset to original inventory
+            Object.keys(inventory).forEach(key => {
+                availableCounts[key] = inventory[key];
+            });
+
+            // Subtract assigned
+            Object.values(assignments).forEach(assignment => {
+                const notes = assignment.notes || [];
+                notes.forEach(note => {
+                    const key = getInventoryKey(note);
+                    if (availableCounts[key] !== undefined) {
+                        availableCounts[key]--;
+                    }
+                });
+            });
+
+            // Update display
+            Object.keys(availableCounts).forEach(key => {
+                const badge = document.getElementById(`count-${key}`);
+                if (badge) {
+                    badge.textContent = `×${availableCounts[key]}`;
+                }
+            });
+        }
+
+        function renderStudentGrid() {
+            const grid = document.getElementById('studentGrid');
+            grid.innerHTML = '';
+
+            if (students.length === 0) {
+                grid.innerHTML = '<div class="empty-state">No students loaded.</div>';
+                return;
+            }
+
+            students.forEach(student => {
+                const card = document.createElement('div');
+                card.className = 'student-card';
+                card.dataset.studentId = student.student_id;
+
+                if (student.isAbsent) {
+                    card.classList.add('absent');
+                }
+
+                const name = document.createElement('div');
+                name.className = 'student-name';
+                name.textContent = student.name;
+
+                const boomwhackerList = document.createElement('div');
+                boomwhackerList.className = 'boomwhacker-list';
+                boomwhackerList.dataset.studentId = student.student_id;
+
+                boomwhackerList.addEventListener('dragover', handleDragOver);
+                boomwhackerList.addEventListener('drop', handleDrop);
+                boomwhackerList.addEventListener('dragleave', handleDragLeave);
+
+                const studentAssignment = assignments[student.student_id];
+                const studentNotes = studentAssignment?.notes || [];
+
+                if (studentNotes.length > 0) {
+                    studentNotes.forEach(noteObj => {
+                        boomwhackerList.appendChild(createBoomwhackerChip(noteObj, student.student_id));
+                    });
+                } else {
+                    const placeholder = document.createElement('div');
+                    placeholder.className = 'empty-state';
+                    placeholder.textContent = 'No assignment';
+                    placeholder.style.fontSize = '13px';
+                    placeholder.style.padding = '5px';
+                    boomwhackerList.appendChild(placeholder);
+                }
+
+                card.appendChild(name);
+                card.appendChild(boomwhackerList);
+                grid.appendChild(card);
+            });
+
+            updateAvailableCounts();
+        }
+
+        function createBoomwhackerChip(noteObj, studentId) {
+            const chip = document.createElement('div');
+            const baseNote = noteObj.note.replace('#', 's');
+            chip.className = `boomwhacker-chip note-${baseNote}`;
+            chip.draggable = true;
+            chip.dataset.noteObj = JSON.stringify(noteObj);
+            chip.dataset.studentId = studentId;
+
+            const noteText = document.createElement('span');
+            noteText.textContent = formatNoteName(noteObj);
+            chip.appendChild(noteText);
+
+            chip.addEventListener('dragstart', (e) => {
+                draggedChip = chip;
+                sourceStudent = studentId;
+                dragSource = 'student';
+                chip.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            });
+
+            chip.addEventListener('dragend', () => {
+                chip.classList.remove('dragging');
+                draggedChip = null;
+                sourceStudent = null;
+                dragSource = null;
+            });
+
+            return chip;
+        }
+
+        function formatNoteName(noteObj) {
+            const formatted = noteObj.note.replace('#', '♯');
+            if (noteObj.octave === 'low') return `${formatted},`;
+            if (noteObj.octave === 'high') return `${formatted}'`;
+            return formatted;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = dragSource === 'inventory' ? 'copy' : 'move';
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            if (!draggedChip) return;
+
+            const targetStudentId = e.currentTarget.dataset.studentId;
+            const note = JSON.parse(draggedChip.dataset.noteObj);
+
+            if (dragSource === 'inventory') {
+                // Dragging from inventory
+                const key = getInventoryKey(note);
+                if (availableCounts[key] > 0) {
+                    addNoteToStudent(note, targetStudentId);
+                }
+            } else if (dragSource === 'student') {
+                // Moving between students
+                if (sourceStudent && assignments[sourceStudent]) {
+                    const sourceNotes = assignments[sourceStudent].notes || [];
+                    const filtered = sourceNotes.filter(n =>
+                        !(n.note === note.note && n.octave === note.octave)
+                    );
+
+                    if (filtered.length > 0) {
+                        assignments[sourceStudent] = { notes: filtered };
+                    } else {
+                        delete assignments[sourceStudent];
+                    }
+                }
+
+                addNoteToStudent(note, targetStudentId);
+            }
+
+            renderStudentGrid();
+            notifyParent();
+        }
+
+        function addNoteToStudent(note, studentId) {
+            if (!assignments[studentId]) {
+                assignments[studentId] = { notes: [] };
+            }
+
+            if (!assignments[studentId].notes) {
+                assignments[studentId] = { notes: [] };
+            }
+
+            const targetNotes = assignments[studentId].notes;
+            const alreadyHas = targetNotes.some(n =>
+                n.note === note.note && n.octave === note.octave
+            );
+
+            if (!alreadyHas) {
+                targetNotes.push(note);
+            }
+        }
+
+        async function assignBoomwhackers(count) {
+            assignments = {};
+            const presentStudents = students.filter(s => !s.isAbsent);
+
+            if (presentStudents.length === 0) {
+                alert('No students present!');
+                return;
+            }
+
+            if (count === 1) {
+                await assignOneBoomwhacker(presentStudents);
+            } else if (count === 2) {
+                await assignTwoBoomwhackers(presentStudents);
+            }
+
+            renderStudentGrid();
+            notifyParent();
+        }
+
+        async function assignOneBoomwhacker(presentStudents) {
+            // Get all toggled-on notes
+            const availableNotes = [];
+            Object.keys(toggledOn).forEach(key => {
+                if (toggledOn[key]) {
+                    const [note, octave] = key.split('_');
+                    availableNotes.push({ note, octave });
+                }
+            });
+
+            if (availableNotes.length === 0) {
+                alert('No boomwhackers are toggled on!');
+                return;
+            }
+
+            const tempAvailable = { ...inventory };
+            const shuffledStudents = [...presentStudents].sort(() => Math.random() - 0.5);
+            const coveredNotes = new Set();
+            const studentAssignments = new Map();
+
+            // First: ensure coverage
+            shuffledStudents.forEach(student => {
+                const uncovered = availableNotes.filter(note => {
+                    const key = getInventoryKey(note);
+                    return !coveredNotes.has(key) && tempAvailable[key] > 0;
+                });
+
+                if (uncovered.length > 0) {
+                    const note = uncovered[Math.floor(Math.random() * uncovered.length)];
+                    const key = getInventoryKey(note);
+                    coveredNotes.add(key);
+                    tempAvailable[key]--;
+                    studentAssignments.set(student.student_id, [note]);
+                }
+            });
+
+            // Second: fill remaining
+            shuffledStudents.forEach(student => {
+                if (!studentAssignments.has(student.student_id)) {
+                    const available = availableNotes.filter(note => {
+                        const key = getInventoryKey(note);
+                        return tempAvailable[key] > 0;
+                    });
+
+                    if (available.length > 0) {
+                        const note = available[Math.floor(Math.random() * available.length)];
+                        const key = getInventoryKey(note);
+                        tempAvailable[key]--;
+                        studentAssignments.set(student.student_id, [note]);
+                    }
+                }
+            });
+
+            // Animate and assign
+            const animations = [];
+            let delay = 0;
+            studentAssignments.forEach((notes, studentId) => {
+                assignments[studentId] = { notes };
+                notes.forEach(note => {
+                    animations.push(animateBoomwhackerFly(note, studentId, delay));
+                    delay += 100;
+                });
+            });
+
+            await Promise.all(animations);
+        }
+
+        async function assignTwoBoomwhackers(presentStudents) {
+            const availableNotes = [];
+            Object.keys(toggledOn).forEach(key => {
+                if (toggledOn[key]) {
+                    const [note, octave] = key.split('_');
+                    availableNotes.push({ note, octave });
+                }
+            });
+
+            if (availableNotes.length === 0) {
+                alert('No boomwhackers are toggled on!');
+                return;
+            }
+
+            const tempAvailable = { ...inventory };
+            const shuffledStudents = [...presentStudents].sort(() => Math.random() - 0.5);
+            const coveredNotes = new Set();
+            const studentAssignments = new Map();
+
+            // First: coverage
+            shuffledStudents.forEach(student => {
+                const uncovered = availableNotes.filter(note => {
+                    const key = getInventoryKey(note);
+                    return !coveredNotes.has(key) && tempAvailable[key] > 0;
+                });
+
+                if (uncovered.length > 0 && !studentAssignments.has(student.student_id)) {
+                    const note = uncovered[Math.floor(Math.random() * uncovered.length)];
+                    const key = getInventoryKey(note);
+                    coveredNotes.add(key);
+                    tempAvailable[key]--;
+                    studentAssignments.set(student.student_id, [note]);
+                }
+            });
+
+            // Second: try for 2
+            shuffledStudents.forEach(student => {
+                const current = studentAssignments.get(student.student_id) || [];
+
+                if (current.length < 2) {
+                    const available = availableNotes.filter(note => {
+                        const key = getInventoryKey(note);
+                        const alreadyHas = current.some(n => getInventoryKey(n) === key);
+                        return !alreadyHas && tempAvailable[key] > 0;
+                    });
+
+                    if (available.length > 0) {
+                        const note = available[Math.floor(Math.random() * available.length)];
+                        const key = getInventoryKey(note);
+                        tempAvailable[key]--;
+                        current.push(note);
+                        studentAssignments.set(student.student_id, current);
+                    }
+                }
+            });
+
+            // Animate and assign
+            const animations = [];
+            let delay = 0;
+            studentAssignments.forEach((notes, studentId) => {
+                assignments[studentId] = { notes };
+                notes.forEach(note => {
+                    animations.push(animateBoomwhackerFly(note, studentId, delay));
+                    delay += 100;
+                });
+            });
+
+            await Promise.all(animations);
+        }
+
+        function animateBoomwhackerFly(noteObj, studentId, delay = 0) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const key = getInventoryKey(noteObj);
+                    const sourceElement = document.querySelector(`.inventory-chip[data-key="${key}"]`);
+
+                    if (!sourceElement) {
+                        resolve();
+                        return;
+                    }
+
+                    const targetCard = document.querySelector(`.student-card[data-student-id="${studentId}"]`);
+                    if (!targetCard) {
+                        resolve();
+                        return;
+                    }
+
+                    const targetElement = targetCard.querySelector('.boomwhacker-list');
+                    if (!targetElement) {
+                        resolve();
+                        return;
+                    }
+
+                    const sourceRect = sourceElement.getBoundingClientRect();
+                    const targetRect = targetElement.getBoundingClientRect();
+
+                    const deltaX = targetRect.left - sourceRect.left;
+                    const deltaY = targetRect.top - sourceRect.top;
+
+                    const flyingChip = document.createElement('div');
+                    const baseNote = noteObj.note.replace('#', 's');
+                    flyingChip.className = `boomwhacker-chip note-${baseNote} flying-chip`;
+                    flyingChip.style.left = `${sourceRect.left}px`;
+                    flyingChip.style.top = `${sourceRect.top}px`;
+                    flyingChip.style.setProperty('--fly-x', `${deltaX}px`);
+                    flyingChip.style.setProperty('--fly-y', `${deltaY}px`);
+
+                    const noteText = document.createElement('span');
+                    noteText.textContent = formatNoteName(noteObj);
+                    flyingChip.appendChild(noteText);
+
+                    document.body.appendChild(flyingChip);
+
+                    setTimeout(() => {
+                        flyingChip.remove();
+                        resolve();
+                    }, 800);
+                }, delay);
+            });
+        }
+
+        function getCurrentAssignments() {
+            return JSON.stringify(assignments);
+        }
+
+        function notifyParent() {
+            window.parent.postMessage({
+                type: 'taskmodule:response',
+                value: getCurrentAssignments(),
+                isComplete: true
+            }, '*');
+        }
+
+        function resetAssignments() {
+            assignments = {};
+            renderStudentGrid();
+        }
+    </script>
+</body>
+
+</html>
