@@ -131,6 +131,9 @@ class TeachingAssistantApp {
         // Module encountered an error
         console.error('Module error:', event.data.message);
         this.showNotification(`Module error: ${event.data.message}`, 'error');
+      } else if (event.data.type === 'taskmodule:request-students') {
+        // Module is requesting the current class's student list
+        this.handleStudentListRequest(event);
       }
     });
 
@@ -1905,6 +1908,38 @@ class TeachingAssistantApp {
 
     console.log('Retrieved settings:', this.moduleSettings[modulePath]);
     return this.moduleSettings[modulePath] || null;
+  }
+
+  /**
+   * Handle request from module for student list
+   * @param {MessageEvent} event - Message event from module
+   */
+  handleStudentListRequest(event) {
+    if (!this.selectedClass) {
+      console.warn('No class selected, cannot send student list');
+      return;
+    }
+
+    // Get students from current class
+    const classStudents = this.students
+      .filter(s => s.class === this.selectedClass)
+      .map(student => ({
+        student_id: student.student_id,
+        name: student.name,
+        grade: student.grade,
+        class: student.class,
+        isAbsent: this.isStudentAbsent(student.student_id)
+      }));
+
+    // Send student list back to the requesting module
+    const moduleIframe = document.querySelector('#module-container iframe');
+    if (moduleIframe && moduleIframe.contentWindow) {
+      moduleIframe.contentWindow.postMessage({
+        type: 'taskmodule:students-data',
+        students: classStudents
+      }, '*');
+      console.log('Sent student list to module:', classStudents.length, 'students');
+    }
   }
 
   /**
