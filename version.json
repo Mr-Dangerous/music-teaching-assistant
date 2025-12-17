@@ -1,5 +1,5 @@
 {
-  "version": "0.4.2",
+  "version": "0.4.3",
   "lastUpdated": "2025-12-17",
-  "description": "Fixed module initialization by adding taskmodule:init listener"
+  "description": "Fixed iframe selector to properly send student data to modules"
 }
