@@ -716,7 +716,72 @@
             notifyParent();
         }
 
-        function assignBoomwhackers(count) {
+        function animateBoomwhackerFly(noteObj, studentId, delay = 0) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    // Find the inventory item for this note
+                    const inventoryItems = document.querySelectorAll('.inventory-item');
+                    let sourceElement = null;
+
+                    inventoryItems.forEach(item => {
+                        if (item.dataset.note === noteObj.note && item.dataset.octave === noteObj.octave) {
+                            sourceElement = item;
+                        }
+                    });
+
+                    if (!sourceElement) {
+                        resolve();
+                        return;
+                    }
+
+                    // Find the target student card
+                    const studentCards = document.querySelectorAll('.student-card');
+                    let targetElement = null;
+
+                    studentCards.forEach(card => {
+                        if (card.dataset.studentId === studentId) {
+                            targetElement = card.querySelector('.boomwhacker-list');
+                        }
+                    });
+
+                    if (!targetElement) {
+                        resolve();
+                        return;
+                    }
+
+                    // Get positions
+                    const sourceRect = sourceElement.getBoundingClientRect();
+                    const targetRect = targetElement.getBoundingClientRect();
+
+                    // Calculate the distance
+                    const deltaX = targetRect.left - sourceRect.left;
+                    const deltaY = targetRect.top - sourceRect.top;
+
+                    // Create flying chip
+                    const flyingChip = document.createElement('div');
+                    const baseNote = noteObj.note.replace('#', 's').replace('♭', 'b');
+                    flyingChip.className = `boomwhacker-chip note-${baseNote} flying-chip`;
+                    flyingChip.style.left = `${sourceRect.left}px`;
+                    flyingChip.style.top = `${sourceRect.top}px`;
+                    flyingChip.style.setProperty('--fly-x', `${deltaX}px`);
+                    flyingChip.style.setProperty('--fly-y', `${deltaY}px`);
+
+                    const noteText = document.createElement('span');
+                    noteText.textContent = formatNoteName(noteObj);
+                    flyingChip.appendChild(noteText);
+
+                    document.body.appendChild(flyingChip);
+
+                    // Remove after animation
+                    flyingChip.addEventListener('animationend', () => {
+                        flyingChip.remove();
+                        resolve();
+                    });
+                }, delay);
+            });
+        }
+
+        async function assignBoomwhackers(count) {
             // Clear existing assignments
             assignments = {};
 
@@ -729,16 +794,16 @@
             }
 
             if (count === 1) {
-                assignOneBoomwhacker(presentStudents);
+                await assignOneBoomwhacker(presentStudents);
             } else if (count === 2) {
-                assignTwoBoomwhackers(presentStudents);
+                await assignTwoBoomwhackers(presentStudents);
             }
 
             renderStudentGrid();
             notifyParent();
         }
 
-        function assignOneBoomwhacker(presentStudents) {
+        async function assignOneBoomwhacker(presentStudents) {
             // Combine both melodies
             const allNotes = [...melody1Notes, ...melody2Notes];
 
@@ -802,13 +867,22 @@
                 }
             });
 
-            // Convert to assignments object
+            // Convert to assignments object and trigger animations
+            const animations = [];
+            let delay = 0;
             studentAssignments.forEach((notes, studentId) => {
                 assignments[studentId] = { notes: notes };
+                notes.forEach(note => {
+                    animations.push(animateBoomwhackerFly(note, studentId, delay));
+                    delay += 100; // Stagger animations
+                });
             });
+
+            // Wait for all animations to complete
+            await Promise.all(animations);
         }
 
-        function assignTwoBoomwhackers(presentStudents) {
+        async function assignTwoBoomwhackers(presentStudents) {
             // Combine both melodies
             const allNotes = [...melody1Notes, ...melody2Notes];
 
@@ -873,10 +947,20 @@
                 }
             });
 
-            // Convert to assignments object
+
+            // Convert to assignments object and trigger animations
+            const animations = [];
+            let delay = 0;
             studentAssignments.forEach((notes, studentId) => {
                 assignments[studentId] = { notes: notes };
+                notes.forEach(note => {
+                    animations.push(animateBoomwhackerFly(note, studentId, delay));
+                    delay += 100; // Stagger animations
+                });
             });
+
+            // Wait for all animations to complete
+            await Promise.all(animations);
         }
 
         function getCurrentAssignments() {

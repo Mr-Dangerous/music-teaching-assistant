@@ -1,5 +1,5 @@
 {
-  "version": "0.6.1",
+  "version": "0.7.0",
   "lastUpdated": "2025-12-17",
-  "description": "Improved note display: proper musical notation (C' and C,) and 75% larger font"
+  "description": "Added flying animation from inventory to student cards during assignment"
 }
