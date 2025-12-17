@@ -32,14 +32,46 @@
         }
 
         .header {
-            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
         }
 
         .header h1 {
             font-size: 32px;
             color: #2c3e50;
-            margin-bottom: 10px;
+            margin: 0;
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .inventory-display {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .inventory-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .inventory-count {
+            background: rgba(0, 0, 0, 0.2);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 12px;
         }
 
         .assign-btn {
@@ -75,11 +107,14 @@
 
         .student-card {
             background: white;
-            border-radius: 15px;
-            padding: 15px;
+            border-radius: 12px;
+            padding: 12px 15px;
             box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
             transition: all 0.3s ease;
             border: 2px solid transparent;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .student-card.absent {
@@ -93,22 +128,23 @@
         }
 
         .student-name {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             color: #2c3e50;
-            margin-bottom: 10px;
-            text-align: center;
+            min-width: 100px;
+            flex-shrink: 0;
         }
 
         .boomwhacker-list {
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
-            min-height: 50px;
-            padding: 10px;
+            flex: 1;
+            padding: 8px;
             background: #f8f9fa;
-            border-radius: 10px;
+            border-radius: 8px;
             border: 2px dashed #bdc3c7;
+            min-height: 40px;
         }
 
         .boomwhacker-list.drag-over {
@@ -260,6 +296,9 @@
     <div class="container">
         <div class="header">
             <h1>🎵 Boomwhacker Assignment 🎵</h1>
+            <div class="inventory-display" id="inventoryDisplay">
+                <!-- Inventory will be dynamically generated here -->
+            </div>
             <button class="assign-btn" onclick="assignBoomwhackers()">Ready to Assign!</button>
         </div>
 
@@ -362,9 +401,37 @@
             }
         }
 
+        function renderInventory() {
+            const inventoryContainer = document.getElementById('inventoryDisplay');
+            inventoryContainer.innerHTML = '';
+
+            // Get all unique notes used in both melodies
+            const allNotes = [...new Set([...melody1Notes, ...melody2Notes])];
+
+            allNotes.forEach(note => {
+                const count = inventory[note] || 0;
+                const item = document.createElement('div');
+                item.className = `inventory-item note-${note}`;
+
+                const noteName = document.createElement('span');
+                noteName.textContent = formatNoteName(note);
+
+                const countBadge = document.createElement('span');
+                countBadge.className = 'inventory-count';
+                countBadge.textContent = `×${count}`;
+
+                item.appendChild(noteName);
+                item.appendChild(countBadge);
+                inventoryContainer.appendChild(item);
+            });
+        }
+
         function renderStudentGrid() {
             const grid = document.getElementById('studentGrid');
             grid.innerHTML = '';
+
+            // Render inventory on first call
+            renderInventory();
 
             if (students.length === 0) {
                 grid.innerHTML = '<div class="empty-state">No students loaded. Please load students in the main app.</div>';
