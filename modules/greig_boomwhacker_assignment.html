@@ -321,18 +321,24 @@
         let sourceStudent = null;
 
         function initModule(context) {
-            // Request student list from parent
-            window.parent.postMessage({
-                type: 'taskmodule:request-students'
-            }, '*');
+            // Show loading state
+            const grid = document.getElementById('studentGrid');
+            grid.innerHTML = '<div class="empty-state">Loading students...</div>';
 
-            // Listen for student data
+            // Listen for student data BEFORE requesting it
             window.addEventListener('message', (event) => {
                 if (event.data.type === 'taskmodule:students-data') {
+                    console.log('Received student data:', event.data.students);
                     students = event.data.students || [];
                     renderStudentGrid();
                 }
             });
+
+            // Request student list from parent
+            console.log('Requesting student list from parent...');
+            window.parent.postMessage({
+                type: 'taskmodule:request-students'
+            }, '*');
 
             // Request existing response to restore previous assignments
             if (context && context.existingResponse) {
@@ -576,20 +582,6 @@
             assignments = {};
             renderStudentGrid();
         }
-
-        // Initialize with mock data if parent doesn't respond (for testing)
-        setTimeout(() => {
-            if (students.length === 0) {
-                students = [
-                    { student_id: '1', name: 'Alice', isAbsent: false },
-                    { student_id: '2', name: 'Bob', isAbsent: false },
-                    { student_id: '3', name: 'Charlie', isAbsent: true },
-                    { student_id: '4', name: 'Diana', isAbsent: false },
-                    { student_id: '5', name: 'Eve', isAbsent: false }
-                ];
-                renderStudentGrid();
-            }
-        }, 1000);
     </script>
 </body>
 
