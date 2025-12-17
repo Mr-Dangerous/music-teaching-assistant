@@ -496,16 +496,35 @@
             const inventoryContainer = document.getElementById('inventoryDisplay');
             inventoryContainer.innerHTML = '';
 
-            // Get all unique notes used in both melodies
-            const allNotes = [...new Set([...melody1Notes, ...melody2Notes])];
+            if (!inventoryLoaded) {
+                inventoryContainer.innerHTML = '<div class="empty-state" style="font-size: 12px;">Loading inventory...</div>';
+                return;
+            }
 
-            allNotes.forEach(note => {
-                const count = inventory[note] || 0;
+            // Get all unique note/octave combinations used in both melodies
+            const allNoteObjs = [...melody1Notes, ...melody2Notes];
+            const uniqueNotes = [];
+            const seen = new Set();
+
+            allNoteObjs.forEach(noteObj => {
+                const key = getInventoryKey(noteObj);
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueNotes.push(noteObj);
+                }
+            });
+
+            uniqueNotes.forEach(noteObj => {
+                const key = getInventoryKey(noteObj);
+                const count = inventory[key] || 0;
                 const item = document.createElement('div');
-                item.className = `inventory-item note-${note}`;
+
+                // Use just the base note for color class (C, D, E, etc)
+                const baseNote = noteObj.note.replace('#', 's').replace('♭', 'b');
+                item.className = `inventory-item note-${baseNote}`;
 
                 const noteName = document.createElement('span');
-                noteName.textContent = formatNoteName(note);
+                noteName.textContent = formatNoteName(noteObj);
 
                 const countBadge = document.createElement('span');
                 countBadge.className = 'inventory-count';
@@ -513,6 +532,8 @@
 
                 item.appendChild(noteName);
                 item.appendChild(countBadge);
+                item.dataset.note = noteObj.note;
+                item.dataset.octave = noteObj.octave;
                 inventoryContainer.appendChild(item);
             });
         }
@@ -600,8 +621,29 @@
             return chip;
         }
 
-        function formatNoteName(note) {
-            return note.replace('s', '#').replace('b', '♭');
+        function formatNoteName(noteObj) {
+            // Handle both string (old format) and object (new format)
+            let noteName, octave;
+
+            if (typeof noteObj === 'object' && noteObj.note) {
+                noteName = noteObj.note;
+                octave = noteObj.octave;
+            } else {
+                // Old string format - just return as is
+                return String(noteObj).replace('s', '#').replace('b', '♭');
+            }
+
+            // Format the note name
+            const formatted = noteName.replace('#', '♯').replace('b', '♭');
+
+            // Add octave indicator
+            if (octave === 'low') {
+                return `${formatted}₍`;  // Using subscript symbol
+            } else if (octave === 'high') {
+                return `${formatted}ʰ`;  // Using superscript h
+            } else {
+                return formatted;  // regular octave, no marker
+            }
         }
 
         function handleDragStart(e) {
