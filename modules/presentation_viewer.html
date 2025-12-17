@@ -311,44 +311,6 @@
             background: #ffebee;
             color: #f44336;
         }
-
-        .keyboard-toggle {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 13px;
-            color: #666;
-        }
-
-        .toggle-switch {
-            position: relative;
-            width: 44px;
-            height: 24px;
-            background: #ccc;
-            border-radius: 12px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        .toggle-switch.active {
-            background: #667eea;
-        }
-
-        .toggle-switch::after {
-            content: '';
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            background: white;
-            top: 2px;
-            left: 2px;
-            transition: left 0.3s;
-        }
-
-        .toggle-switch.active::after {
-            left: 22px;
-        }
     </style>
 </head>
 
@@ -360,10 +322,7 @@
             <button id="loadBtn" class="btn load-btn">Load</button>
             <button id="saveBtn" class="btn save-btn">Save</button>
             <button id="clearBtn" class="btn clear-btn">Clear</button>
-            <div class="keyboard-toggle">
-                <span>A/C Nav</span>
-                <div id="keyboardToggle" class="toggle-switch"></div>
-            </div>
+
         </div>
 
         <div id="savedPresentations" class="saved-presentations">
@@ -421,7 +380,7 @@
         // Module state
         let currentUrl = '';
         let savedPresentations = [];
-        let keyboardNavEnabled = false;
+
 
         // DOM elements
         const urlInput = document.getElementById('urlInput');
@@ -433,7 +392,7 @@
         const saveTitleModal = document.getElementById('saveTitleModal');
         const titleInput = document.getElementById('titleInput');
         const savedPresentationsContainer = document.getElementById('savedPresentations');
-        const keyboardToggle = document.getElementById('keyboardToggle');
+
 
         // TaskModule interface for parent app
         window.TaskModule = {
@@ -848,30 +807,7 @@
         });
 
 
-        // Keyboard navigation toggle
-        keyboardToggle.addEventListener('click', () => {
-            keyboardNavEnabled = !keyboardNavEnabled;
-            keyboardToggle.classList.toggle('active', keyboardNavEnabled);
-            console.log('Keyboard navigation:', keyboardNavEnabled ? 'enabled' : 'disabled');
-        });
 
-        // Global keyboard navigation (A = left, C = right)
-        document.addEventListener('keydown', (e) => {
-            if (!keyboardNavEnabled || !currentUrl) return;
-            
-            // Don't trigger if typing in an input field
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-            if (e.key.toLowerCase() === 'a') {
-                // Send left arrow to iframe
-                frame.contentWindow.postMessage({ type: 'keydown', key: 'ArrowLeft' }, '*');
-                console.log('A → Left arrow');
-            } else if (e.key.toLowerCase() === 'c') {
-                // Send right arrow to iframe
-                frame.contentWindow.postMessage({ type: 'keydown', key: 'ArrowRight' }, '*');
-                console.log('C → Right arrow');
-            }
-        });
 
         // Listen for init message from parent
         window.addEventListener('message', (event) => {

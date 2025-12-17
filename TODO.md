@@ -26,7 +26,26 @@
 
 ## Feature Requests
 
-_(Add any future feature requests here)_
+### Melodic Dictation Trainer Improvements
+**Status:** In Progress
+**File:** `modules/melodic_dictation.html`
+
+**Required Changes:**
+1. ✅ **Show starting note** - Must display the first note to make it fair
+2. ✅ **Remove treble clef** - Use solfege-based staff like other trainers (so/la/mi lines)
+3. ✅ **Simplify interaction** - Drag colored circles to align on staff lines
+4. ✅ **Cursor feedback** - Show pitch name/position as user drags
+5. ✅ **Starting note selector** - Allow choosing starting note in solfege (default: "so")
+6. ✅ **Key selector** - Add ability to change key signature
+7. ✅ **Pitch set options** - Toggle between pentatonic and diatonic scale
+8. ✅ **Match trainer styling** - Use same visual style as so_la_mi_trainer.html
+
+**Design Goals:**
+- Simple colored circle dragging (like existing trainers)
+- Staff shows only necessary solfege lines (no treble clef)
+- First note is always shown/played first
+- Clear visual feedback during interaction
+- Consistent with existing module aesthetics
 
 ---
 

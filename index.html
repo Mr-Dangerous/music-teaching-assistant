@@ -52,6 +52,9 @@
       <button id="resolution-toggle-btn" class="btn btn-secondary" title="Toggle Resolution">
         <span id="resolution-icon">1080p</span>
       </button>
+      <button id="snow-toggle-btn" class="btn btn-secondary" title="Toggle Snow Theme">
+        <span id="snow-icon">❄️ Snow</span>
+      </button>
       <button id="fullscreen-btn" class="btn btn-secondary" title="Toggle Fullscreen">
         <span id="fullscreen-icon">⛶</span> Fullscreen
       </button>
@@ -265,6 +268,87 @@
       <span>Earned Stool</span>
     </div>
   </div>
+
+  <!-- Snow Container -->
+  <div id="snow-container" class="snow-container"></div>
+
+  <!-- Snow Toggle Script -->
+  <script>
+    (function () {
+      const snowToggleBtn = document.getElementById('snow-toggle-btn');
+      const snowContainer = document.getElementById('snow-container');
+      let snowActive = false;
+      let snowflakes = [];
+
+      function createSnowflake() {
+        const snowflake = document.createElement('div');
+        snowflake.className = 'snowflake';
+        snowflake.innerHTML = '❄';
+
+        // Random starting position
+        snowflake.style.left = Math.random() * 100 + '%';
+
+        // Random animation duration (3-8 seconds)
+        const duration = Math.random() * 5 + 3;
+        snowflake.style.animationDuration = duration + 's';
+
+        // Random delay
+        snowflake.style.animationDelay = Math.random() * 2 + 's';
+
+        // Random size
+        const size = Math.random() * 0.5 + 0.5; // 0.5 to 1
+        snowflake.style.fontSize = size + 'em';
+
+        // Random opacity
+        snowflake.style.opacity = Math.random() * 0.6 + 0.4;
+
+        snowContainer.appendChild(snowflake);
+        snowflakes.push(snowflake);
+
+        // Remove after animation
+        setTimeout(() => {
+          if (snowflake.parentNode) {
+            snowflake.remove();
+          }
+          snowflakes = snowflakes.filter(s => s !== snowflake);
+        }, (duration + 2) * 1000);
+      }
+
+      function startSnow() {
+        snowActive = true;
+        snowContainer.classList.add('active');
+        document.body.classList.add('snow-theme');
+
+        // Create snowflakes at intervals
+        snowInterval = setInterval(() => {
+          if (snowActive) {
+            createSnowflake();
+          }
+        }, 200); // New snowflake every 200ms
+      }
+
+      function stopSnow() {
+        snowActive = false;
+        clearInterval(snowInterval);
+        snowContainer.classList.remove('active');
+        document.body.classList.remove('snow-theme');
+
+        // Clear existing snowflakes
+        snowflakes.forEach(s => s.remove());
+        snowflakes = [];
+      }
+
+      snowToggleBtn.addEventListener('click', () => {
+        if (snowActive) {
+          stopSnow();
+          snowToggleBtn.querySelector('#snow-icon').textContent = '❄️ Snow';
+        } else {
+          startSnow();
+          snowToggleBtn.querySelector('#snow-icon').textContent = '☀️ Clear';
+        }
+      });
+    })();
+  </script>
 </body>
 
 </html>
