@@ -797,18 +797,24 @@
                 }
             });
 
-            // Animate and assign
-            const animations = [];
+            // Animate and assign progressively
             let delay = 0;
-            studentAssignments.forEach((notes, studentId) => {
-                assignments[studentId] = { notes };
-                notes.forEach(note => {
-                    animations.push(animateBoomwhackerFly(note, studentId, delay));
-                    delay += 100;
-                });
-            });
-
-            await Promise.all(animations);
+            for (const [studentId, notes] of studentAssignments.entries()) {
+                for (const note of notes) {
+                    // Wait for animation, then immediately show the assignment
+                    await animateBoomwhackerFly(note, studentId, delay, () => {
+                        // Callback: assign and re-render when chip lands
+                        if (!assignments[studentId]) {
+                            assignments[studentId] = { notes: [] };
+                        }
+                        if (!assignments[studentId].notes.some(n => n.note === note.note && n.octave === note.octave)) {
+                            assignments[studentId].notes.push(note);
+                        }
+                        renderStudentGrid();
+                    });
+                    delay = 0; // Stagger handled by sequential await
+                }
+            }
         }
 
         async function assignTwoBoomwhackers(presentStudents) {
@@ -869,21 +875,25 @@
                 }
             });
 
-            // Animate and assign
-            const animations = [];
+            // Animate and assign progressively
             let delay = 0;
-            studentAssignments.forEach((notes, studentId) => {
-                assignments[studentId] = { notes };
-                notes.forEach(note => {
-                    animations.push(animateBoomwhackerFly(note, studentId, delay));
-                    delay += 100;
-                });
-            });
-
-            await Promise.all(animations);
+            for (const [studentId, notes] of studentAssignments.entries()) {
+                for (const note of notes) {
+                    await animateBoomwhackerFly(note, studentId, delay, () => {
+                        if (!assignments[studentId]) {
+                            assignments[studentId] = { notes: [] };
+                        }
+                        if (!assignments[studentId].notes.some(n => n.note === note.note && n.octave === note.octave)) {
+                            assignments[studentId].notes.push(note);
+                        }
+                        renderStudentGrid();
+                    });
+                    delay = 0;
+                }
+            }
         }
 
-        function animateBoomwhackerFly(noteObj, studentId, delay = 0) {
+        function animateBoomwhackerFly(noteObj, studentId, delay = 0, onLand = null) {
             return new Promise((resolve) => {
                 setTimeout(() => {
                     const key = getInventoryKey(noteObj);
@@ -928,6 +938,7 @@
 
                     setTimeout(() => {
                         flyingChip.remove();
+                        if (onLand) onLand(); // Call callback when chip lands
                         resolve();
                     }, 800);
                 }, delay);
