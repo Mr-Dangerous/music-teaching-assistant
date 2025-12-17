@@ -186,9 +186,10 @@
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            padding: 8px 15px;
+            padding: 10px 18px;
             border-radius: 20px;
-            font-size: 16px;
+            font-size: 28px;
+            /* Increased by 75% from 16px */
             font-weight: bold;
             color: white;
             cursor: grab;
@@ -634,13 +635,13 @@
             // Format the note name
             const formatted = noteName.replace('#', '♯').replace('b', '♭');
 
-            // Add octave indicator
+            // Add octave indicator using proper musical notation
             if (octave === 'low') {
-                return `${formatted}₍`;  // Using subscript symbol
+                return `${formatted},`;  // Low octave uses comma
             } else if (octave === 'high') {
-                return `${formatted}ʰ`;  // Using superscript h
+                return `${formatted}'`;  // High octave uses apostrophe
             } else {
-                return formatted;  // regular octave, no marker
+                return formatted;  // Regular octave, no marker
             }
         }
 

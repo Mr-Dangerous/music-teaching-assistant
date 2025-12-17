@@ -1,5 +1,5 @@
 {
-  "version": "0.6.0",
+  "version": "0.6.1",
   "lastUpdated": "2025-12-17",
-  "description": "Completed boomwhacker assignment with smart 1/2 modes and CSV inventory"
+  "description": "Improved note display: proper musical notation (C' and C,) and 75% larger font"
 }
