@@ -72,18 +72,19 @@
 
         .inventory-section {
             background: white;
-            border-radius: 6px;
-            padding: 6px 10px;
-            margin-bottom: 8px;
-            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin-bottom: 6px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
         }
 
         .inventory-row {
             display: flex;
-            gap: 3px;
-            margin-bottom: 3px;
+            gap: 2px;
+            margin-bottom: 2px;
             flex-wrap: wrap;
             align-items: center;
+            line-height: 1;
         }
 
         .inventory-row:last-child {
@@ -93,24 +94,26 @@
         .octave-label {
             font-weight: bold;
             color: #2c3e50;
-            min-width: 40px;
-            font-size: 10px;
+            min-width: 35px;
+            font-size: 9px;
+            line-height: 1;
         }
 
         .inventory-chip {
             display: inline-flex;
             align-items: center;
             gap: 2px;
-            padding: 3px 6px;
-            border-radius: 10px;
-            font-size: 12px;
+            padding: 2px 5px;
+            border-radius: 8px;
+            font-size: 10px;
             font-weight: bold;
             color: white;
             cursor: pointer;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
             transition: all 0.2s ease;
             user-select: none;
             position: relative;
+            line-height: 1.2;
         }
 
         .inventory-chip.toggled-off {
@@ -125,9 +128,10 @@
 
         .inventory-count {
             background: rgba(0, 0, 0, 0.3);
-            padding: 1px 3px;
-            border-radius: 4px;
-            font-size: 8px;
+            padding: 0px 2px;
+            border-radius: 3px;
+            font-size: 7px;
+            line-height: 1;
         }
 
         .student-grid {
