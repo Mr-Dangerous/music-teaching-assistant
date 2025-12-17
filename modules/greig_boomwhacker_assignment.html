@@ -280,6 +280,16 @@
     </div>
 
     <script>
+        // Listen for init message from parent
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'taskmodule:init') {
+                console.log('Received init message:', event.data);
+                if (window.TaskModule && window.TaskModule.init) {
+                    window.TaskModule.init(event.data.context, event.data.savedSettings);
+                }
+            }
+        });
+
         // TaskModule interface for integration
         window.TaskModule = {
             context: null,
