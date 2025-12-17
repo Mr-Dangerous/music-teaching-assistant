@@ -251,7 +251,8 @@
 
         .note-Ds,
         .note-Eb {
-            background-color: #d68910;
+            background-color: #d4a017;
+            /* Mustard */
         }
 
         .note-Fs,
@@ -261,7 +262,8 @@
 
         .note-Gs,
         .note-Ab {
-            background-color: #196f3d;
+            background-color: #3498db;
+            /* Blue */
         }
 
         .note-As,
@@ -574,15 +576,14 @@
                 boomwhackerList.addEventListener('dragleave', handleDragLeave);
 
                 // Display assigned boomwhackers
-                const studentAssignments = assignments[student.student_id] || {};
-                if (studentAssignments.melody1) {
-                    boomwhackerList.appendChild(createBoomwhackerChip(studentAssignments.melody1, 1, student.student_id));
-                }
-                if (studentAssignments.melody2) {
-                    boomwhackerList.appendChild(createBoomwhackerChip(studentAssignments.melody2, 2, student.student_id));
-                }
+                const studentAssignment = assignments[student.student_id];
+                const studentNotes = studentAssignment?.notes || studentAssignment || [];
 
-                if (!studentAssignments.melody1 && !studentAssignments.melody2) {
+                if (Array.isArray(studentNotes) && studentNotes.length > 0) {
+                    studentNotes.forEach(noteObj => {
+                        boomwhackerList.appendChild(createBoomwhackerChip(noteObj, student.student_id));
+                    });
+                } else {
                     const placeholder = document.createElement('div');
                     placeholder.className = 'empty-state';
                     placeholder.textContent = 'No assignment';
@@ -597,23 +598,20 @@
             });
         }
 
-        function createBoomwhackerChip(note, melodyNum, studentId) {
+        function createBoomwhackerChip(noteObj, studentId) {
             const chip = document.createElement('div');
-            chip.className = `boomwhacker-chip note-${note}`;
+
+            // Use base note for color class
+            const baseNote = noteObj.note.replace('#', 's').replace('♭', 'b');
+            chip.className = `boomwhacker-chip note-${baseNote}`;
             chip.draggable = true;
-            chip.dataset.note = note;
-            chip.dataset.melody = melodyNum;
+            chip.dataset.noteObj = JSON.stringify(noteObj);
             chip.dataset.studentId = studentId;
 
             const noteText = document.createElement('span');
-            noteText.textContent = formatNoteName(note);
-
-            const label = document.createElement('span');
-            label.className = 'melody-label';
-            label.textContent = `M${melodyNum}`;
+            noteText.textContent = formatNoteName(noteObj);
 
             chip.appendChild(noteText);
-            chip.appendChild(label);
 
             chip.addEventListener('dragstart', handleDragStart);
             chip.addEventListener('dragend', handleDragEnd);
@@ -676,32 +674,40 @@
             if (!draggedChip) return;
 
             const targetStudentId = e.currentTarget.dataset.studentId;
-            const note = draggedChip.dataset.note;
-            const melodyNum = parseInt(draggedChip.dataset.melody);
+            const note = JSON.parse(draggedChip.dataset.noteObj);
 
             // Remove from source student
             if (sourceStudent && assignments[sourceStudent]) {
-                if (assignments[sourceStudent].melody1 === note && melodyNum === 1) {
-                    delete assignments[sourceStudent].melody1;
-                }
-                if (assignments[sourceStudent].melody2 === note && melodyNum === 2) {
-                    delete assignments[sourceStudent].melody2;
-                }
-                // Clean up empty assignment objects
-                if (!assignments[sourceStudent].melody1 && !assignments[sourceStudent].melody2) {
-                    delete assignments[sourceStudent];
+                const sourceNotes = assignments[sourceStudent].notes || assignments[sourceStudent];
+                if (Array.isArray(sourceNotes)) {
+                    const filteredNotes = sourceNotes.filter(n =>
+                        !(n.note === note.note && n.octave === note.octave)
+                    );
+
+                    if (filteredNotes.length > 0) {
+                        assignments[sourceStudent] = { notes: filteredNotes };
+                    } else {
+                        delete assignments[sourceStudent];
+                    }
                 }
             }
 
             // Add to target student
             if (!assignments[targetStudentId]) {
-                assignments[targetStudentId] = {};
+                assignments[targetStudentId] = { notes: [] };
             }
 
-            if (melodyNum === 1) {
-                assignments[targetStudentId].melody1 = note;
-            } else {
-                assignments[targetStudentId].melody2 = note;
+            // Ensure notes array exists
+            if (!assignments[targetStudentId].notes) {
+                assignments[targetStudentId] = { notes: [] };
+            }
+
+            // Check if the target student already has this specific note
+            const targetNotes = assignments[targetStudentId].notes;
+            const alreadyHas = targetNotes.some(n => n.note === note.note && n.octave === note.octave);
+
+            if (!alreadyHas) {
+                targetNotes.push(note);
             }
 
             // Re-render and save
@@ -709,7 +715,7 @@
             notifyParent();
         }
 
-        function assignBoomwhackers() {
+        function assignBoomwhackers(count) {
             // Clear existing assignments
             assignments = {};
 
@@ -721,59 +727,155 @@
                 return;
             }
 
-            // Distribute melody 1 notes
-            const melody1Distribution = distributeMelody(presentStudents, melody1Notes, 1);
-
-            // Distribute melody 2 notes
-            const melody2Distribution = distributeMelody(presentStudents, melody2Notes, 2);
-
-            // Merge distributions
-            presentStudents.forEach(student => {
-                const studentId = student.student_id;
-
-                if (!assignments[studentId]) {
-                    assignments[studentId] = {};
-                }
-
-                if (melody1Distribution[studentId]) {
-                    assignments[studentId].melody1 = melody1Distribution[studentId];
-                }
-
-                if (melody2Distribution[studentId]) {
-                    assignments[studentId].melody2 = melody2Distribution[studentId];
-                }
-            });
+            if (count === 1) {
+                assignOneBoomwhacker(presentStudents);
+            } else if (count === 2) {
+                assignTwoBoomwhackers(presentStudents);
+            }
 
             renderStudentGrid();
             notifyParent();
         }
 
-        function distributeMelody(presentStudents, melodyNotes, melodyNum) {
-            const distribution = {};
-            const availableNotes = {};
+        function assignOneBoomwhacker(presentStudents) {
+            // Combine both melodies
+            const allNotes = [...melody1Notes, ...melody2Notes];
 
-            // Initialize available counts
-            melodyNotes.forEach(note => {
-                availableNotes[note] = inventory[note] || 4;
-            });
-
-            // Shuffle students for random distribution
-            const shuffledStudents = [...presentStudents].sort(() => Math.random() - 0.5);
-
-            // Try to assign one note per student
-            shuffledStudents.forEach(student => {
-                // Find notes that still have available boomwhackers
-                const availableNotesArray = melodyNotes.filter(note => availableNotes[note] > 0);
-
-                if (availableNotesArray.length > 0) {
-                    // Randomly select from available notes
-                    const randomNote = availableNotesArray[Math.floor(Math.random() * availableNotesArray.length)];
-                    distribution[student.student_id] = randomNote;
-                    availableNotes[randomNote]--;
+            // Ensure each unique note is covered at least once
+            const uniqueNotes = [];
+            const seen = new Set();
+            allNotes.forEach(noteObj => {
+                const key = getInventoryKey(noteObj);
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueNotes.push(noteObj);
                 }
             });
 
-            return distribution;
+            // Track available inventory
+            const availableInventory = { ...inventory };
+
+            // Shuffle students
+            const shuffledStudents = [...presentStudents].sort(() => Math.random() - 0.5);
+
+            // First pass: ensure every note is covered at least once
+            const coveredNotes = new Set();
+            const studentAssignments = new Map();
+
+            shuffledStudents.forEach(student => {
+                // Find notes not yet covered that are still available
+                const uncovered = uniqueNotes.filter(note => {
+                    const key = getInventoryKey(note);
+                    return !coveredNotes.has(key) && availableInventory[key] > 0;
+                });
+
+                if (uncovered.length > 0) {
+                    // Assign an uncovered note
+                    const note = uncovered[Math.floor(Math.random() * uncovered.length)];
+                    const key = getInventoryKey(note);
+                    coveredNotes.add(key);
+                    availableInventory[key]--;
+
+                    if (!studentAssignments.has(student.student_id)) {
+                        studentAssignments.set(student.student_id, []);
+                    }
+                    studentAssignments.get(student.student_id).push(note);
+                }
+            });
+
+            // Second pass: assign remaining students any available note
+            shuffledStudents.forEach(student => {
+                if (!studentAssignments.has(student.student_id)) {
+                    const availableNotes = uniqueNotes.filter(note => {
+                        const key = getInventoryKey(note);
+                        return availableInventory[key] > 0;
+                    });
+
+                    if (availableNotes.length > 0) {
+                        const note = availableNotes[Math.floor(Math.random() * availableNotes.length)];
+                        const key = getInventoryKey(note);
+                        availableInventory[key]--;
+
+                        studentAssignments.set(student.student_id, [note]);
+                    }
+                }
+            });
+
+            // Convert to assignments object
+            studentAssignments.forEach((notes, studentId) => {
+                assignments[studentId] = { notes: notes };
+            });
+        }
+
+        function assignTwoBoomwhackers(presentStudents) {
+            // Combine both melodies
+            const allNotes = [...melody1Notes, ...melody2Notes];
+
+            // Get unique notes
+            const uniqueNotes = [];
+            const seen = new Set();
+            allNotes.forEach(noteObj => {
+                const key = getInventoryKey(noteObj);
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueNotes.push(noteObj);
+                }
+            });
+
+            // Track available inventory
+            const availableInventory = { ...inventory };
+
+            // Shuffle students
+            const shuffledStudents = [...presentStudents].sort(() => Math.random() - 0.5);
+
+            // Assign 2 different boomwhackers to each student when possible
+            const coveredNotes = new Set();
+            const studentAssignments = new Map();
+
+            // First pass: ensure coverage
+            shuffledStudents.forEach(student => {
+                const uncovered = uniqueNotes.filter(note => {
+                    const key = getInventoryKey(note);
+                    return !coveredNotes.has(key) && availableInventory[key] > 0;
+                });
+
+                if (uncovered.length > 0 && !studentAssignments.has(student.student_id)) {
+                    const note = uncovered[Math.floor(Math.random() * uncovered.length)];
+                    const key = getInventoryKey(note);
+                    coveredNotes.add(key);
+                    availableInventory[key]--;
+
+                    studentAssignments.set(student.student_id, [note]);
+                }
+            });
+
+            // Second pass: try to give everyone a second boomwhacker (different from first)
+            shuffledStudents.forEach(student => {
+                const current = studentAssignments.get(student.student_id) || [];
+
+                if (current.length < 2) {
+                    // Find available notes different from what they already have
+                    const availableNotes = uniqueNotes.filter(note => {
+                        const key = getInventoryKey(note);
+                        const alreadyHas = current.some(n => getInventoryKey(n) === key);
+                        return !alreadyHas && availableInventory[key] > 0;
+                    });
+
+                    if (availableNotes.length > 0) {
+                        const note = availableNotes[Math.floor(Math.random() * availableNotes.length)];
+                        const key = getInventoryKey(note);
+                        availableInventory[key]--;
+
+                        current.push(note);
+                        studentAssignments.set(student.student_id, current);
+                    }
+                }
+            });
+
+            // Convert to assignments object
+            studentAssignments.forEach((notes, studentId) => {
+                assignments[studentId] = { notes: notes };
+            });
         }
 
         function getCurrentAssignments() {
