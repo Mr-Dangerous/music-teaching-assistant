@@ -74,17 +74,47 @@
             font-size: 12px;
         }
 
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
         .assign-btn {
-            font-size: 24px;
+            font-size: 18px;
             font-weight: bold;
             color: white;
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
             border: none;
-            padding: 15px 40px;
+            padding: 12px 30px;
             border-radius: 50px;
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(245, 87, 108, 0.4);
             transition: all 0.3s ease;
+        }
+
+        @keyframes flyToStudent {
+            0% {
+                transform: translate(0, 0) scale(1);
+                opacity: 1;
+            }
+
+            50% {
+                transform: translate(var(--fly-x), var(--fly-y)) scale(1.5);
+                opacity: 0.7;
+            }
+
+            100% {
+                transform: translate(var(--fly-x), var(--fly-y)) scale(1);
+                opacity: 0;
+            }
+        }
+
+        .flying-chip {
+            position: fixed;
+            z-index: 9999;
+            pointer-events: none;
+            animation: flyToStudent 0.8s ease-in-out forwards;
         }
 
         .assign-btn:hover {
@@ -299,7 +329,10 @@
             <div class="inventory-display" id="inventoryDisplay">
                 <!-- Inventory will be dynamically generated here -->
             </div>
-            <button class="assign-btn" onclick="assignBoomwhackers()">Ready to Assign!</button>
+            <div class="button-group">
+                <button class="assign-btn" onclick="assignBoomwhackers(1)">Assign 1 Boomwhacker</button>
+                <button class="assign-btn" onclick="assignBoomwhackers(2)">Assign 2 Boomwhackers</button>
+            </div>
         </div>
 
         <div class="legend">
@@ -355,21 +388,79 @@
             }
         };
 
-        // Song configuration
-        const melody1Notes = ['A', 'C', 'E', 'Ds', 'D', 'G']; // Using 'Ds' for D#
-        const melody2Notes = ['E', 'G', 'Gs', 'B', 'C']; // Using 'Gs' for G#, high C
+        // Song configuration  - note names with octave specifiers
+        const melody1Notes = [
+            { note: 'A', octave: 'low' },
+            { note: 'C', octave: 'low' },
+            { note: 'E', octave: 'regular' },
+            { note: 'D#', octave: 'regular' },
+            { note: 'D', octave: 'regular' },
+            { note: 'G', octave: 'regular' }
+        ];
 
-        // Boomwhacker inventory (quantities)
-        const inventory = {
-            'A': 4, 'C': 4, 'D': 4, 'Ds': 2, 'E': 4, 'G': 4, 'Gs': 2, 'B': 4
-        };
+        const melody2Notes = [
+            { note: 'E', octave: 'regular' },
+            { note: 'G', octave: 'regular' },
+            { note: 'G#', octave: 'regular' },
+            { note: 'B', octave: 'regular' },
+            { note: 'C', octave: 'high' }
+        ];
+
+        // Boomwhacker inventory - will be loaded from CSV
+        let inventory = {};
+        let inventoryLoaded = false;
 
         let students = [];
-        let assignments = {}; // studentId -> {melody1: 'note', melody2: 'note'}
+        let assignments = {}; // studentId -> array of {note, octave, melody}
         let draggedChip = null;
         let sourceStudent = null;
 
+        // Load inventory from CSV
+        async function loadInventory() {
+            try {
+                const response = await fetch('../boomwhacker_inventory.csv');
+                const csvText = await response.text();
+                const lines = csvText.trim().split('\n');
+
+                // Skip header row
+                for (let i = 1; i < lines.length; i++) {
+                    const [note, octave, quantity] = lines[i].split(',');
+                    if (note && octave && quantity) {
+                        const key = `${note}_${octave}`;
+                        inventory[key] = parseInt(quantity);
+                    }
+                }
+
+                inventoryLoaded = true;
+                console.log('Loaded inventory:', inventory);
+                renderInventory();
+            } catch (error) {
+                console.error('Error loading inventory:', error);
+                // Fallback to hardcoded values if CSV fails
+                inventory = {
+                    'A_low': 2, 'A_regular': 6, 'A_high': 1,
+                    'C_low': 2, 'C_regular': 6, 'C_high': 6,
+                    'D_low': 2, 'D_regular': 6, 'D_high': 2,
+                    'D#_regular': 3,
+                    'E_low': 2, 'E_regular': 6, 'E_high': 1,
+                    'G_low': 1, 'G_regular': 6, 'G_high': 1,
+                    'G#_regular': 3,
+                    'B_low': 2, 'B_regular': 3, 'B_high': 1
+                };
+                inventoryLoaded = true;
+                renderInventory();
+            }
+        }
+
+        // Helper function to get inventory key
+        function getInventoryKey(noteObj) {
+            return `${noteObj.note}_${noteObj.octave}`;
+        }
+
         function initModule(context) {
+            // Load inventory from CSV
+            loadInventory();
+
             // Show loading state
             const grid = document.getElementById('studentGrid');
             grid.innerHTML = '<div class="empty-state">Loading students...</div>';
