@@ -1932,13 +1932,15 @@ class TeachingAssistantApp {
       }));
 
     // Send student list back to the requesting module
-    const moduleIframe = document.querySelector('#module-container iframe');
+    const moduleIframe = document.querySelector('#task-image-container iframe');
     if (moduleIframe && moduleIframe.contentWindow) {
       moduleIframe.contentWindow.postMessage({
         type: 'taskmodule:students-data',
         students: classStudents
       }, '*');
       console.log('Sent student list to module:', classStudents.length, 'students');
+    } else {
+      console.warn('Could not find module iframe to send student data');
     }
   }
 
