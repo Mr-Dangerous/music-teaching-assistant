@@ -1,5 +1,5 @@
 {
-  "version": "0.4.0",
+  "version": "0.4.1",
   "lastUpdated": "2025-12-17",
-  "description": "Added Greig Boomwhacker Assignment module with drag-and-drop functionality"
+  "description": "Fixed boomwhacker module to load actual students instead of mock data"
 }
