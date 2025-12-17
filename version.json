@@ -1,5 +1,5 @@
 {
-  "version": "0.5.0",
+  "version": "0.6.0",
   "lastUpdated": "2025-12-17",
-  "description": "Added inventory display and compact inline layout for boomwhacker assignments"
+  "description": "Completed boomwhacker assignment with smart 1/2 modes and CSV inventory"
 }
