@@ -138,6 +138,15 @@ class TeachingAssistantApp {
       } else if (event.data.type === 'taskmodule:request-students') {
         // Module is requesting the current class's student list
         this.handleStudentListRequest(event);
+      } else if (event.data.type === 'saveBoomwhackerSong') {
+        // Save boomwhacker song configuration
+        this.saveBoomwhackerSong(event.data.songName, event.data.configJson);
+      } else if (event.data.type === 'loadBoomwhackerSong') {
+        // Load boomwhacker song configuration
+        this.loadBoomwhackerSong(event.data.songName);
+      } else if (event.data.type === 'getBoomwhackerSongs') {
+        // Get list of saved songs
+        this.getBoomwhackerSongs();
       }
     });
 
@@ -2266,6 +2275,115 @@ class TeachingAssistantApp {
    */
   getPresentationLinks() {
     return this.presentationLinks;
+  }
+
+  /**
+   * Save a boomwhacker song configuration
+   */
+  async saveBoomwhackerSong(songName, configJson) {
+    try {
+      const csvPath = 'data/boomwhacker_songs.csv';
+      const response = await fetch(csvPath);
+      const csvText = await response.text();
+      const lines = csvText.trim().split('\n');
+
+      // Check if song already exists
+      const existingIndex = lines.findIndex((line, i) => {
+        if (i === 0) return false; // Skip header
+        const [name] = line.split(',');
+        return name === songName;
+      });
+
+      const escapedJson = configJson.replace(/"/g, '""'); // Escape quotes for CSV
+      const newLine = `${songName},"${escapedJson}"`;
+
+      if (existingIndex > 0) {
+        // Update existing
+        lines[existingIndex] = newLine;
+      } else {
+        // Add new
+        lines.push(newLine);
+      }
+
+      const newCsv = lines.join('\n');
+
+      // Save using File API
+      const blob = new Blob([newCsv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'boomwhacker_songs.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+
+      console.log(`Saved boomwhacker song: ${songName}`);
+    } catch (error) {
+      console.error('Error saving boomwhacker song:', error);
+    }
+  }
+
+  /**
+    * Load a boomwhacker song configuration
+    */
+  async loadBoomwhackerSong(songName) {
+    try {
+      const csvPath = 'data/boomwhacker_songs.csv';
+      const response = await fetch(csvPath);
+      const csvText = await response.text();
+      const lines = csvText.trim().split('\n');
+
+      for (let i = 1; i < lines.length; i++) {
+        const match = lines[i].match(/^([^,]+),"(.+)"$/);
+        if (match && match[1] === songName) {
+          const configJson = match[2].replace(/""/g, '"'); // Unescape quotes
+
+          // Send to module
+          const iframe = document.getElementById('task-module-frame');
+          if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage({
+              type: 'boomwhackerSongConfig',
+              configJson: configJson
+            }, '*');
+          }
+          return;
+        }
+      }
+
+      console.warn(`Song not found: ${songName}`);
+    } catch (error) {
+      console.error('Error loading boomwhacker song:', error);
+    }
+  }
+
+  /**
+   * Get list of all saved boomwhacker songs
+   */
+  async getBoomwhackerSongs() {
+    try {
+      const csvPath = 'data/boomwhacker_songs.csv';
+      const response = await fetch(csvPath);
+      const csvText = await response.text();
+      const lines = csvText.trim().split('\n');
+
+      const songs = [];
+      for (let i = 1; i < lines.length; i++) {
+        const match = lines[i].match(/^([^,]+),/);
+        if (match) {
+          songs.push(match[1]);
+        }
+      }
+
+      // Send to module
+      const iframe = document.getElementById('task-module-frame');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+          type: 'boomwhackerSongList',
+          songs: songs
+        }, '*');
+      }
+    } catch (error) {
+      console.error('Error getting boomwhacker songs:', error);
+    }
   }
 }
 

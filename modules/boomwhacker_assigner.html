@@ -200,6 +200,41 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
         }
 
+        .song-controls {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+        }
+
+        .song-btn {
+            font-size: 11px;
+            padding: 3px 10px;
+            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .song-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);
+        }
+
+        .song-select {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 8px;
+            border: 2px solid #8b5cf6;
+            background: white;
+            color: #6d28d9;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
         .octavator-success {
             position: fixed;
             pointer-events: none;
@@ -410,6 +445,12 @@
             <div class="octavator-chip" id="octavatorChip" draggable="true">
                 <span>Octavator</span>
                 <span class="inventory-count" id="octavatorCount">×12</span>
+            </div>
+            <div class="song-controls">
+                <button class="song-btn" onclick="saveSong()">💾 Save Song</button>
+                <select class="song-select" id="songSelect" onchange="loadSong()">
+                    <option value="">-- Load Song --</option>
+                </select>
             </div>
         </div>
 
@@ -1316,6 +1357,121 @@
                 popup.remove();
             }, 600);
         }
+
+        // Song save/load functions
+        async function saveSong() {
+            const songName = prompt('Enter a name for this song configuration:');
+            if (!songName || songName.trim() === '') {
+                return;
+            }
+
+            const config = {
+                toggledOn: { ...toggledOn },
+                octavatorConversions: { ...octavatorConversions },
+                octavatorsAvailable: octavatorsAvailable
+            };
+
+            const configJson = JSON.stringify(config);
+
+            // Send to parent app to save
+            window.parent.postMessage({
+                type: 'saveBoomwhackerSong',
+                songName: songName.trim(),
+                configJson: configJson
+            }, '*');
+
+            alert(`Song "${songName}" saved!`);
+            loadSongList(); // Refresh the dropdown
+        }
+
+        async function loadSong() {
+            const select = document.getElementById('songSelect');
+            const songName = select.value;
+
+
+            if (!songName) return;
+
+            // Request song from parent
+            window.parent.postMessage({
+                type: 'loadBoomwhackerSong',
+                songName: songName
+            }, '*');
+        }
+
+        function applySongConfig(configJson) {
+            try {
+                const config = JSON.parse(configJson);
+
+                // Apply toggled state
+                toggledOn = config.toggledOn || {};
+
+                // Revert any existing octavator conversions first
+                revertAllOctavators();
+
+                // Apply octavator conversions
+                if (config.octavatorConversions) {
+                    Object.keys(config.octavatorConversions).forEach(lowKey => {
+                        const count = config.octavatorConversions[lowKey];
+                        if (count > 0) {
+                            const note = lowKey.split('_')[0];
+                            const regularKey = `${note}_regular`;
+
+                            // Transfer inventory
+                            inventory[regularKey] -= count;
+                            availableCounts[regularKey] -= count;
+                            inventory[lowKey] += count;
+                            availableCounts[lowKey] += count;
+                        }
+                    });
+                    octavatorConversions = config.octavatorConversions;
+                    octavatorsAvailable = config.octavatorsAvailable || 12;
+                }
+
+                renderInventory();
+                updateOctavatorDisplay();
+                console.log('Song configuration applied!');
+            } catch (e) {
+                console.error('Error applying song config:', e);
+                alert('Error loading song configuration');
+            }
+        }
+
+        function loadSongList() {
+            // Request song list from parent
+            window.parent.postMessage({
+                type: 'getBoomwhackerSongs'
+            }, '*');
+        }
+
+        function populateSongList(songs) {
+            const select = document.getElementById('songSelect');
+            select.innerHTML = '<option value="">-- Load Song --</option>';
+
+            songs.forEach(songName => {
+                const option = document.createElement('option');
+                option.value = songName;
+                option.textContent = songName;
+                select.appendChild(option);
+            });
+        }
+
+        // Listen for messages from parent
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'boomwhackerSongConfig') {
+                applySongConfig(event.data.configJson);
+            } else if (event.data.type === 'boomwhackerSongList') {
+                populateSongList(event.data.songs);
+            }
+        });
+
+        // Load song list when octavators are enabled
+        const originalToggleOctavators = toggleOctavators;
+        toggleOctavators = function () {
+            originalToggleOctavators();
+            if (octavatorsEnabled) {
+                loadSongList();
+            }
+        };
     </script>
 </body>
 

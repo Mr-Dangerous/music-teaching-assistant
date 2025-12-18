@@ -1,5 +1,5 @@
 {
-  "version": "1.0.7",
+  "version": "1.1.0",
   "lastUpdated": "2025-12-18",
-  "description": "Improved flying animation: smooth motion (no zoom), faster (0.5s = 2/sec)"
+  "description": "Added song save/load: save/load toggled notes + octavator configs to CSV"
 }
