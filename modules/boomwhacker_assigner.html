@@ -967,30 +967,32 @@
 
             const tempAvailable = { ...inventory };
             const shuffledStudents = [...presentStudents].sort(() => Math.random() - 0.5);
-            const coveredNotes = new Set();
             const studentAssignments = new Map();
 
-            // First: coverage
+            // FIRST PASS: Give EVERYONE 1 boomwhacker
             shuffledStudents.forEach(student => {
-                const uncovered = availableNotes.filter(note => {
+                const available = availableNotes.filter(note => {
                     const key = getInventoryKey(note);
-                    return !coveredNotes.has(key) && tempAvailable[key] > 0;
+                    return tempAvailable[key] > 0;
                 });
 
-                if (uncovered.length > 0 && !studentAssignments.has(student.student_id)) {
-                    const note = uncovered[Math.floor(Math.random() * uncovered.length)];
+                if (available.length > 0) {
+                    const note = available[Math.floor(Math.random() * available.length)];
                     const key = getInventoryKey(note);
-                    coveredNotes.add(key);
                     tempAvailable[key]--;
                     studentAssignments.set(student.student_id, [note]);
+                } else {
+                    // Not enough inventory for everyone to get 1
+                    studentAssignments.set(student.student_id, []);
                 }
             });
 
-            // Second: give everyone 2 when possible
+            // SECOND PASS: Give everyone a 2nd boomwhacker if possible
             shuffledStudents.forEach(student => {
                 const current = studentAssignments.get(student.student_id) || [];
 
-                while (current.length < 2) {
+                // Only try to add a 2nd if they have a 1st
+                if (current.length === 1) {
                     const available = availableNotes.filter(note => {
                         const key = getInventoryKey(note);
                         const alreadyHas = current.some(n => n.note === note.note && n.octave === note.octave);
@@ -1003,8 +1005,6 @@
                         tempAvailable[key]--;
                         current.push(note);
                         studentAssignments.set(student.student_id, current);
-                    } else {
-                        break; // No more available
                     }
                 }
             });
