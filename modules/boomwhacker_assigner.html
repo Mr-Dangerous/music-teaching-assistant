@@ -255,23 +255,29 @@
         }
 
         .student-name {
-            font-size: 18px;
+            font-size: 24px;
             font-weight: bold;
             color: #2c3e50;
-            min-width: 90px;
+            min-width: 100px;
+            max-width: 120px;
             flex-shrink: 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .boomwhacker-list {
             display: flex;
             flex-wrap: wrap;
-            gap: 4px;
+            gap: 6px;
             flex: 1;
-            padding: 4px;
+            padding: 8px;
             background: #f8f9fa;
             border-radius: 5px;
             border: 2px dashed #bdc3c7;
-            min-height: 30px;
+            min-height: 50px;
+            max-height: 50px;
+            overflow: hidden;
         }
 
         .boomwhacker-list.drag-over {
@@ -282,14 +288,14 @@
         .boomwhacker-chip {
             display: inline-flex;
             align-items: center;
-            gap: 3px;
-            padding: 4px 10px;
-            border-radius: 14px;
-            font-size: 18px;
+            gap: 4px;
+            padding: 8px 14px;
+            border-radius: 18px;
+            font-size: 28px;
             font-weight: bold;
             color: white;
             cursor: grab;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
             transition: all 0.2s ease;
             user-select: none;
         }
