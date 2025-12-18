@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Results Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .results-container {
+            display: flex;
+            flex-direction: column;
+            height: calc(100vh - 40px);
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            padding: 20px;
+        }
+
+        .results-header {
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #ddd;
+        }
+
+        .results-title {
+            font-size: 28px;
+            color: #3b82f6;
+            margin-bottom: 8px;
+        }
+
+        .results-subtitle {
+            font-size: 18px;
+            color: #6b7280;
+        }
+
+        .selection-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        .selection-row label {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+
+        .selection-row select {
+            padding: 10px;
+            border: 2px solid #3498db;
+            border-radius: 5px;
+            font-size: 14px;
+            min-width: 200px;
+        }
+
+        .filter-options {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #ecf0f1;
+            border-radius: 5px;
+        }
+
+        .filter-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-option label {
+            font-weight: normal;
+            color: #34495e;
+        }
+
+        .results-table-container {
+            flex: 1;
+            background: #f9fafb;
+            border-radius: 10px;
+            overflow-y: auto;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .results-table thead {
+            background-color: #3498db;
+            color: white;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .results-table th {
+            padding: 15px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .results-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #ecf0f1;
+            font-size: 14px;
+            background: white;
+        }
+
+        .results-table tbody tr:hover {
+            background-color: #f8f9fa;
+        }
+
+        .results-table tbody tr:hover td {
+            background-color: #f8f9fa;
+        }
+
+        .results-table tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        .score-cell {
+            font-weight: bold;
+            font-size: 16px;
+        }
+
+        .pattern-display {
+            font-family: monospace;
+            background-color: #ecf0f1;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
+        .answer-display {
+            font-family: monospace;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-size: 13px;
+        }
+
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+            color: #7f8c8d;
+            font-size: 18px;
+        }
+
+        .timestamp {
+            color: #7f8c8d;
+            font-size: 12px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            font-size: 18px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="results-container">
+        <div class="results-header">
+            <h1 class="results-title">📊 Student Results Viewer</h1>
+            <p class="results-subtitle" id="results-subtitle">Loading data...</p>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loading-state" style="display: none;">
+            <div class="loading">Loading data...</div>
+        </div>
+
+        <!-- Selection Controls -->
+        <div id="selection-controls" style="display: none;">
+            <div class="selection-row">
+                <label for="class-select">Class:</label>
+                <select id="class-select">
+                    <option value="">Select a class...</option>
+                </select>
+
+                <label for="student-select">Student:</label>
+                <select id="student-select">
+                    <option value="">Select a student...</option>
+                </select>
+
+                <label for="module-select">Module:</label>
+                <select id="module-select">
+                    <option value="">All Modules</option>
+                </select>
+            </div>
+
+            <div class="filter-options">
+                <div class="filter-option">
+                    <input type="checkbox" id="show-all-attempts" checked>
+                    <label for="show-all-attempts">Show all attempts</label>
+                </div>
+                <div class="filter-option">
+                    <input type="checkbox" id="show-correct-only">
+                    <label for="show-correct-only">Show correct only</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Table -->
+        <div id="results-display" class="results-table-container" style="display: none;">
+            <table class="results-table">
+                <thead>
+                    <tr>
+                        <th>Date/Time</th>
+                        <th>Student</th>
+                        <th>Module</th>
+                        <th>Question</th>
+                        <th>Answer</th>
+                        <th>Score</th>
+                    </tr>
+                </thead>
+                <tbody id="results-tbody">
+                    <!-- Results will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+
+        <div id="no-results" class="no-results" style="display: none;">
+            <p>No results found. Please select a class and student.</p>
+        </div>
+    </div>
+
+    <script>
+        // Results Viewer Module
+        class ResultsViewerModule {
+            constructor() {
+                this.students = [];
+                this.tasks = [];
+                this.results = [];
+
+                this.selectedClass = null;
+                this.selectedStudent = null;
+                this.selectedModule = null;
+                this.showAllAttempts = true;
+                this.showCorrectOnly = false;
+
+                // Context from parent
+                this.currentStudentId = null;
+                this.currentStudentName = null;
+                this.currentClass = null;
+
+                this.init();
+            }
+
+            async init() {
+                console.log('=== Results Viewer Module initialized ===');
+
+                // Listen for init message from parent
+                window.addEventListener('message', (event) => {
+                    if (event.data.type === 'taskmodule:init') {
+                        this.handleInit(event.data);
+                    }
+                });
+
+                // Request initialization from parent
+                window.parent.postMessage({ type: 'taskmodule:ready' }, '*');
+            }
+
+            async handleInit(data) {
+                console.log('Results viewer received init:', data);
+
+                // Store context from parent
+                this.currentStudentId = data.context?.studentId || null;
+                this.currentStudentName = data.context?.studentName || null;
+                this.currentClass = data.context?.class || null;
+
+                // Get data from parent app
+                if (window.parent.app) {
+                    this.students = window.parent.app.students || [];
+                    this.tasks = window.parent.app.tasks || [];
+                    this.results = window.parent.app.results || [];
+
+                    console.log(`Loaded ${this.students.length} students, ${this.tasks.length} tasks, ${this.results.length} results`);
+
+                    // Initialize UI
+                    this.setupUI();
+                    this.loadData();
+                } else {
+                    this.showError('App not initialized properly.');
+                }
+            }
+
+            setupUI() {
+                // Class selector
+                const classSelect = document.getElementById('class-select');
+                classSelect.addEventListener('change', (e) => {
+                    this.selectedClass = e.target.value;
+                    this.populateStudentSelector();
+                    this.displayResults();
+                });
+
+                // Student selector
+                const studentSelect = document.getElementById('student-select');
+                studentSelect.addEventListener('change', (e) => {
+                    this.selectedStudent = e.target.value;
+                    this.displayResults();
+                });
+
+                // Module selector
+                const moduleSelect = document.getElementById('module-select');
+                moduleSelect.addEventListener('change', (e) => {
+                    this.selectedModule = e.target.value;
+                    this.displayResults();
+                });
+
+                // Filter checkboxes
+                const showAllAttemptsCheckbox = document.getElementById('show-all-attempts');
+                showAllAttemptsCheckbox.addEventListener('change', (e) => {
+                    this.showAllAttempts = e.target.checked;
+                    if (this.showAllAttempts) {
+                        document.getElementById('show-correct-only').checked = false;
+                        this.showCorrectOnly = false;
+                    }
+                    this.displayResults();
+                });
+
+                const showCorrectOnlyCheckbox = document.getElementById('show-correct-only');
+                showCorrectOnlyCheckbox.addEventListener('change', (e) => {
+                    this.showCorrectOnly = e.target.checked;
+                    if (this.showCorrectOnly) {
+                        document.getElementById('show-all-attempts').checked = false;
+                        this.showAllAttempts = false;
+                    }
+                    this.displayResults();
+                });
+            }
+
+            loadData() {
+                try {
+                    document.getElementById('loading-state').style.display = 'block';
+
+                    // Populate class selector
+                    this.populateClassSelector();
+
+                    // Populate module selector
+                    this.populateModuleSelector();
+
+                    // Show controls
+                    document.getElementById('selection-controls').style.display = 'block';
+                    document.getElementById('loading-state').style.display = 'none';
+
+                    // If context is provided, pre-select
+                    if (this.currentClass) {
+                        document.getElementById('class-select').value = this.currentClass;
+                        this.selectedClass = this.currentClass;
+                        this.populateStudentSelector();
+
+                        if (this.currentStudentName) {
+                            // Find student by name
+                            const student = this.students.find(s => s.name === this.currentStudentName);
+                            if (student) {
+                                document.getElementById('student-select').value = student.student_id;
+                                this.selectedStudent = student.student_id;
+                            }
+                        }
+
+                        this.displayResults();
+                    }
+
+                } catch (error) {
+                    console.error('Error loading data:', error);
+                    this.showError(`Error loading data: ${error.message}`);
+                }
+            }
+
+            populateClassSelector() {
+                const classSelect = document.getElementById('class-select');
+                classSelect.innerHTML = '<option value="">Select a class...</option>';
+
+                // Get unique classes
+                const classes = [...new Set(this.students.map(s => s.class))].sort();
+
+                classes.forEach(className => {
+                    const option = document.createElement('option');
+                    option.value = className;
+                    option.textContent = className;
+                    classSelect.appendChild(option);
+                });
+            }
+
+            populateStudentSelector() {
+                const studentSelect = document.getElementById('student-select');
+                studentSelect.innerHTML = '<option value="">Select a student...</option>';
+
+                if (!this.selectedClass) {
+                    return;
+                }
+
+                // Filter students by class
+                const classStudents = this.students.filter(s => s.class === this.selectedClass);
+
+                classStudents.forEach(student => {
+                    const option = document.createElement('option');
+                    option.value = student.student_id;
+                    option.textContent = student.name;
+                    studentSelect.appendChild(option);
+                });
+            }
+
+            populateModuleSelector() {
+                const moduleSelect = document.getElementById('module-select');
+                moduleSelect.innerHTML = '<option value="">All Modules</option>';
+
+                // Get unique task IDs from results
+                const modules = [...new Set(this.results.map(r => r.task_id))].sort();
+
+                modules.forEach(moduleId => {
+                    const option = document.createElement('option');
+                    option.value = moduleId;
+                    option.textContent = moduleId;
+                    moduleSelect.appendChild(option);
+                });
+            }
+
+            displayResults() {
+                const tbody = document.getElementById('results-tbody');
+                const resultsDisplay = document.getElementById('results-display');
+                const noResults = document.getElementById('no-results');
+
+                tbody.innerHTML = '';
+
+                if (!this.selectedClass || !this.selectedStudent) {
+                    resultsDisplay.style.display = 'none';
+                    noResults.style.display = 'block';
+                    return;
+                }
+
+                // Filter results
+                let filteredResults = this.results.filter(r => r.student_id === this.selectedStudent);
+
+                // Filter by module if selected
+                if (this.selectedModule) {
+                    filteredResults = filteredResults.filter(r => r.task_id === this.selectedModule);
+                }
+
+                // Apply show correct only filter if needed
+                // This would require parsing the response to determine correctness
+                // For now, we'll just show all results
+
+                if (filteredResults.length === 0) {
+                    resultsDisplay.style.display = 'none';
+                    noResults.style.display = 'block';
+                    document.getElementById('no-results').innerHTML = '<p>No results found for this selection.</p>';
+                    return;
+                }
+
+                // Sort by date (newest first)
+                filteredResults.sort((a, b) => new Date(b.completed_date) - new Date(a.completed_date));
+
+                // Display results
+                filteredResults.forEach(result => {
+                    const row = this.createResultRow(result);
+                    tbody.appendChild(row);
+                });
+
+                resultsDisplay.style.display = 'block';
+                noResults.style.display = 'none';
+
+                // Update subtitle
+                const student = this.students.find(s => s.student_id === this.selectedStudent);
+                const studentName = student ? student.name : 'Unknown';
+                document.getElementById('results-subtitle').textContent = `${filteredResults.length} result(s) for ${studentName}`;
+            }
+
+            createResultRow(result) {
+                const tr = document.createElement('tr');
+
+                // Get student name
+                const student = this.students.find(s => s.student_id === result.student_id);
+                const studentName = student ? student.name : 'Unknown';
+
+                // Date/Time
+                const dateCell = document.createElement('td');
+                dateCell.className = 'timestamp';
+                dateCell.textContent = new Date(result.completed_date).toLocaleString();
+                tr.appendChild(dateCell);
+
+                // Student
+                const studentCell = document.createElement('td');
+                studentCell.textContent = studentName;
+                tr.appendChild(studentCell);
+
+                // Module
+                const moduleCell = document.createElement('td');
+                moduleCell.textContent = result.task_id;
+                tr.appendChild(moduleCell);
+
+                // Question
+                const questionCell = document.createElement('td');
+                questionCell.textContent = '-';
+                tr.appendChild(questionCell);
+
+                // Answer - parse based on module type
+                const answerCell = document.createElement('td');
+                const { display, score } = this.parseResponse(result.task_id, result.response);
+                answerCell.innerHTML = display;
+                tr.appendChild(answerCell);
+
+                // Score
+                const scoreCell = document.createElement('td');
+                scoreCell.className = 'score-cell';
+                scoreCell.textContent = score;
+                tr.appendChild(scoreCell);
+
+                return tr;
+            }
+
+            parseResponse(taskId, response) {
+                // Special handling for specific task types
+                if (taskId === 'ATTENDANCE') {
+                    return {
+                        display: response === 'absent' ? '🚫 Absent' : '✓ Present',
+                        score: '-'
+                    };
+                }
+
+                if (taskId === 'FORGOT_INSTRUMENT') {
+                    return {
+                        display: '❌ Forgot Instrument',
+                        score: '-'
+                    };
+                }
+
+                if (taskId === 'EARNED_STOOL') {
+                    return {
+                        display: '⭐ Earned Stool',
+                        score: '-'
+                    };
+                }
+
+                if (taskId === 'AUDIO_RECORDING' || taskId === 'VIDEO_RECORDING') {
+                    return {
+                        display: `<span class="pattern-display">${response}</span>`,
+                        score: '-'
+                    };
+                }
+
+                // Try to parse as JSON
+                try {
+                    const data = JSON.parse(response);
+
+                    // Handle different module types
+                    if (data.pattern && data.labels) {
+                        // So La Mi trainer format
+                        const pattern = data.pattern;
+                        const labels = data.labels;
+                        let correct = 0;
+
+                        for (let i = 0; i < pattern.length; i++) {
+                            if (pattern[i] === labels[i]) {
+                                correct++;
+                            }
+                        }
+
+                        return {
+                            display: `<div class="pattern-display">Pattern: ${pattern.join(' ')}</div><div class="answer-display">Answer: ${labels.join(' ')}</div>`,
+                            score: `${correct}/${pattern.length}`
+                        };
+                    } else if (data.score !== undefined) {
+                        // Generic score-based format
+                        return {
+                            display: `<span class="answer-display">${JSON.stringify(data)}</span>`,
+                            score: data.score
+                        };
+                    }
+                } catch (e) {
+                    // Not JSON, just display as is
+                }
+
+                // Default: just show the response
+                return {
+                    display: `<span class="answer-display">${response}</span>`,
+                    score: '-'
+                };
+            }
+
+            showError(message) {
+                document.getElementById('loading-state').style.display = 'none';
+                document.getElementById('selection-controls').style.display = 'none';
+                document.getElementById('results-display').style.display = 'none';
+                document.getElementById('no-results').style.display = 'block';
+                document.getElementById('no-results').innerHTML = `<p>${message}</p>`;
+            }
+        }
+
+        // Initialize the results viewer module
+        const resultsViewer = new ResultsViewerModule();
+    </script>
+</body>
+
+</html>

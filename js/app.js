@@ -98,7 +98,7 @@ class TeachingAssistantApp {
     const viewResultsBtn = document.getElementById('view-results-btn');
     if (viewResultsBtn) {
       viewResultsBtn.addEventListener('click', () => {
-        window.location.href = 'results-viewer.html';
+        this.showResultsViewer();
       });
     }
 
@@ -1987,6 +1987,55 @@ class TeachingAssistantApp {
       this.showNotification('Practice Mode - responses will not be saved', 'info');
     }).catch(err => {
       this.showNoTask(`Failed to load module: ${err.message}`);
+    });
+  }
+
+  /**
+   * Show results viewer as a module
+   */
+  showResultsViewer() {
+    // Make sure we're on the student screen to show the module
+    if (this.currentScreen !== 'student-select') {
+      // If no class is selected, just go to class screen first
+      if (!this.selectedClass) {
+        this.showNotification('Please select a class first', 'info');
+        return;
+      }
+      this.showStudentScreen();
+    }
+
+    // Reset any loaded modules
+    this.moduleLoader.reset();
+
+    // Update student name display
+    document.getElementById('current-student-name').textContent = 'Results Viewer';
+
+    // Update task name
+    document.getElementById('current-task-name').textContent = 'View all student results';
+
+    // Load the results viewer module
+    const container = document.getElementById('task-image-container');
+    const context = {
+      studentId: this.selectedStudent,
+      studentName: this.selectedStudent ? this.students.find(s => s.student_id === this.selectedStudent)?.name : null,
+      class: this.selectedClass,
+      grade: null
+    };
+
+    this.moduleLoader.loadModule(
+      'modules/results-viewer.html',
+      container,
+      context
+    ).then(iframe => {
+      this.moduleLoader.currentResponseModule = iframe;
+      this.cancelCountdown();
+
+      const responseArea = document.getElementById('response-area');
+      if (responseArea) {
+        responseArea.style.display = 'none';
+      }
+    }).catch(err => {
+      this.showNoTask(`Failed to load results viewer: ${err.message}`);
     });
   }
 
