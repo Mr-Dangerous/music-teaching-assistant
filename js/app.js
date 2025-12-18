@@ -147,6 +147,18 @@ class TeachingAssistantApp {
       } else if (event.data.type === 'getBoomwhackerSongs') {
         // Get list of saved songs
         this.getBoomwhackerSongs();
+      } else if (event.data.type === 'requestSongName') {
+        // Module wants to get a song name (can't use prompt in iframe)
+        const songName = prompt('Enter a name for this song configuration:');
+        if (songName) {
+          const iframe = document.getElementById('task-module-frame');
+          if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage({
+              type: 'songName',
+              songName: songName
+            }, '*');
+          }
+        }
       }
     });
 
@@ -2283,15 +2295,23 @@ class TeachingAssistantApp {
   async saveBoomwhackerSong(songName, configJson) {
     try {
       const csvPath = 'data/boomwhacker_songs.csv';
-      const response = await fetch(csvPath);
-      const csvText = await response.text();
-      const lines = csvText.trim().split('\n');
+      let csvText;
+      let lines;
+
+      try {
+        const response = await fetch(csvPath);
+        csvText = await response.text();
+        lines = csvText.trim().split('\n');
+      } catch {
+        // File doesn't exist yet, create header
+        lines = ['song_name,config_json'];
+      }
 
       // Check if song already exists
       const existingIndex = lines.findIndex((line, i) => {
         if (i === 0) return false; // Skip header
-        const [name] = line.split(',');
-        return name === songName;
+        const parts = line.split(',');
+        return parts[0] === songName;
       });
 
       const escapedJson = configJson.replace(/"/g, '""'); // Escape quotes for CSV
@@ -2307,14 +2327,21 @@ class TeachingAssistantApp {
 
       const newCsv = lines.join('\n');
 
-      // Save using File API
-      const blob = new Blob([newCsv], { type: 'text/csv' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'boomwhacker_songs.csv';
-      a.click();
-      URL.revokeObjectURL(url);
+      // Write to file using file manager if available
+      if (window.fileManager) {
+        await window.fileManager.writeFile(csvPath, newCsv);
+        this.showNotification(`Song "${songName}" saved successfully!`, 'success');
+      } else {
+        // Fallback: download file
+        const blob = new Blob([newCsv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'boomwhacker_songs.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+        this.showNotification(`Song "${songName}" saved! Replace the CSV file in data/ folder.`, 'warning');
+      }
 
       console.log(`Saved boomwhacker song: ${songName}`);
     } catch (error) {

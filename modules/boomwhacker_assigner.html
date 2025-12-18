@@ -1363,7 +1363,13 @@
 
         // Song save/load functions
         async function saveSong() {
-            const songName = prompt('Enter a name for this song configuration:');
+            // Request song name from parent (can't use prompt in sandboxed iframe)
+            window.parent.postMessage({
+                type: 'requestSongName'
+            }, '*');
+        }
+
+        function saveSongWithName(songName) {
             if (!songName || songName.trim() === '') {
                 return;
             }
@@ -1383,7 +1389,6 @@
                 configJson: configJson
             }, '*');
 
-            alert(`Song "${songName}" saved!`);
             loadSongList(); // Refresh the dropdown
         }
 
@@ -1464,6 +1469,8 @@
                 applySongConfig(event.data.configJson);
             } else if (event.data.type === 'boomwhackerSongList') {
                 populateSongList(event.data.songs);
+            } else if (event.data.type === 'songName') {
+                saveSongWithName(event.data.songName);
             }
         });
 
