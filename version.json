@@ -1,5 +1,5 @@
 {
-  "version": "1.0.4",
+  "version": "1.0.5",
   "lastUpdated": "2025-12-18",
-  "description": "Improved cards: larger names (24px), truncated long names, bigger chips (28px)"
+  "description": "Fixed chip cropping and added green hover highlight for octavator drops"
 }

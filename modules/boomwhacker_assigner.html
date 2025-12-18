@@ -121,6 +121,12 @@
             filter: grayscale(80%);
         }
 
+        .inventory-chip.octavator-hover {
+            transform: scale(1.15);
+            box-shadow: 0 0 8px rgba(46, 204, 113, 0.8);
+            outline: 2px solid #2ecc71;
+        }
+
         .inventory-chip:hover:not(.toggled-off) {
             transform: translateY(-2px);
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
@@ -276,8 +282,7 @@
             border-radius: 5px;
             border: 2px dashed #bdc3c7;
             min-height: 50px;
-            max-height: 50px;
-            overflow: hidden;
+            align-items: center;
         }
 
         .boomwhacker-list.drag-over {
@@ -650,6 +655,18 @@
                 }
             });
 
+            chip.addEventListener('dragenter', (e) => {
+                if (dragSource === 'octavator') {
+                    chip.classList.add('octavator-hover');
+                }
+            });
+
+            chip.addEventListener('dragleave', (e) => {
+                if (dragSource === 'octavator') {
+                    chip.classList.remove('octavator-hover');
+                }
+            });
+
             chip.addEventListener('drop', (e) => {
                 if (dragSource === 'octavator') {
                     e.preventDefault();
@@ -687,6 +704,9 @@
                     if (success) {
                         showOctavatorSuccess(e.clientX, e.clientY, message);
                     }
+
+                    // Remove hover class
+                    chip.classList.remove('octavator-hover');
                 }
             });
 
