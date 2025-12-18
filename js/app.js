@@ -2346,6 +2346,7 @@ class TeachingAssistantApp {
       console.log(`Saved boomwhacker song: ${songName}`);
     } catch (error) {
       console.error('Error saving boomwhacker song:', error);
+      this.showNotification(`Error saving song: ${error.message}`, 'error');
     }
   }
 
