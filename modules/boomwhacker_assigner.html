@@ -446,12 +446,15 @@
                 <span>Octavator</span>
                 <span class="inventory-count" id="octavatorCount">×12</span>
             </div>
-            <div class="song-controls">
-                <button class="song-btn" onclick="saveSong()">💾 Save Song</button>
-                <select class="song-select" id="songSelect" onchange="loadSong()">
-                    <option value="">-- Load Song --</option>
-                </select>
-            </div>
+        </div>
+
+        <div class="song-controls"
+            style="background: #2c3e50; border-radius: 4px; padding: 6px 8px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+            <span style="color: white; font-size: 11px; font-weight: bold;">Songs:</span>
+            <button class="song-btn" onclick="saveSong()">💾 Save</button>
+            <select class="song-select" id="songSelect" onchange="loadSong()">
+                <option value="">-- Load Song --</option>
+            </select>
         </div>
 
         <div class="inventory-section" id="inventorySection">
@@ -1464,14 +1467,8 @@
             }
         });
 
-        // Load song list when octavators are enabled
-        const originalToggleOctavators = toggleOctavators;
-        toggleOctavators = function () {
-            originalToggleOctavators();
-            if (octavatorsEnabled) {
-                loadSongList();
-            }
-        };
+        // Load song list on page load
+        loadSongList();
     </script>
 </body>
 
