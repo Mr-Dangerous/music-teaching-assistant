@@ -194,6 +194,33 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
         }
 
+        .octavator-success {
+            position: fixed;
+            pointer-events: none;
+            font-size: 20px;
+            font-weight: bold;
+            color: #2ecc71;
+            z-index: 10000;
+            animation: octavatorPop 0.6s ease-out forwards;
+        }
+
+        @keyframes octavatorPop {
+            0% {
+                transform: scale(0.5);
+                opacity: 1;
+            }
+
+            50% {
+                transform: scale(1.2);
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1) translateY(-30px);
+                opacity: 0;
+            }
+        }
+
         .student-grid {
             flex: 1;
             display: grid;
@@ -622,23 +649,37 @@
                     e.preventDefault();
                     console.log(`Octavator dropped on ${noteObj.note} ${noteObj.octave}`);
 
+                    let success = false;
+                    let message = '';
+
                     // Determine if adding or removing octavator
                     if (noteObj.octave === 'regular') {
                         // Apply octavator: regular → low
                         const result = applyOctavator(noteObj.note);
                         console.log(`Apply result: ${result}`);
-                        if (!result) {
+                        if (result) {
+                            success = true;
+                            message = '→ Low';
+                        } else {
                             console.log(`Failed to apply - maybe no available ${noteObj.note}_regular?`);
                         }
                     } else if (noteObj.octave === 'low') {
                         // Remove octavator: low → regular
                         const result = removeOctavator(noteObj.note);
                         console.log(`Remove result: ${result}`);
-                        if (!result) {
+                        if (result) {
+                            success = true;
+                            message = '→ Regular';
+                        } else {
                             console.log(`Failed to remove - maybe no octavator applied to ${noteObj.note}_low?`);
                         }
                     } else {
                         console.log('Cannot apply octavator to high octave notes');
+                    }
+
+                    // Show visual feedback at cursor position
+                    if (success) {
+                        showOctavatorSuccess(e.clientX, e.clientY, message);
                     }
                 }
             });
@@ -1240,6 +1281,19 @@
             const countElement = document.getElementById('octavatorCount');
             countElement.textContent = `×${octavatorsAvailable}`;
             renderInventory();
+        }
+
+        function showOctavatorSuccess(x, y, message) {
+            const popup = document.createElement('div');
+            popup.className = 'octavator-success';
+            popup.textContent = message;
+            popup.style.left = `${x}px`;
+            popup.style.top = `${y}px`;
+            document.body.appendChild(popup);
+
+            setTimeout(() => {
+                popup.remove();
+            }, 600);
         }
     </script>
 </body>
