@@ -466,6 +466,28 @@
                 setupOctavatorDragHandlers();
             } catch (error) {
                 console.error('Error loading inventory:', error);
+
+                // Fallback inventory for local development
+                inventory = {
+                    'C_low': 2, 'C_regular': 6, 'C_high': 6,
+                    'Cs_low': 1, 'Cs_regular': 3, 'Cs_high': 1,
+                    'D_low': 2, 'D_regular': 6, 'D_high': 2,
+                    'Ds_low': 1, 'Ds_regular': 3, 'Ds_high': 1,
+                    'E_low': 2, 'E_regular': 6, 'E_high': 1,
+                    'F_low': 2, 'F_regular': 6, 'F_high': 6,
+                    'Fs_low': 1, 'Fs_regular': 3, 'Fs_high': 1,
+                    'G_low': 1, 'G_regular': 6, 'G_high': 1,
+                    'Gs_low': 1, 'Gs_regular': 3, 'Gs_high': 1,
+                    'A_low': 2, 'A_regular': 6, 'A_high': 1,
+                    'As_low': 1, 'As_regular': 3, 'As_high': 1,
+                    'B_low': 2, 'B_regular': 3, 'B_high': 1
+                };
+
+                Object.keys(inventory).forEach(key => {
+                    availableCounts[key] = inventory[key];
+                    toggledOn[key] = key.includes('_regular');
+                });
+
                 inventoryLoaded = true;
                 renderInventory();
                 setupOctavatorDragHandlers();
@@ -598,18 +620,25 @@
             chip.addEventListener('drop', (e) => {
                 if (dragSource === 'octavator') {
                     e.preventDefault();
+                    console.log(`Octavator dropped on ${noteObj.note} ${noteObj.octave}`);
 
                     // Determine if adding or removing octavator
                     if (noteObj.octave === 'regular') {
                         // Apply octavator: regular → low
-                        if (applyOctavator(noteObj.note)) {
-                            console.log(`Applied octavator to ${noteObj.note}`);
+                        const result = applyOctavator(noteObj.note);
+                        console.log(`Apply result: ${result}`);
+                        if (!result) {
+                            console.log(`Failed to apply - maybe no available ${noteObj.note}_regular?`);
                         }
                     } else if (noteObj.octave === 'low') {
                         // Remove octavator: low → regular
-                        if (removeOctavator(noteObj.note)) {
-                            console.log(`Removed octavator from ${noteObj.note}`);
+                        const result = removeOctavator(noteObj.note);
+                        console.log(`Remove result: ${result}`);
+                        if (!result) {
+                            console.log(`Failed to remove - maybe no octavator applied to ${noteObj.note}_low?`);
                         }
+                    } else {
+                        console.log('Cannot apply octavator to high octave notes');
                     }
                 }
             });
@@ -1111,13 +1140,24 @@
 
         function applyOctavator(note) {
             // Can only apply to regular octave
-            if (octavatorsAvailable <= 0) return false;
+            if (octavatorsAvailable <= 0) {
+                console.log('No octavators available');
+                return false;
+            }
 
-            const regularKey = `${note}_regular`;
-            const lowKey = `${note}_low`;
+            // Normalize note name (C# → Cs)
+            const normalizedNote = note.replace('#', 's');
+            const regularKey = `${normalizedNote}_regular`;
+            const lowKey = `${normalizedNote}_low`;
+
+            console.log(`Trying to apply octavator: ${regularKey} → ${lowKey}`);
+            console.log(`Regular inventory: ${inventory[regularKey]}, available: ${availableCounts[regularKey]}`);
 
             // Check if this note has available regular inventory
-            if (!inventory[regularKey] || availableCounts[regularKey] <= 0) return false;
+            if (!inventory[regularKey] || availableCounts[regularKey] <= 0) {
+                console.log(`No available ${regularKey} inventory`);
+                return false;
+            }
 
             // Transfer one from regular to low
             inventory[regularKey]--;
@@ -1134,16 +1174,24 @@
             octavatorConversions[lowKey]++;
 
             octavatorsAvailable--;
+            console.log(`Successfully applied! Octavators remaining: ${octavatorsAvailable}`);
             updateOctavatorDisplay();
             return true;
         }
 
         function removeOctavator(note) {
-            const regularKey = `${note}_regular`;
-            const lowKey = `${note}_low`;
+            // Normalize note name (C# → Cs)
+            const normalizedNote = note.replace('#', 's');
+            const regularKey = `${normalizedNote}_regular`;
+            const lowKey = `${normalizedNote}_low`;
+
+            console.log(`Trying to remove octavator: ${lowKey} → ${regularKey}`);
 
             // Check if this low note has an octavator applied
-            if (!octavatorConversions[lowKey] || octavatorConversions[lowKey] <= 0) return false;
+            if (!octavatorConversions[lowKey] || octavatorConversions[lowKey] <= 0) {
+                console.log(`No octavator conversion found for ${lowKey}`);
+                return false;
+            }
 
             // Transfer one from low back to regular
             if (inventory[lowKey] > 0) {
@@ -1156,10 +1204,12 @@
                 octavatorConversions[lowKey]--;
                 octavatorsAvailable++;
 
+                console.log(`Successfully removed! Octavators available: ${octavatorsAvailable}`);
                 updateOctavatorDisplay();
                 return true;
             }
 
+            console.log(`No ${lowKey} inventory to convert back`);
             return false;
         }
 
