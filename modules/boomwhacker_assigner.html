@@ -134,6 +134,66 @@
             line-height: 1;
         }
 
+        .octavator-section {
+            background: #2c3e50;
+            border-radius: 4px;
+            padding: 4px 8px;
+            margin-bottom: 6px;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .octavator-section.active {
+            display: flex;
+        }
+
+        .octavator-label {
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+        }
+
+        .octavator-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            padding: 2px 5px;
+            border-radius: 8px;
+            font-size: 10px;
+            font-weight: bold;
+            color: white;
+            background: #000;
+            cursor: grab;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+            user-select: none;
+        }
+
+        .octavator-chip:active {
+            cursor: grabbing;
+        }
+
+        .toggle-btn {
+            font-size: 12px;
+            padding: 4px 12px;
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-btn.active {
+            background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+        }
+
+        .toggle-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
         .student-grid {
             flex: 1;
             display: grid;
@@ -304,10 +364,19 @@
         <div class="header">
             <h1>🎵 Boomwhacker Assigner</h1>
             <div class="button-group">
+                <button class="toggle-btn" id="octavatorToggle" onclick="toggleOctavators()">Enable Octavators</button>
                 <button class="assign-btn" onclick="assignBoomwhackers(1)">Assign 1 Boomwhacker</button>
                 <button class="assign-btn" onclick="assignBoomwhackers(2)">Assign 2 Boomwhackers</button>
                 <button class="assign-btn" onclick="returnAllBoomwhackers()"
                     style="background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);">Return All</button>
+            </div>
+        </div>
+
+        <div class="octavator-section" id="octavatorSection">
+            <span class="octavator-label">Octavators:</span>
+            <div class="octavator-chip" id="octavatorChip" draggable="true">
+                <span>Octavator</span>
+                <span class="inventory-count" id="octavatorCount">×12</span>
             </div>
         </div>
 
@@ -367,7 +436,10 @@
         let assignments = {}; // studentId -> array of {note, octave}
         let draggedChip = null;
         let sourceStudent = null;
-        let dragSource = null; // 'inventory' or 'student'
+        let dragSource = null; // 'inventory' or 'student' or 'octavator'
+        let octavatorsEnabled = false;
+        let octavatorsAvailable = 12;
+        let octavatorConversions = {}; // tracks which notes have octavators applied
 
         // Load inventory from CSV
         async function loadInventory() {
@@ -391,10 +463,12 @@
                 inventoryLoaded = true;
                 console.log('Loaded inventory:', inventory);
                 renderInventory();
+                setupOctavatorDragHandlers();
             } catch (error) {
                 console.error('Error loading inventory:', error);
                 inventoryLoaded = true;
                 renderInventory();
+                setupOctavatorDragHandlers();
             }
         }
 
@@ -511,6 +585,33 @@
                 chip.classList.remove('dragging');
                 draggedChip = null;
                 dragSource = null;
+            });
+
+            // Handle octavator drops
+            chip.addEventListener('dragover', (e) => {
+                if (dragSource === 'octavator') {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'copy';
+                }
+            });
+
+            chip.addEventListener('drop', (e) => {
+                if (dragSource === 'octavator') {
+                    e.preventDefault();
+
+                    // Determine if adding or removing octavator
+                    if (noteObj.octave === 'regular') {
+                        // Apply octavator: regular → low
+                        if (applyOctavator(noteObj.note)) {
+                            console.log(`Applied octavator to ${noteObj.note}`);
+                        }
+                    } else if (noteObj.octave === 'low') {
+                        // Remove octavator: low → regular
+                        if (removeOctavator(noteObj.note)) {
+                            console.log(`Removed octavator from ${noteObj.note}`);
+                        }
+                    }
+                }
             });
 
             return chip;
@@ -970,6 +1071,125 @@
             assignments = {};
             renderStudentGrid();
             notifyParent();
+        }
+
+        // Octavator functions
+        function toggleOctavators() {
+            octavatorsEnabled = !octavatorsEnabled;
+            const section = document.getElementById('octavatorSection');
+            const toggle = document.getElementById('octavatorToggle');
+
+            if (octavatorsEnabled) {
+                section.classList.add('active');
+                toggle.classList.add('active');
+            } else {
+                section.classList.remove('active');
+                toggle.classList.remove('active');
+                // Revert all conversions
+                revertAllOctavators();
+            }
+        }
+
+        function setupOctavatorDragHandlers() {
+            const octavatorChip = document.getElementById('octavatorChip');
+
+            octavatorChip.addEventListener('dragstart', (e) => {
+                if (octavatorsAvailable > 0) {
+                    dragSource = 'octavator';
+                    draggedChip = octavatorChip;
+                    e.dataTransfer.effectAllowed = 'copy';
+                } else {
+                    e.preventDefault();
+                }
+            });
+
+            octavatorChip.addEventListener('dragend', () => {
+                dragSource = null;
+                draggedChip = null;
+            });
+        }
+
+        function applyOctavator(note) {
+            // Can only apply to regular octave
+            if (octavatorsAvailable <= 0) return false;
+
+            const regularKey = `${note}_regular`;
+            const lowKey = `${note}_low`;
+
+            // Check if this note has available regular inventory
+            if (!inventory[regularKey] || availableCounts[regularKey] <= 0) return false;
+
+            // Transfer one from regular to low
+            inventory[regularKey]--;
+            availableCounts[regularKey]--;
+
+            if (!inventory[lowKey]) inventory[lowKey] = 0;
+            if (!availableCounts[lowKey]) availableCounts[lowKey] = 0;
+
+            inventory[lowKey]++;
+            availableCounts[lowKey]++;
+
+            // Track conversion
+            if (!octavatorConversions[lowKey]) octavatorConversions[lowKey] = 0;
+            octavatorConversions[lowKey]++;
+
+            octavatorsAvailable--;
+            updateOctavatorDisplay();
+            return true;
+        }
+
+        function removeOctavator(note) {
+            const regularKey = `${note}_regular`;
+            const lowKey = `${note}_low`;
+
+            // Check if this low note has an octavator applied
+            if (!octavatorConversions[lowKey] || octavatorConversions[lowKey] <= 0) return false;
+
+            // Transfer one from low back to regular
+            if (inventory[lowKey] > 0) {
+                inventory[lowKey]--;
+                availableCounts[lowKey]--;
+
+                inventory[regularKey]++;
+                availableCounts[regularKey]++;
+
+                octavatorConversions[lowKey]--;
+                octavatorsAvailable++;
+
+                updateOctavatorDisplay();
+                return true;
+            }
+
+            return false;
+        }
+
+        function revertAllOctavators() {
+            // Revert all conversions
+            Object.keys(octavatorConversions).forEach(lowKey => {
+                const count = octavatorConversions[lowKey];
+                if (count > 0) {
+                    const note = lowKey.split('_')[0];
+                    const regularKey = `${note}_regular`;
+
+                    // Transfer back
+                    inventory[lowKey] -= count;
+                    availableCounts[lowKey] -= count;
+                    inventory[regularKey] += count;
+                    availableCounts[regularKey] += count;
+                }
+            });
+
+            // Reset
+            octavatorConversions = {};
+            octavatorsAvailable = 12;
+            updateOctavatorDisplay();
+            renderInventory();
+        }
+
+        function updateOctavatorDisplay() {
+            const countElement = document.getElementById('octavatorCount');
+            countElement.textContent = `×${octavatorsAvailable}`;
+            renderInventory();
         }
     </script>
 </body>

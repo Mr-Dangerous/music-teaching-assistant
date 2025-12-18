@@ -1,5 +1,5 @@
 {
-  "version": "0.9.3",
+  "version": "1.0.0",
   "lastUpdated": "2025-12-18",
-  "description": "Misc updates to styles, app.js, and CLAUDE.md"
+  "description": "Added octavator system: convert regular to low boomwhackers (12 available)"
 }
