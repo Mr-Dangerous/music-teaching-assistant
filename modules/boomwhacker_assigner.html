@@ -366,17 +366,12 @@
 
         @keyframes flyAndStay {
             0% {
-                transform: translate(0, 0) scale(1);
+                transform: translate(0, 0);
                 opacity: 1;
             }
 
-            50% {
-                transform: translate(calc(var(--fly-x) * 0.5), calc(var(--fly-y) * 0.5)) scale(1.5);
-                opacity: 0.8;
-            }
-
             100% {
-                transform: translate(var(--fly-x), var(--fly-y)) scale(1);
+                transform: translate(var(--fly-x), var(--fly-y));
                 opacity: 1;
             }
         }
@@ -385,7 +380,7 @@
             position: fixed;
             z-index: 9999;
             pointer-events: none;
-            animation: flyAndStay 0.8s ease-in-out forwards;
+            animation: flyAndStay 0.5s ease-in-out forwards;
         }
 
         .empty-state {
@@ -1141,7 +1136,7 @@
                         flyingChip.remove();
                         if (onLand) onLand(); // Call callback when chip lands
                         resolve();
-                    }, 800);
+                    }, 500);
                 }, delay);
             });
         }

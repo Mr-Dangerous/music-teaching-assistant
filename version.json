@@ -1,5 +1,5 @@
 {
-  "version": "1.0.6",
+  "version": "1.0.7",
   "lastUpdated": "2025-12-18",
-  "description": "Fixed header cutoff: adjusted screen-content height from 80px to 120px offset"
+  "description": "Improved flying animation: smooth motion (no zoom), faster (0.5s = 2/sec)"
 }
