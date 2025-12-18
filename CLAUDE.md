@@ -19,6 +19,18 @@ python3 -m http.server 8080
 
 No build, compile, or bundle steps needed.
 
+## Testing
+
+**IMPORTANT:** The user will always test functionality themselves. Do NOT launch a browser or attempt to verify implementations visually. Make code changes, explain what was done, and let the user test on their smartboard.
+
+## Design Constraints
+
+**NO SCROLLING:** The app is designed for smartboard use and must fit entirely on screen without scrolling. When adding new UI elements:
+- **Minimize vertical space** - Keep buttons, controls, and containers compact
+- **Dynamic sizing** - Use CSS grid/flexbox to adapt to available space
+- **Avoid expansion** - Adding features (like checkboxes) should NOT make existing elements larger or push content off screen
+- **Test fit** - Consider that class screens may have 10+ classes visible at once
+
 ## Architecture
 
 ### Three-File CSV System

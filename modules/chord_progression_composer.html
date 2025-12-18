@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chord Progression Composer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            flex-wrap: wrap;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        label {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        select {
+            font-size: 18px;
+            padding: 8px 12px;
+            border: 2px solid #667eea;
+            border-radius: 8px;
+            background-color: white;
+            cursor: pointer;
+        }
+
+        .btn {
+            font-size: 20px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s, box-shadow 0.2s;
+            min-width: 50px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .btn-count {
+            background-color: #3498db;
+        }
+
+        .btn-play {
+            background-color: #27ae60;
+            font-size: 24px;
+            padding: 15px 30px;
+        }
+
+        .btn-clear {
+            background-color: #e74c3c;
+        }
+
+        .box-count-display {
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+            min-width: 40px;
+            text-align: center;
+        }
+
+        .chord-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            padding: 20px;
+            background-color: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .chord-box {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border: 3px solid #333;
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            user-select: none;
+        }
+
+        .chord-box:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .chord-box:active {
+            transform: scale(0.98);
+        }
+
+        .chord-root {
+            font-size: 48px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .chord-quality {
+            font-size: 32px;
+            font-weight: bold;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            min-height: 40px;
+        }
+
+        .instruction {
+            background-color: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            font-size: 18px;
+            color: #333;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .instruction strong {
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="controls">
+            <div class="control-group">
+                <label for="chordMode">Chord Mode:</label>
+                <select id="chordMode">
+                    <option value="basic">Basic Chords</option>
+                    <option value="advanced">Advanced Chords</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Boxes:</label>
+                <button class="btn btn-count" id="decreaseBtn">-</button>
+                <span class="box-count-display" id="boxCountDisplay">4</span>
+                <button class="btn btn-count" id="increaseBtn">+</button>
+            </div>
+
+            <button class="btn btn-play" id="playBtn">▶ Play</button>
+            <button class="btn btn-clear" id="clearBtn">Clear All</button>
+        </div>
+
+        <div class="instruction">
+            <strong>Tap the root note</strong> to cycle through notes (C → C# → D...) •
+            <strong>Tap the chord quality</strong> to change chord type •
+            <strong>Tap a complete chord</strong> to hear it play
+        </div>
+
+        <div class="chord-grid" id="chordGrid"></div>
+    </div>
+
+    <script>
+        // Chord progression state
+        let chordMode = 'basic';
+        let boxCount = 4;
+        let chordProgression = [];
+        let audioContext = null;
+
+        // Musical constants
+        const chromaticNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        const basicQualities = ['', 'm', '7']; // blank = major
+        const advancedQualities = ['', 'm', '7', 'maj7', 'min7', 'dim7'];
+
+        // Note frequencies (A4 = 440Hz)
+        const noteFrequencies = {
+            'C': 261.63, 'C#': 277.18, 'D': 293.66, 'D#': 311.13,
+            'E': 329.63, 'F': 349.23, 'F#': 369.99, 'G': 392.00,
+            'G#': 415.30, 'A': 440.00, 'A#': 466.16, 'B': 493.88
+        };
+
+        // Session storage for settings (persists during session only)
+        let sessionSettings = {
+            mode: 'basic',
+            count: 4
+        };
+
+        // Initialize
+        function init(context) {
+            // Restore session settings if available
+            if (window.sessionChordSettings) {
+                sessionSettings = window.sessionChordSettings;
+                chordMode = sessionSettings.mode;
+                boxCount = sessionSettings.count;
+                document.getElementById('chordMode').value = chordMode;
+                document.getElementById('boxCountDisplay').textContent = boxCount;
+            }
+
+            // Load existing response if available
+            if (context.existingResponse) {
+                try {
+                    const data = JSON.parse(context.existingResponse);
+                    if (data.progression) {
+                        chordProgression = data.progression;
+                        if (data.mode) {
+                            chordMode = data.mode;
+                            sessionSettings.mode = chordMode;
+                            document.getElementById('chordMode').value = chordMode;
+                        }
+                        if (data.count) {
+                            boxCount = data.count;
+                            sessionSettings.count = boxCount;
+                            document.getElementById('boxCountDisplay').textContent = boxCount;
+                        }
+                    }
+                } catch (e) {
+                    console.error('Error loading existing response:', e);
+                }
+            }
+
+            // Initialize progression if empty
+            if (chordProgression.length === 0) {
+                chordProgression = Array(boxCount).fill(null).map(() => ({
+                    root: 'C',
+                    quality: ''
+                }));
+            }
+
+            // Adjust progression length to match box count
+            while (chordProgression.length < boxCount) {
+                chordProgression.push({ root: 'C', quality: '' });
+            }
+            while (chordProgression.length > boxCount) {
+                chordProgression.pop();
+            }
+
+            renderChordGrid();
+            setupEventListeners();
+            notifyParent();
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            document.getElementById('chordMode').addEventListener('change', (e) => {
+                chordMode = e.target.value;
+                sessionSettings.mode = chordMode;
+                window.sessionChordSettings = sessionSettings;
+                renderChordGrid(); // Re-render to update available qualities
+                notifyParent();
+            });
+
+            document.getElementById('decreaseBtn').addEventListener('click', () => {
+                if (boxCount > 2) {
+                    boxCount--;
+                    chordProgression.pop();
+                    sessionSettings.count = boxCount;
+                    window.sessionChordSettings = sessionSettings;
+                    document.getElementById('boxCountDisplay').textContent = boxCount;
+                    renderChordGrid();
+                    notifyParent();
+                }
+            });
+
+            document.getElementById('increaseBtn').addEventListener('click', () => {
+                if (boxCount < 24) {
+                    boxCount++;
+                    chordProgression.push({ root: 'C', quality: '' });
+                    sessionSettings.count = boxCount;
+                    window.sessionChordSettings = sessionSettings;
+                    document.getElementById('boxCountDisplay').textContent = boxCount;
+                    renderChordGrid();
+                    notifyParent();
+                }
+            });
+
+            document.getElementById('playBtn').addEventListener('click', () => {
+                playProgression();
+            });
+
+            document.getElementById('clearBtn').addEventListener('click', () => {
+                chordProgression = Array(boxCount).fill(null).map(() => ({
+                    root: 'C',
+                    quality: ''
+                }));
+                renderChordGrid();
+                notifyParent();
+            });
+        }
+
+        // Render chord grid
+        function renderChordGrid() {
+            const grid = document.getElementById('chordGrid');
+            grid.innerHTML = '';
+
+            chordProgression.forEach((chord, index) => {
+                const box = document.createElement('div');
+                box.className = 'chord-box';
+
+                const rootDiv = document.createElement('div');
+                rootDiv.className = 'chord-root';
+                rootDiv.textContent = chord.root;
+
+                const qualityDiv = document.createElement('div');
+                qualityDiv.className = 'chord-quality';
+                qualityDiv.textContent = chord.quality || ' ';
+
+                box.appendChild(rootDiv);
+                box.appendChild(qualityDiv);
+
+                // Click on root to cycle through notes
+                rootDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const currentIndex = chromaticNotes.indexOf(chord.root);
+                    const nextIndex = (currentIndex + 1) % chromaticNotes.length;
+                    chord.root = chromaticNotes[nextIndex];
+                    rootDiv.textContent = chord.root;
+                    notifyParent();
+                });
+
+                // Click on quality to cycle through qualities
+                qualityDiv.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const qualities = chordMode === 'basic' ? basicQualities : advancedQualities;
+                    const currentIndex = qualities.indexOf(chord.quality);
+                    const nextIndex = (currentIndex + 1) % qualities.length;
+                    chord.quality = qualities[nextIndex];
+                    qualityDiv.textContent = chord.quality || ' ';
+                    notifyParent();
+                });
+
+                // Click on box (but not on root or quality) to play chord
+                box.addEventListener('click', () => {
+                    playChord(chord);
+                });
+
+                grid.appendChild(box);
+            });
+        }
+
+        // Play a single chord
+        function playChord(chord) {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            const rootFreq = noteFrequencies[chord.root];
+            if (!rootFreq) return;
+
+            const now = audioContext.currentTime;
+            const duration = 1.5; // seconds
+
+            // Calculate chord intervals based on quality
+            let intervals = getChordIntervals(chord.quality);
+
+            // Play each note in the chord
+            intervals.forEach(semitones => {
+                const frequency = rootFreq * Math.pow(2, semitones / 12);
+                playNote(frequency, now, duration);
+            });
+        }
+
+        // Get chord intervals (in semitones from root)
+        function getChordIntervals(quality) {
+            switch (quality) {
+                case '': // Major
+                    return [0, 4, 7]; // root, major 3rd, perfect 5th
+                case 'm': // Minor
+                    return [0, 3, 7]; // root, minor 3rd, perfect 5th
+                case '7': // Dominant 7
+                    return [0, 4, 7, 10]; // root, major 3rd, perfect 5th, minor 7th
+                case 'maj7': // Major 7
+                    return [0, 4, 7, 11]; // root, major 3rd, perfect 5th, major 7th
+                case 'min7': // Minor 7
+                    return [0, 3, 7, 10]; // root, minor 3rd, perfect 5th, minor 7th
+                case 'dim7': // Diminished 7
+                    return [0, 3, 6, 9]; // root, minor 3rd, diminished 5th, diminished 7th
+                default:
+                    return [0, 4, 7]; // Default to major
+            }
+        }
+
+        // Play a single note using Web Audio API
+        function playNote(frequency, startTime, duration) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+
+            oscillator.frequency.value = frequency;
+            oscillator.type = 'sine';
+
+            // Envelope for smoother sound
+            gainNode.gain.setValueAtTime(0, startTime);
+            gainNode.gain.linearRampToValueAtTime(0.15, startTime + 0.01);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+
+            oscillator.start(startTime);
+            oscillator.stop(startTime + duration);
+        }
+
+        // Play entire progression
+        function playProgression() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            let currentTime = audioContext.currentTime;
+            const chordDuration = 1.0; // seconds per chord
+
+            chordProgression.forEach(chord => {
+                const rootFreq = noteFrequencies[chord.root];
+                if (!rootFreq) return;
+
+                const intervals = getChordIntervals(chord.quality);
+
+                intervals.forEach(semitones => {
+                    const frequency = rootFreq * Math.pow(2, semitones / 12);
+                    playNote(frequency, currentTime, chordDuration);
+                });
+
+                currentTime += chordDuration;
+            });
+        }
+
+        // Notify parent app of response changes
+        function notifyParent() {
+            const response = {
+                progression: chordProgression,
+                mode: chordMode,
+                count: boxCount
+            };
+
+            window.parent.postMessage({
+                type: 'taskmodule:response',
+                value: JSON.stringify(response),
+                isComplete: true
+            }, '*');
+        }
+
+        // TaskModule interface (required)
+        window.TaskModule = {
+            init: init,
+
+            getResponse: function() {
+                return JSON.stringify({
+                    progression: chordProgression,
+                    mode: chordMode,
+                    count: boxCount
+                });
+            },
+
+            isComplete: function() {
+                return true; // Always complete (progression can be empty)
+            },
+
+            reset: function() {
+                chordProgression = Array(boxCount).fill(null).map(() => ({
+                    root: 'C',
+                    quality: ''
+                }));
+                renderChordGrid();
+                notifyParent();
+            }
+        };
+
+        // Track initialization state
+        let initialized = false;
+
+        // Listen for init message from parent
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'taskmodule:init' && !initialized) {
+                initialized = true;
+                init(event.data.context);
+            }
+        });
+
+        // Auto-initialize with empty context if parent doesn't send init message
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                if (!initialized) {
+                    console.log('Auto-initializing chord composer with default context');
+                    init({
+                        studentId: '',
+                        taskId: '',
+                        grade: '',
+                        studentName: '',
+                        question: '',
+                        existingResponse: ''
+                    });
+                }
+            }, 100);
+        });
+    </script>
+</body>
+</html>

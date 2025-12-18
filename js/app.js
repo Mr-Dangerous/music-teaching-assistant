@@ -37,6 +37,10 @@ class TeachingAssistantApp {
     this.sessionForgotInstrument = new Set();
     this.sessionEarnedStool = new Set();
 
+    // Combined classes mode
+    this.combineClassesMode = false; // Whether we're in "combine classes" mode
+    this.selectedClasses = new Set(); // Which classes are selected for combining
+
     // Presentation links storage
     this.presentationLinks = [];  // Array of {timestamp, url, title}
     this.perClassPresentations = {};  // {className: url} for session persistence
@@ -512,6 +516,7 @@ class TeachingAssistantApp {
 
     this.currentScreen = 'class-select';
     this.selectedClass = null;
+    this.selectedClasses.clear(); // Clear any combined class selections
     this.showScreen('class-select');
 
     // Hide back button on class select screen
@@ -546,10 +551,89 @@ class TeachingAssistantApp {
     const classGrid = document.getElementById('class-grid');
     classGrid.innerHTML = '';
 
+    // Add "Combine Classes" controls at the top
+    const combineControls = document.createElement('div');
+    combineControls.className = 'combine-controls';
+
+    if (!this.combineClassesMode) {
+      // Show "Combine Classes" button
+      const combineBtn = document.createElement('button');
+      combineBtn.className = 'btn btn-secondary combine-toggle-btn';
+      combineBtn.innerHTML = '🔗 Combine Classes';
+      combineBtn.addEventListener('click', () => {
+        this.combineClassesMode = true;
+        this.selectedClasses.clear();
+        this.showClassScreen();
+      });
+      combineControls.appendChild(combineBtn);
+    } else {
+      // Show "Cancel" and "Select All" buttons
+      const buttonGroup = document.createElement('div');
+      buttonGroup.className = 'combine-button-group';
+
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'btn btn-secondary';
+      cancelBtn.innerHTML = '← Cancel';
+      cancelBtn.addEventListener('click', () => {
+        this.combineClassesMode = false;
+        this.selectedClasses.clear();
+        this.showClassScreen();
+      });
+
+      const selectAllBtn = document.createElement('button');
+      selectAllBtn.className = 'btn btn-secondary';
+      selectAllBtn.innerHTML = '✓ Select All';
+      selectAllBtn.addEventListener('click', () => {
+        if (this.selectedClasses.size === classes.length) {
+          // All are selected, deselect all
+          this.selectedClasses.clear();
+        } else {
+          // Select all
+          this.selectedClasses = new Set(classes);
+        }
+        this.showClassScreen();
+      });
+
+      buttonGroup.appendChild(cancelBtn);
+      buttonGroup.appendChild(selectAllBtn);
+      combineControls.appendChild(buttonGroup);
+
+      // Show "View Combined" button if at least one class is selected
+      if (this.selectedClasses.size > 0) {
+        const totalStudents = Array.from(this.selectedClasses).reduce((sum, className) => {
+          return sum + (classMap.get(className) || 0);
+        }, 0);
+
+        const viewCombinedBtn = document.createElement('button');
+        viewCombinedBtn.className = 'btn btn-primary btn-large view-combined-btn';
+        viewCombinedBtn.innerHTML = `View Combined (${totalStudents} total students)`;
+        viewCombinedBtn.addEventListener('click', () => {
+          this.viewCombinedClasses();
+        });
+        combineControls.appendChild(viewCombinedBtn);
+      }
+    }
+
+    classGrid.appendChild(combineControls);
+
+    // Render class buttons
     classes.forEach(className => {
       const button = document.createElement('button');
       button.className = 'class-button';
-      button.textContent = className;
+
+      // Add checkbox if in combine mode
+      if (this.combineClassesMode) {
+        const checkbox = document.createElement('input');
+        checkbox.type = 'checkbox';
+        checkbox.className = 'class-checkbox';
+        checkbox.checked = this.selectedClasses.has(className);
+        // Don't add change listener - button click handler manages toggling
+        button.appendChild(checkbox);
+      }
+
+      // Add class name text
+      const textNode = document.createTextNode(className);
+      button.appendChild(textNode);
 
       // Count students in class
       const studentCount = classMap.get(className);
@@ -559,13 +643,121 @@ class TeachingAssistantApp {
       button.appendChild(document.createElement('br'));
       button.appendChild(count);
 
+      // In combine mode, clicking toggles checkbox
+      // In normal mode, clicking selects the class
       button.addEventListener('click', () => {
-        this.selectedClass = className;
-        this.showStudentScreen();
+        if (this.combineClassesMode) {
+          // Toggle checkbox
+          const checkbox = button.querySelector('.class-checkbox');
+
+          if (checkbox) {
+            checkbox.checked = !checkbox.checked;
+
+            if (checkbox.checked) {
+              this.selectedClasses.add(className);
+            } else {
+              this.selectedClasses.delete(className);
+            }
+
+            // DON'T re-render entire screen - just update the combine controls
+            this.updateCombineControls(classMap);
+          }
+        } else {
+          // Normal mode - select class
+          this.selectedClass = className;
+          this.showStudentScreen();
+        }
       });
 
       classGrid.appendChild(button);
     });
+  }
+
+  /**
+   * Update combine controls without re-rendering entire screen
+   */
+  updateCombineControls(classMap) {
+    const combineControls = document.querySelector('.combine-controls');
+    if (!combineControls) return;
+
+    // Clear existing controls
+    combineControls.innerHTML = '';
+
+    // Show "Cancel" and "Select All" buttons
+    const buttonGroup = document.createElement('div');
+    buttonGroup.className = 'combine-button-group';
+
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn btn-secondary';
+    cancelBtn.innerHTML = '← Cancel';
+    cancelBtn.addEventListener('click', () => {
+      this.combineClassesMode = false;
+      this.selectedClasses.clear();
+      this.showClassScreen();
+    });
+
+    const selectAllBtn = document.createElement('button');
+    selectAllBtn.className = 'btn btn-secondary';
+    const allClasses = Array.from(classMap.keys());
+    selectAllBtn.innerHTML = '✓ Select All';
+    selectAllBtn.addEventListener('click', () => {
+      if (this.selectedClasses.size === allClasses.length) {
+        // All are selected, deselect all
+        this.selectedClasses.clear();
+      } else {
+        // Select all
+        this.selectedClasses = new Set(allClasses);
+      }
+      this.showClassScreen();
+    });
+
+    buttonGroup.appendChild(cancelBtn);
+    buttonGroup.appendChild(selectAllBtn);
+    combineControls.appendChild(buttonGroup);
+
+    // Show "View Combined" button if at least one class is selected
+    if (this.selectedClasses.size > 0) {
+      const totalStudents = Array.from(this.selectedClasses).reduce((sum, className) => {
+        return sum + (classMap.get(className) || 0);
+      }, 0);
+
+      const viewCombinedBtn = document.createElement('button');
+      viewCombinedBtn.className = 'btn btn-primary btn-large view-combined-btn';
+      viewCombinedBtn.innerHTML = `View Combined (${totalStudents} total students)`;
+      viewCombinedBtn.addEventListener('click', () => {
+        this.viewCombinedClasses();
+      });
+      combineControls.appendChild(viewCombinedBtn);
+    }
+  }
+
+  /**
+   * View combined classes roster
+   */
+  viewCombinedClasses() {
+    if (this.selectedClasses.size === 0) {
+      this.showNotification('Please select at least one class', 'warning');
+      return;
+    }
+
+    // Create combined class name
+    if (this.selectedClasses.size === this.students.length) {
+      // If all students are selected, use "Everyone"
+      const uniqueClasses = new Set(this.students.map(s => s.class));
+      if (this.selectedClasses.size === uniqueClasses.size) {
+        this.selectedClass = 'Everyone';
+      } else {
+        this.selectedClass = Array.from(this.selectedClasses).join(' + ');
+      }
+    } else {
+      this.selectedClass = Array.from(this.selectedClasses).join(' + ');
+    }
+
+    // Exit combine mode
+    this.combineClassesMode = false;
+
+    // Show student screen (it will filter by selectedClasses)
+    this.showStudentScreen();
   }
 
   /**
@@ -599,8 +791,16 @@ class TeachingAssistantApp {
     // Clear student name display in sidebar
     document.getElementById('selected-student-display').textContent = '';
 
-    // Filter students by class
-    const classStudents = this.students.filter(s => s.class === this.selectedClass);
+    // Filter students by class(es)
+    let classStudents;
+    if (this.selectedClasses.size > 0) {
+      // Combined classes mode - get students from all selected classes
+      classStudents = this.students.filter(s => this.selectedClasses.has(s.class));
+      // Don't clear selectedClasses - keep it so combined class persists when changing tasks
+    } else {
+      // Single class mode
+      classStudents = this.students.filter(s => s.class === this.selectedClass);
+    }
 
     // Show all tasks (no grade filtering)
     this.populateTaskSelector(null);
@@ -1920,16 +2120,31 @@ class TeachingAssistantApp {
       return;
     }
 
-    // Get students from current class
-    const classStudents = this.students
-      .filter(s => s.class === this.selectedClass)
-      .map(student => ({
-        student_id: student.student_id,
-        name: student.name,
-        grade: student.grade,
-        class: student.class,
-        isAbsent: this.isStudentAbsent(student.student_id)
-      }));
+    // Get students from current class(es)
+    let classStudents;
+    if (this.selectedClasses.size > 0) {
+      // Combined classes mode - get students from all selected classes
+      classStudents = this.students
+        .filter(s => this.selectedClasses.has(s.class))
+        .map(student => ({
+          student_id: student.student_id,
+          name: student.name,
+          grade: student.grade,
+          class: student.class,
+          isAbsent: this.isStudentAbsent(student.student_id)
+        }));
+    } else {
+      // Single class mode
+      classStudents = this.students
+        .filter(s => s.class === this.selectedClass)
+        .map(student => ({
+          student_id: student.student_id,
+          name: student.name,
+          grade: student.grade,
+          class: student.class,
+          isAbsent: this.isStudentAbsent(student.student_id)
+        }));
+    }
 
     // Send student list back to the requesting module
     const moduleIframe = document.querySelector('#task-image-container iframe');

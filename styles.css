@@ -386,6 +386,95 @@ body {
   color: rgba(255, 255, 255, 0.9);
 }
 
+/* === Combine Classes Controls === */
+.combine-controls {
+  grid-column: 1 / -1;
+  /* Span all columns */
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  margin-bottom: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 12px;
+  border: 2px solid #e0e7ff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.combine-toggle-btn {
+  width: 100%;
+  min-height: 44px;
+  padding: var(--spacing-xs) var(--spacing-md);
+  font-size: var(--font-normal);
+  background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+  color: white;
+  border: 2px solid white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.combine-toggle-btn:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.combine-button-group {
+  display: flex;
+  gap: var(--spacing-sm);
+  justify-content: center;
+}
+
+.combine-button-group .btn {
+  flex: 1;
+  max-width: 200px;
+  min-height: 40px;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-normal);
+}
+
+.view-combined-btn {
+  width: 100%;
+  min-height: 50px;
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-large);
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: 2px solid white;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.view-combined-btn:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+}
+
+/* Class button with checkbox - use absolute positioning to avoid expansion */
+.class-checkbox {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%) scale(1.3);
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+  z-index: 1;
+  pointer-events: none;
+  /* Let clicks pass through to button */
+}
+
+.class-button {
+  position: relative;
+  /* For absolute checkbox positioning */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
 /* === Class View Layout === */
 .class-view-container {
   display: flex;
@@ -1574,6 +1663,7 @@ body {
 .status-stool {
   color: #f39c12;
 }
+
 /* === Snow Theme === */
 .snow-container {
   position: fixed;
@@ -1607,20 +1697,18 @@ body {
     transform: translateY(0) rotate(0deg);
     opacity: 0.8;
   }
+
   50% {
     opacity: 1;
   }
+
   100% {
     transform: translateY(100vh) rotate(360deg);
     opacity: 0.4;
   }
 }
 
-/* Optional: Winter theme colors when snow is active */
-body.snow-theme {
-  /* Could add winter-themed background adjustments here if desired */
-}
-
+/* Winter theme colors when snow is active */
 body.snow-theme .app-header {
   background: linear-gradient(90deg, #3b82f6 0%, #6366f1 50%, #8b5cf6 100%);
 }
