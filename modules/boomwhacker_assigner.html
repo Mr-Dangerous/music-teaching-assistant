@@ -306,6 +306,8 @@
             <div class="button-group">
                 <button class="assign-btn" onclick="assignBoomwhackers(1)">Assign 1 Boomwhacker</button>
                 <button class="assign-btn" onclick="assignBoomwhackers(2)">Assign 2 Boomwhackers</button>
+                <button class="assign-btn" onclick="returnAllBoomwhackers()"
+                    style="background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);">Return All</button>
             </div>
         </div>
 
@@ -962,6 +964,12 @@
         function resetAssignments() {
             assignments = {};
             renderStudentGrid();
+        }
+
+        function returnAllBoomwhackers() {
+            assignments = {};
+            renderStudentGrid();
+            notifyParent();
         }
     </script>
 </body>
