@@ -208,31 +208,39 @@
         }
 
         .song-btn {
-            font-size: 11px;
-            padding: 3px 10px;
-            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
-            color: white;
-            border: none;
-            border-radius: 10px;
-            cursor: pointer;
+            font-size: 16px;
             font-weight: bold;
-            transition: all 0.2s ease;
+            color: white;
+            background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(139, 92, 246, 0.4);
+            transition: all 0.3s ease;
         }
 
         .song-btn:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 2px 6px rgba(139, 92, 246, 0.4);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(139, 92, 246, 0.6);
         }
 
         .song-select {
-            font-size: 10px;
-            padding: 3px 8px;
-            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 10px 15px;
+            border-radius: 50px;
             border: 2px solid #8b5cf6;
             background: white;
             color: #6d28d9;
-            font-weight: bold;
             cursor: pointer;
+            box-shadow: 0 2px 10px rgba(139, 92, 246, 0.2);
+            transition: all 0.3s ease;
+        }
+
+        .song-select:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
         }
 
         .octavator-success {
@@ -437,6 +445,10 @@
                 <button class="assign-btn" onclick="assignBoomwhackers(2)">Assign 2 Boomwhackers</button>
                 <button class="assign-btn" onclick="returnAllBoomwhackers()"
                     style="background: linear-gradient(135deg, #34495e 0%, #2c3e50 100%);">Return All</button>
+                <button class="song-btn" onclick="saveSong()">💾 Save</button>
+                <select class="song-select" id="songSelect" onchange="loadSong()">
+                    <option value="">-- Load Song --</option>
+                </select>
             </div>
         </div>
 
@@ -446,15 +458,6 @@
                 <span>Octavator</span>
                 <span class="inventory-count" id="octavatorCount">×12</span>
             </div>
-        </div>
-
-        <div class="song-controls"
-            style="background: #2c3e50; border-radius: 4px; padding: 6px 8px; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
-            <span style="color: white; font-size: 11px; font-weight: bold;">Songs:</span>
-            <button class="song-btn" onclick="saveSong()">💾 Save</button>
-            <select class="song-select" id="songSelect" onchange="loadSong()">
-                <option value="">-- Load Song --</option>
-            </select>
         </div>
 
         <div class="inventory-section" id="inventorySection">

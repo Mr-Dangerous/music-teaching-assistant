@@ -1,5 +1,5 @@
 {
-  "version": "1.1.5",
+  "version": "1.1.6",
   "lastUpdated": "2025-12-18",
-  "description": "Removed View Results button from header"
+  "description": "Moved song save/load buttons into header, inline with other buttons"
 }
