@@ -1,5 +1,5 @@
 {
-  "version": "1.1.4",
+  "version": "1.1.5",
   "lastUpdated": "2025-12-18",
-  "description": "Converted results viewer to module system"
+  "description": "Removed View Results button from header"
 }

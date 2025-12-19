@@ -94,13 +94,7 @@ class TeachingAssistantApp {
       });
     }
 
-    // View Results button
-    const viewResultsBtn = document.getElementById('view-results-btn');
-    if (viewResultsBtn) {
-      viewResultsBtn.addEventListener('click', () => {
-        this.showResultsViewer();
-      });
-    }
+
 
     // Resolution toggle button
     const resolutionToggleBtn = document.getElementById('resolution-toggle-btn');
@@ -310,11 +304,6 @@ class TeachingAssistantApp {
       document.getElementById('mic-gain-control').style.display = 'flex';
       document.getElementById('video-recording-hq-btn').style.display = 'block';
       document.getElementById('video-recording-lq-btn').style.display = 'block';
-      document.getElementById('view-results-btn').style.display = 'block';
-      const viewResultsBtn = document.getElementById('view-results-btn');
-      if (viewResultsBtn) {
-        viewResultsBtn.style.display = 'inline-flex';
-      }
 
       // Hide back button initially
       const backBtn = document.getElementById('back-to-classes-btn');
