@@ -1366,14 +1366,18 @@
 
         // Song save/load functions
         async function saveSong() {
+            console.log('[MODULE saveSong] Button clicked');
             // Request song name from parent (can't use prompt in sandboxed iframe)
             window.parent.postMessage({
                 type: 'requestSongName'
             }, '*');
+            console.log('[MODULE saveSong] Sent requestSongName to parent');
         }
 
         function saveSongWithName(songName) {
+            console.log('[MODULE saveSongWithName] Called with:', songName);
             if (!songName || songName.trim() === '') {
+                console.log('[MODULE saveSongWithName] Empty name, aborting');
                 return;
             }
 
@@ -1384,6 +1388,7 @@
             };
 
             const configJson = JSON.stringify(config);
+            console.log('[MODULE saveSongWithName] Config JSON length:', configJson.length);
 
             // Send to parent app to save
             window.parent.postMessage({
@@ -1391,6 +1396,7 @@
                 songName: songName.trim(),
                 configJson: configJson
             }, '*');
+            console.log('[MODULE saveSongWithName] Sent saveBoomwhackerSong to parent');
 
             loadSongList(); // Refresh the dropdown
         }

@@ -143,7 +143,9 @@ class TeachingAssistantApp {
         this.getBoomwhackerSongs();
       } else if (event.data.type === 'requestSongName') {
         // Module wants to get a song name (can't use prompt in iframe)
+        console.log('[PARENT] Received requestSongName from module');
         const songName = prompt('Enter a name for this song configuration:');
+        console.log('[PARENT] User entered song name:', songName);
         if (songName) {
           const iframe = document.getElementById('task-module-frame');
           if (iframe && iframe.contentWindow) {
@@ -151,8 +153,21 @@ class TeachingAssistantApp {
               type: 'songName',
               songName: songName
             }, '*');
+            console.log('[PARENT] Sent songName back to module');
           }
         }
+      } else if (event.data.type === 'saveBoomwhackerSong') {
+        // Save boomwhacker song configuration
+        console.log('[PARENT] Received saveBoomwhackerSong:', event.data.songName);
+        this.saveBoomwhackerSong(event.data.songName, event.data.configJson);
+      } else if (event.data.type === 'loadBoomwhackerSong') {
+        // Load boomwhacker song configuration
+        console.log('[PARENT] Received loadBoomwhackerSong:', event.data.songName);
+        this.loadBoomwhackerSong(event.data.songName);
+      } else if (event.data.type === 'getBoomwhackerSongs') {
+        // Get list of saved songs
+        console.log('[PARENT] Received getBoomwhackerSongs');
+        this.getBoomwhackerSongs();
       }
     });
 
