@@ -2331,6 +2331,7 @@ class TeachingAssistantApp {
    * Save a boomwhacker song configuration
    */
   async saveBoomwhackerSong(songName, configJson) {
+    console.log(`[saveBoomwhackerSong] Starting save for: ${songName}`);
     try {
       const csvPath = 'data/boomwhacker_songs.csv';
       let csvText;
@@ -2340,8 +2341,10 @@ class TeachingAssistantApp {
         const response = await fetch(csvPath);
         csvText = await response.text();
         lines = csvText.trim().split('\n');
-      } catch {
+        console.log(`[saveBoomwhackerSong] Loaded existing CSV with ${lines.length} lines`);
+      } catch (e) {
         // File doesn't exist yet, create header
+        console.log('[saveBoomwhackerSong] CSV not found, creating new');
         lines = ['song_name,config_json'];
       }
 
@@ -2357,20 +2360,26 @@ class TeachingAssistantApp {
 
       if (existingIndex > 0) {
         // Update existing
+        console.log(`[saveBoomwhackerSong] Updating existing song at line ${existingIndex}`);
         lines[existingIndex] = newLine;
       } else {
         // Add new
+        console.log('[saveBoomwhackerSong] Adding new song');
         lines.push(newLine);
       }
 
       const newCsv = lines.join('\n');
 
-      // Write to file using file manager if available
-      if (window.fileManager) {
-        await window.fileManager.writeFile(csvPath, newCsv);
+      // Save using fileManager if available
+      if (window.fileManager && window.fileManager.saveFileToFolder) {
+        console.log('[saveBoomwhackerSong] Saving with fileManager.saveFileToFolder');
+        const blob = new Blob([newCsv], { type: 'text/csv' });
+        await window.fileManager.saveFileToFolder('boomwhacker_songs.csv', blob);
         this.showNotification(`Song "${songName}" saved successfully!`, 'success');
+        console.log('[saveBoomwhackerSong] Save successful');
       } else {
         // Fallback: download file
+        console.log('[saveBoomwhackerSong] Falling back to download');
         const blob = new Blob([newCsv], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -2380,10 +2389,8 @@ class TeachingAssistantApp {
         URL.revokeObjectURL(url);
         this.showNotification(`Song "${songName}" saved! Replace the CSV file in data/ folder.`, 'warning');
       }
-
-      console.log(`Saved boomwhacker song: ${songName}`);
     } catch (error) {
-      console.error('Error saving boomwhacker song:', error);
+      console.error('[saveBoomwhackerSong] Error:', error);
       this.showNotification(`Error saving song: ${error.message}`, 'error');
     }
   }
