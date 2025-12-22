@@ -1,5 +1,5 @@
 {
-  "version": "1.2.1",
+  "version": "1.2.2",
   "lastUpdated": "2025-12-22",
-  "description": "Improved: presentation deletion now shows success notification and confirms CSV update"
+  "description": "Fixed: right-click disable in presentation viewer and context menu delete button"
 }

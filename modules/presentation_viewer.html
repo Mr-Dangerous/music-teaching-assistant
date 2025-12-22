@@ -581,13 +581,21 @@
                 document.addEventListener('click', closeMenu);
                 document.addEventListener('touchstart', closeMenu);
             }, 300);
+        }
 
-            // Handle menu item clicks
+        // Set up context menu click handlers (once on page load)
+        (function setupContextMenu() {
+            const menu = document.getElementById('presentationContextMenu');
+            if (!menu) return;
+
             const menuItems = menu.querySelectorAll('.context-menu-item');
             menuItems.forEach(item => {
-                item.onclick = (e) => {
+                item.addEventListener('click', (e) => {
                     e.stopPropagation();
                     const action = item.dataset.action;
+                    const url = menu.dataset.currentUrl;
+                    const title = menu.dataset.currentTitle;
+
                     menu.classList.remove('show');
 
                     if (action === 'rename') {
@@ -595,9 +603,9 @@
                     } else if (action === 'delete') {
                         deletePresentationByUrl(url, title);
                     }
-                };
+                });
             });
-        }
+        })();
 
         // Show rename modal
         function showRenameModal(url, currentTitle) {
@@ -811,11 +819,20 @@
 
 
 
+
+
+
         // Listen for init message from parent
         window.addEventListener('message', (event) => {
             if (event.data.type === 'taskmodule:init') {
                 window.TaskModule.init(event.data.context, event.data.savedSettings);
             }
+        });
+
+        // Disable right-click context menu (this iframe needs its own handler)
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            return false;
         });
     </script>
 </body>
