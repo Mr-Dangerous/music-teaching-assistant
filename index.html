@@ -347,6 +347,15 @@
       });
     })();
   </script>
+
+  <!-- Disable Right-Click Context Menu (for touchscreen devices) -->
+  <script>
+    // Prevent right-click context menu globally
+    document.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      return false;
+    });
+  </script>
 </body>
 
 </html>

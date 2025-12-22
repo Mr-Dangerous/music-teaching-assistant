@@ -1,5 +1,5 @@
 {
-  "version": "1.1.9",
+  "version": "1.2.0",
   "lastUpdated": "2025-12-22",
-  "description": "Fixed: presentation viewer CSV parsing error using correct parseCSVLines method"
+  "description": "Added: disabled right-click context menu globally for better touchscreen experience"
 }
