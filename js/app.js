@@ -2248,16 +2248,18 @@ class TeachingAssistantApp {
       const file = await handle.getFile();
       const text = await file.text();
 
-      const lines = text.split('\n').filter(line => line.trim());
-      if (lines.length <= 1) {
+      // Parse CSV using csvHandler
+      const parsedLines = this.csvHandler.parseCSVLines(text);
+
+      if (parsedLines.length <= 1) {
         this.presentationLinks = [];
         console.log('Presentation links file is empty');
         return;
       }
 
-      // Parse CSV (skip header)
-      this.presentationLinks = lines.slice(1).map(line => {
-        const [timestamp, url, title] = this.csvHandler.parseCSVLine(line);
+      // Skip header row and convert to presentation objects
+      this.presentationLinks = parsedLines.slice(1).map(fields => {
+        const [timestamp, url, title] = fields;
         return { timestamp, url, title };
       });
 
