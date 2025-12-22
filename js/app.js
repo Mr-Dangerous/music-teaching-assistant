@@ -2333,8 +2333,14 @@ class TeachingAssistantApp {
    * Delete a presentation link
    */
   async deletePresentationLink(url) {
+    const deletedPresentation = this.presentationLinks.find(p => p.url === url);
     this.presentationLinks = this.presentationLinks.filter(p => p.url !== url);
     await this.savePresentationLinks();
+
+    if (deletedPresentation) {
+      console.log(`✓ Deleted presentation: ${deletedPresentation.title}`);
+      this.showNotification(`Deleted: ${deletedPresentation.title}`, 'success');
+    }
   }
 
   /**

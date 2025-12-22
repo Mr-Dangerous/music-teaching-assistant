@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
+  "version": "1.2.1",
   "lastUpdated": "2025-12-22",
-  "description": "Added: disabled right-click context menu globally for better touchscreen experience"
+  "description": "Improved: presentation deletion now shows success notification and confirms CSV update"
 }

@@ -493,7 +493,9 @@
                 try {
                     await window.parent.deletePresentationLink(url);
                     await loadSavedPresentations();
+                    // Parent app will show success notification
                 } catch (error) {
+                    console.error('Error deleting presentation:', error);
                     alert('Error deleting presentation: ' + error.message);
                 }
             }
