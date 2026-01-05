@@ -1,5 +1,5 @@
 {
-  "version": "1.2.2",
-  "lastUpdated": "2025-12-22",
-  "description": "Fixed: right-click disable in presentation viewer and context menu delete button"
+  "version": "1.3.1",
+  "lastUpdated": "2025-01-05",
+  "description": "Added Practice Performance Mode with automated 56-measure sequence, part cycling, and measure-by-measure warnings for Martin's Dream module"
 }

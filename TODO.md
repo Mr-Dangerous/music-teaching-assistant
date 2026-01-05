@@ -1,82 +1,43 @@
-# Smartboard Teaching Assistant - TODO List
+# TODO List
 
-## High Priority Issues
+## Boomwhacker Song Save/Load Feature
 
-### Text Task Display Sizing
-**Status:** Not Working
-**Problem:** Short text strings (e.g., "2+2=?") appear tiny in the task display area despite CSS clamp() attempts.
+### Status: NOT WORKING
+- **UI**: ✅ Buttons correctly positioned in header (inline with Assign buttons)
+- **Message Flow**: ✅ Complete message chain working (module ↔ parent)
+- **Save Functionality**: ❌ NOT WORKING - needs investigation
 
-**What's Been Tried:**
-- CSS `clamp(32px, 8vw, 120px)` - text still tiny
-- CSS `clamp(48px, 20vw, 240px)` - still not working
+### What Works:
+1. Save button prompts for song name
+2. Message chain confirmed via console logs:
+   - `[MODULE saveSong]` - Button clicked
+   - `[PARENT] Received requestSongName` - Parent receives request
+   - `[PARENT] User entered song name` - Name entered
+   - `[PARENT] Sent songName back to module` - Name sent back
+   - `[MODULE saveSongWithName]` - Module receives name
+   - `[PARENT] Received saveBoomwhackerSong` - Parent receives save request
+   - `[saveBoomwhackerSong]` - Save function called
 
-**Next Steps to Try:**
-1. Use container-based sizing with CSS Container Queries (`cqw` units)
-2. Implement JavaScript-based dynamic font calculation:
-   - Measure container width
-   - Measure text length
-   - Calculate optimal font size to fill available space
-3. Use `vmin` or `vmax` units instead of `vw`
-4. Apply `font-size` directly to the container with different units
+### What Doesn't Work:
+- File is not actually being saved to `data/boomwhacker_songs.csv`
+- No error shown, no success notification
+- Likely issue: `fileManager.saveFileToFolder()` may not have permission or may not work for dynamically created files
 
-**File Location:** `styles.css` line 457-472 (`.task-text-display`)
-**Related File:** `js/app.js` - `displayTaskText()` method
+### Next Steps to Debug:
+1. Check if `fileManager.saveFileToFolder()` is actually being called (add more logging)
+2. Check if method returns error (try/catch may be swallowing it)
+3. May need to use different approach:
+   - Download file and ask user to manually place it in data folder
+   - Use a different file API
+   - Store in localStorage as fallback
 
----
+### Related Files:
+- `modules/boomwhacker_assigner.html` - Module with save/load UI
+- `js/app.js` - Parent message handlers and `saveBoomwhackerSong()` method
+- `js/file-manager.js` - File system API wrapper
 
-## Feature Requests
-
-### Melodic Dictation Trainer Improvements
-**Status:** In Progress
-**File:** `modules/melodic_dictation.html`
-
-**Required Changes:**
-1. ✅ **Show starting note** - Must display the first note to make it fair
-2. ✅ **Remove treble clef** - Use solfege-based staff like other trainers (so/la/mi lines)
-3. ✅ **Simplify interaction** - Drag colored circles to align on staff lines
-4. ✅ **Cursor feedback** - Show pitch name/position as user drags
-5. ✅ **Starting note selector** - Allow choosing starting note in solfege (default: "so")
-6. ✅ **Key selector** - Add ability to change key signature
-7. ✅ **Pitch set options** - Toggle between pentatonic and diatonic scale
-8. ✅ **Match trainer styling** - Use same visual style as so_la_mi_trainer.html
-
-**Design Goals:**
-- Simple colored circle dragging (like existing trainers)
-- Staff shows only necessary solfege lines (no treble clef)
-- First note is always shown/played first
-- Clear visual feedback during interaction
-- Consistent with existing module aesthetics
-
----
-
-## Known Bugs
-
-### Context Menu - Mouse Long-Click Not Working
-**Status:** Partial - Works on smartboard/touch, not working with mouse long-click
-**Problem:** Student roster context menu (long-press feature) works perfectly on smartboard/touchscreen but does not trigger with a long mouse click.
-
-**What Works:**
-- ✅ Long-press on touchscreen/smartboard (800ms hold)
-- ✅ Context menu display and interaction
-- ✅ All three menu options (Absent, Forgot Instrument, Earned Stool)
-- ✅ Visual indicators (❌ ⭐) appear correctly
-- ✅ Data saves to results.csv
-
-**What Doesn't Work:**
-- ❌ Long-click with regular mouse (holding mouse button down for 800ms)
-
-**File Location:** `js/app.js` lines 649-698 (student button event handlers)
-**Related:** Context menu implementation starting at line 788
-
----
-
-## Completed Items
-
-- ✅ Implement grade-based folder structure for tasks
-- ✅ Add fullscreen mode for 16:9 displays
-- ✅ Create side-by-side layout (task left, response right)
-- ✅ Support for `artifact_1_question_type` (picture vs string)
-- ✅ Support for `artifact_1_input_type` (multiple_choice, free_type)
-- ✅ Multiple choice button spawning with variable options
-- ✅ Free-type keyboard capture
-- ✅ Auto-save functionality with File System Access API
+### Version History:
+- v1.1.0: Initial implementation
+- v1.1.6: Moved buttons to header
+- v1.1.7: Fixed to use `saveFileToFolder()` instead of non-existent `writeFile()`
+- v1.1.8: Re-added missing message handlers, added trace logging

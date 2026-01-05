@@ -1,0 +1,2779 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Martin's Dream - Class Progress Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            padding-top: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+
+        h1 {
+            text-align: center;
+            color: #764ba2;
+            margin: 0;
+            font-size: 2.5em;
+            display: none;
+        }
+
+        /* Toggle buttons */
+        .toggle-btn {
+            display: inline-block;
+            margin: 0 10px 5px 10px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .toggle-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .toggle-btn:active {
+            transform: translateY(0);
+        }
+
+        .button-container {
+            text-align: center;
+            margin-bottom: 0;
+            position: relative;
+        }
+
+        /* Parts Dropdown */
+        .parts-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-menu {
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-top: 5px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            padding: 10px;
+            min-width: 200px;
+            display: none;
+            z-index: 1000;
+        }
+
+        .dropdown-menu.show {
+            display: block;
+        }
+
+        .dropdown-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            user-select: none;
+        }
+
+        .dropdown-item:hover {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .dropdown-item input[type="checkbox"],
+        .dropdown-item input[type="radio"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #764ba2;
+        }
+
+        .dropdown-item label {
+            cursor: pointer;
+            flex: 1;
+            font-weight: 500;
+        }
+
+        /* Checklist container - can be hidden */
+        .progress-checklist {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            max-height: 0;
+            overflow: hidden;
+            opacity: 0;
+            transition: all 0.4s ease;
+        }
+
+        .progress-checklist.show {
+            max-height: 1000px;
+            opacity: 1;
+            padding: 15px;
+        }
+
+        .checklist-title {
+            color: white;
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .checklist-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 10px;
+        }
+
+        .checklist-item {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 6px;
+            padding: 10px 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: 2px solid transparent;
+        }
+
+        .checklist-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .checklist-item.checked {
+            border-color: #4CAF50;
+            background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+        }
+
+        .checklist-item input[type="checkbox"] {
+            width: 22px;
+            height: 22px;
+            cursor: pointer;
+            accent-color: #4CAF50;
+        }
+
+        .checklist-item label {
+            flex: 1;
+            font-size: 0.95em;
+            cursor: pointer;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .checklist-item.checked label {
+            color: #2e7d32;
+        }
+
+        /* Week indicator */
+        .week-badge {
+            background: #667eea;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 10px;
+            font-size: 0.75em;
+            font-weight: bold;
+        }
+
+        /* Play Button in Header */
+        .play-btn {
+            display: inline-block;
+            margin: 0 10px 5px 10px;
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .play-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .play-btn:active {
+            transform: translateY(0);
+        }
+
+        .play-btn.playing {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+        }
+
+        .practice-btn {
+            display: inline-block;
+            margin: 0 10px 5px 10px;
+            background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 1.1em;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+        }
+
+        .practice-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+
+        .practice-btn:active {
+            transform: translateY(0);
+        }
+
+        .practice-btn.active {
+            background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);
+        }
+
+        /* Warning Display */
+        .warning-display {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(135deg, #FF9800 0%, #F57C00 100%);
+            color: white;
+            padding: 40px 60px;
+            border-radius: 20px;
+            font-size: 3em;
+            font-weight: bold;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+            z-index: 1000;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            text-align: center;
+            border: 5px solid white;
+        }
+
+        .warning-display.show {
+            opacity: 1;
+        }
+
+        /* Measure Counter */
+        .measure-counter {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 15px;
+            font-size: 1.5em;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .measure-counter.show {
+            opacity: 1;
+        }
+
+        /* Countdown Display */
+        .countdown-display {
+            text-align: center;
+            font-size: 3em;
+            font-weight: bold;
+            color: #764ba2;
+            margin: 0;
+            padding: 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            min-height: 0;
+            position: absolute;
+            top: 70px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+        }
+
+        /* Staff Display */
+        .staff-display {
+            background: white;
+            border-radius: 12px;
+            padding: 10px;
+            padding-left: 50px;
+            margin: 10px 0 0 0;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .staff-display.hidden {
+            display: none;
+        }
+
+        .staff-label {
+            position: absolute;
+            left: 15px;
+            top: 50%;
+            transform: translateY(-50%) rotate(-90deg);
+            transform-origin: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #764ba2;
+            cursor: pointer;
+            user-select: none;
+            padding: 8px 15px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+        }
+
+        .staff-label:hover {
+            transform: translateY(-50%) rotate(-90deg) scale(1.05);
+            box-shadow: 0 3px 12px rgba(0,0,0,0.3);
+        }
+
+        #staffCanvas {
+            width: 100%;
+            max-width: 1200px;
+            display: block;
+            margin: 0 auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+        }
+
+        /* Content area (for future expansion) */
+        .content-area {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            min-height: 200px;
+        }
+
+        .placeholder-text {
+            text-align: center;
+            color: #999;
+            font-size: 1.2em;
+            padding: 40px;
+        }
+
+        /* Save indicator */
+        .save-indicator {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+
+        .save-indicator.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Martin's Dream 🎵</h1>
+
+        <!-- Toggle Buttons -->
+        <div class="button-container">
+            <button class="toggle-btn" id="toggleChecklistBtn">
+                📋 Progress Checklist
+            </button>
+            <button class="play-btn" id="playBtn">▶️ PLAY</button>
+            <button class="practice-btn" id="practiceBtn">🎭 Practice Performance</button>
+            <div class="parts-dropdown">
+                <button class="toggle-btn" id="metronomeBtn">
+                    🔊 70 BPM
+                </button>
+                <div class="dropdown-menu" id="metronomeDropdown">
+                    <div class="dropdown-item" id="bpm60Item">
+                        <input type="radio" name="bpmSelect" id="bpm60Radio">
+                        <label for="bpm60Radio">60 BPM</label>
+                    </div>
+                    <div class="dropdown-item" id="bpm70Item">
+                        <input type="radio" name="bpmSelect" id="bpm70Radio" checked>
+                        <label for="bpm70Radio">70 BPM</label>
+                    </div>
+                    <div class="dropdown-item" id="bpm75Item">
+                        <input type="radio" name="bpmSelect" id="bpm75Radio">
+                        <label for="bpm75Radio">75 BPM</label>
+                    </div>
+                    <div class="dropdown-item" id="bpm80Item">
+                        <input type="radio" name="bpmSelect" id="bpm80Radio">
+                        <label for="bpm80Radio">80 BPM</label>
+                    </div>
+                    <div class="dropdown-item" id="muteItem">
+                        <input type="checkbox" id="muteCheckbox">
+                        <label for="muteCheckbox">Mute Clicks</label>
+                    </div>
+                </div>
+            </div>
+            <div class="parts-dropdown">
+                <button class="toggle-btn" id="partsBtn">
+                    🎼 Parts
+                </button>
+                <div class="dropdown-menu" id="partsDropdown">
+                    <div class="dropdown-item" id="xylophoneItem">
+                        <input type="checkbox" id="xylophoneCheckbox" checked>
+                        <label for="xylophoneCheckbox">Xylophone</label>
+                    </div>
+                    <div class="dropdown-item" id="recorderItem">
+                        <input type="checkbox" id="recorderCheckbox" checked>
+                        <label for="recorderCheckbox">Recorder</label>
+                    </div>
+                    <div class="dropdown-item" id="vocalItem">
+                        <input type="checkbox" id="vocalCheckbox" checked>
+                        <label for="vocalCheckbox">Vocal</label>
+                    </div>
+                    <div class="dropdown-item" id="drumItem">
+                        <input type="checkbox" id="drumCheckbox" checked>
+                        <label for="drumCheckbox">Drum</label>
+                    </div>
+                    <div class="dropdown-item" id="rapItem">
+                        <input type="checkbox" id="rapCheckbox" checked>
+                        <label for="rapCheckbox">Rap</label>
+                    </div>
+                    <div class="dropdown-item" style="padding-left: 35px; font-size: 0.9em;" id="rapPart1Item">
+                        <input type="radio" name="rapPart" id="rapPart1Radio" checked>
+                        <label for="rapPart1Radio">Part 1</label>
+                    </div>
+                    <div class="dropdown-item" style="padding-left: 35px; font-size: 0.9em;" id="rapPart2Item">
+                        <input type="radio" name="rapPart" id="rapPart2Radio">
+                        <label for="rapPart2Radio">Part 2</label>
+                    </div>
+                    <div class="dropdown-item" style="padding-left: 35px; font-size: 0.9em;" id="rapPart3Item">
+                        <input type="radio" name="rapPart" id="rapPart3Radio">
+                        <label for="rapPart3Radio">Part 3</label>
+                    </div>
+                    <div class="dropdown-item" style="padding-left: 35px; font-size: 0.9em;" id="rapPart4Item">
+                        <input type="radio" name="rapPart" id="rapPart4Radio">
+                        <label for="rapPart4Radio">Part 4</label>
+                    </div>
+                    <div class="dropdown-item" style="padding-left: 35px; font-size: 0.9em;" id="rapAutoItem">
+                        <input type="radio" name="rapPart" id="rapAutoRadio">
+                        <label for="rapAutoRadio">Auto</label>
+                    </div>
+                    <div class="dropdown-item" style="padding-left: 35px; font-size: 0.9em;" id="vocalPart1Item">
+                        <input type="radio" name="vocalPart" id="vocalPart1Radio" checked>
+                        <label for="vocalPart1Radio">Part 1</label>
+                    </div>
+                    <div class="dropdown-item" style="padding-left: 35px; font-size: 0.9em;" id="vocalPart2Item">
+                        <input type="radio" name="vocalPart" id="vocalPart2Radio">
+                        <label for="vocalPart2Radio">Part 2</label>
+                    </div>
+                    <div class="dropdown-item" style="padding-left: 35px; font-size: 0.9em;" id="vocalAutoItem">
+                        <input type="radio" name="vocalPart" id="vocalAutoRadio">
+                        <label for="vocalAutoRadio">Auto</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progress Checklist (hidden by default) -->
+        <div class="progress-checklist" id="progressChecklist">
+            <div class="checklist-title">📋 Class Progress Tracker</div>
+            <div class="checklist-grid" id="checklistGrid"></div>
+        </div>
+
+        <!-- Countdown Display (shown when metronome starts) -->
+        <div class="countdown-display" id="countdownDisplay"></div>
+
+        <!-- Staff Display -->
+        <div class="staff-display" id="staffDisplay">
+            <div class="staff-label" id="staffLabel">XYLOPHONE</div>
+            <canvas id="staffCanvas"></canvas>
+        </div>
+    </div>
+
+    <div class="save-indicator" id="saveIndicator">✓ Progress Saved</div>
+    <div class="warning-display" id="warningDisplay"></div>
+    <div class="measure-counter" id="measureCounter">Measure: 1</div>
+
+    <script>
+        // ============ PLAYBACK MANAGER ============
+        class PlaybackManager {
+            constructor() {
+                this.audioContext = null;
+                this.isPlaying = false;
+                this.bpm = 70;
+                this.currentBeat = 0;
+                this.totalBeats = 8; // 2 measures of 4/4
+                this.intervalId = null;
+                this.metronomeEnabled = true;
+            }
+
+            init() {
+                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            playClick(isDownbeat = false) {
+                if (!this.audioContext || !this.metronomeEnabled) return;
+
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+
+                // Downbeat = higher pitch
+                oscillator.frequency.value = isDownbeat ? 1200 : 800;
+                gainNode.gain.value = 0.3;
+
+                const now = this.audioContext.currentTime;
+                oscillator.start(now);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                oscillator.stop(now + 0.1);
+            }
+
+            async startCountdown() {
+                const countdownDisplay = document.getElementById('countdownDisplay');
+                const counts = ['1', '2', 'Ready', 'Go!'];
+                const beatDuration = (60 / this.bpm) * 1000; // ms per beat
+
+                for (let i = 0; i < counts.length; i++) {
+                    countdownDisplay.textContent = counts[i];
+                    this.playClick(true);
+                    await new Promise(resolve => setTimeout(resolve, beatDuration));
+                }
+
+                countdownDisplay.textContent = '';
+                return true;
+            }
+
+            start() {
+                if (this.isPlaying) return;
+
+                if (!this.audioContext) {
+                    this.init();
+                }
+
+                this.isPlaying = true;
+                this.currentBeat = 0;
+
+                // Start countdown, then begin metronome
+                this.startCountdown().then(() => {
+                    if (!this.isPlaying) return; // Check if stopped during countdown
+
+                    const beatDuration = (60 / this.bpm) * 1000; // ms per beat
+
+                    // Play first beat immediately after countdown
+                    this.tick();
+                    this.currentBeat = (this.currentBeat + 1) % this.totalBeats;
+
+                    // Then continue with interval for subsequent beats
+                    this.intervalId = setInterval(() => {
+                        this.tick();
+                        this.currentBeat = (this.currentBeat + 1) % this.totalBeats;
+
+                        // Auto-switch vocal parts when ostinato completes
+                        if (this.currentBeat === 0 && staffRenderer && staffRenderer.vocalAutoMode) {
+                            staffRenderer.currentVocalPart = staffRenderer.currentVocalPart === 1 ? 2 : 1;
+                            staffRenderer.draw();
+                        }
+
+                        // Auto-switch rap parts when ostinato completes (1→2→3→4→1)
+                        if (this.currentBeat === 0 && staffRenderer && staffRenderer.rapAutoMode) {
+                            staffRenderer.currentRapPart = (staffRenderer.currentRapPart % 4) + 1;
+                            staffRenderer.draw();
+                        }
+                    }, beatDuration);
+                });
+            }
+
+            tick() {
+                // Visual update
+                this.updateBeatDisplay();
+
+                // Audio click (downbeat on beats 0 and 4)
+                const isDownbeat = (this.currentBeat === 0 || this.currentBeat === 4);
+                this.playClick(isDownbeat);
+
+                // Notify performance manager of beat
+                if (performanceManager) {
+                    performanceManager.onBeat();
+                }
+            }
+
+            updateBeatDisplay() {
+                // Update staff display if it exists
+                if (staffRenderer) {
+                    staffRenderer.updateBeatDisplay();
+                }
+            }
+
+            stop() {
+                this.isPlaying = false;
+                if (this.intervalId) {
+                    clearInterval(this.intervalId);
+                    this.intervalId = null;
+                }
+
+                // Clear countdown
+                document.getElementById('countdownDisplay').textContent = '';
+
+                // Reset beat and update display
+                this.currentBeat = 0;
+                if (staffRenderer) {
+                    staffRenderer.updateBeatDisplay();
+                }
+            }
+
+            toggleMetronome() {
+                this.metronomeEnabled = !this.metronomeEnabled;
+            }
+        }
+
+        // Global playback manager instance
+        const playbackManager = new PlaybackManager();
+
+        // ============ PERFORMANCE MANAGER ============
+        class PerformanceManager {
+            constructor() {
+                this.isActive = false;
+                this.currentMeasure = 1;
+                this.totalMeasures = 56;
+                this.beatsPerMeasure = 4;
+                this.beatInMeasure = 0;
+
+                // Schedule of what parts should be visible at each measure
+                this.schedule = this.createSchedule();
+            }
+
+            createSchedule() {
+                const schedule = [];
+
+                // Measures 1-3: Xylophone only
+                for (let m = 1; m <= 3; m++) {
+                    schedule.push({
+                        measure: m,
+                        xylophone: true,
+                        recorder: false,
+                        vocal: false,
+                        drum: false,
+                        rap: false,
+                        warning: null
+                    });
+                }
+
+                // Measures 4-7: Xylophone + Drum
+                for (let m = 4; m <= 7; m++) {
+                    schedule.push({
+                        measure: m,
+                        xylophone: true,
+                        recorder: false,
+                        vocal: false,
+                        drum: true,
+                        rap: false,
+                        warning: m === 3 ? 'Drum starting next measure!' : null
+                    });
+                }
+
+                // Measures 8-11: Xylophone + Drum + Recorder (no vocal yet)
+                for (let m = 8; m <= 11; m++) {
+                    schedule.push({
+                        measure: m,
+                        xylophone: true,
+                        recorder: true,
+                        vocal: false,
+                        drum: true,
+                        rap: false,
+                        warning: m === 7 ? 'Recorder starting next measure!' : null
+                    });
+                }
+
+                // Measures 12-20: Xylophone + Drum + Recorder + Vocal
+                // Vocal parts alternate every 2 measures (Part 1, Part 2, Part 1, etc.)
+                for (let m = 12; m <= 20; m++) {
+                    const vocalPart = Math.floor((m - 12) / 2) % 2 === 0 ? 1 : 2;
+                    schedule.push({
+                        measure: m,
+                        xylophone: true,
+                        recorder: true,
+                        vocal: true,
+                        vocalPart: vocalPart,
+                        drum: true,
+                        rap: false,
+                        warning: m === 11 ? 'Vocal starting next measure!' : null
+                    });
+                }
+
+                // Measures 21-28: Xylophone + Drum + Rap (no recorder/vocal)
+                // Rap parts cycle every 2 measures (Part 1, 2, 3, 4)
+                for (let m = 21; m <= 28; m++) {
+                    const rapPart = (Math.floor((m - 21) / 2) % 4) + 1;
+                    schedule.push({
+                        measure: m,
+                        xylophone: true,
+                        recorder: false,
+                        vocal: false,
+                        drum: true,
+                        rap: true,
+                        rapPart: rapPart,
+                        warning: m === 20 ? 'Rap starting next measure!\nRecorder & Vocal stop!' : null
+                    });
+                }
+
+                // Measures 29-36: Xylophone + Drum + Recorder + Vocal (no rap)
+                // Vocal parts alternate every 2 measures
+                for (let m = 29; m <= 36; m++) {
+                    const vocalPart = Math.floor((m - 29) / 2) % 2 === 0 ? 1 : 2;
+                    schedule.push({
+                        measure: m,
+                        xylophone: true,
+                        recorder: true,
+                        vocal: true,
+                        vocalPart: vocalPart,
+                        drum: true,
+                        rap: false,
+                        warning: m === 28 ? 'Recorder & Vocal starting next measure!\nRap stops!' : null
+                    });
+                }
+
+                // Measures 37-44: Xylophone + Drum + Rap (no recorder/vocal)
+                // Rap parts cycle every 2 measures (Part 1, 2, 3, 4)
+                for (let m = 37; m <= 44; m++) {
+                    const rapPart = (Math.floor((m - 37) / 2) % 4) + 1;
+                    schedule.push({
+                        measure: m,
+                        xylophone: true,
+                        recorder: false,
+                        vocal: false,
+                        drum: true,
+                        rap: true,
+                        rapPart: rapPart,
+                        warning: m === 36 ? 'Rap starting next measure!\nRecorder & Vocal stop!' : null
+                    });
+                }
+
+                // Measures 45-52: Xylophone + Drum + Recorder + Vocal (no rap)
+                // Vocal parts alternate every 2 measures
+                for (let m = 45; m <= 52; m++) {
+                    const vocalPart = Math.floor((m - 45) / 2) % 2 === 0 ? 1 : 2;
+                    schedule.push({
+                        measure: m,
+                        xylophone: true,
+                        recorder: true,
+                        vocal: true,
+                        vocalPart: vocalPart,
+                        drum: true,
+                        rap: false,
+                        warning: m === 44 ? 'Recorder & Vocal starting next measure!\nRap stops!' : null
+                    });
+                }
+
+                // Measures 53-56: Xylophone + Drum only (final 4 measures)
+                for (let m = 53; m <= 56; m++) {
+                    schedule.push({
+                        measure: m,
+                        xylophone: true,
+                        recorder: false,
+                        vocal: false,
+                        drum: true,
+                        rap: false,
+                        warning: m === 52 ? 'Final section - Xylophone & Drum only!' : null
+                    });
+                }
+
+                return schedule;
+            }
+
+            start() {
+                this.isActive = true;
+                this.currentMeasure = 1;
+                this.beatInMeasure = 0;
+
+                // Update button appearance
+                const practiceBtn = document.getElementById('practiceBtn');
+                practiceBtn.classList.add('active');
+                practiceBtn.textContent = '⏹️ Stop Practice';
+
+                // Show measure counter
+                const measureCounter = document.getElementById('measureCounter');
+                measureCounter.textContent = `Measure: ${this.currentMeasure}`;
+                measureCounter.classList.add('show');
+
+                // Apply initial part visibility
+                this.applySchedule();
+
+                // Start playback if not already playing
+                if (!playbackManager.isPlaying) {
+                    playbackManager.start();
+                }
+
+                // Update play button to reflect active playback
+                const playBtn = document.getElementById('playBtn');
+                playBtn.textContent = '⏹️ STOP';
+                playBtn.classList.add('playing');
+            }
+
+            stop() {
+                this.isActive = false;
+                this.currentMeasure = 1;
+                this.beatInMeasure = 0;
+
+                // Update button appearance
+                const practiceBtn = document.getElementById('practiceBtn');
+                practiceBtn.classList.remove('active');
+                practiceBtn.textContent = '🎭 Practice Performance';
+
+                // Hide measure counter
+                const measureCounter = document.getElementById('measureCounter');
+                measureCounter.classList.remove('show');
+
+                // Hide any warnings
+                const warningDisplay = document.getElementById('warningDisplay');
+                warningDisplay.classList.remove('show');
+
+                // Stop playback
+                if (playbackManager.isPlaying) {
+                    playbackManager.stop();
+                }
+
+                // Update play button to reflect stopped state
+                const playBtn = document.getElementById('playBtn');
+                playBtn.textContent = '▶️ PLAY';
+                playBtn.classList.remove('playing');
+
+                // Re-enable manual part controls - restore all parts to visible
+                if (staffRenderer) {
+                    staffRenderer.showRecorder = true;
+                    staffRenderer.showVocal = true;
+                    staffRenderer.showDrum = true;
+                    staffRenderer.showRap = true;
+                    staffRenderer.draw();
+                }
+
+                // Show staff and update checkboxes
+                const staffDisplay = document.getElementById('staffDisplay');
+                staffDisplay.classList.remove('hidden');
+
+                document.getElementById('xylophoneCheckbox').checked = true;
+                document.getElementById('recorderCheckbox').checked = true;
+                document.getElementById('vocalCheckbox').checked = true;
+                document.getElementById('drumCheckbox').checked = true;
+                document.getElementById('rapCheckbox').checked = true;
+            }
+
+            onBeat() {
+                if (!this.isActive) return;
+
+                this.beatInMeasure++;
+
+                // On beat 4, check if we should pre-switch vocal/rap parts for next measure
+                if (this.beatInMeasure === 4) {
+                    const currentSchedule = this.schedule[this.currentMeasure - 1];
+                    const nextSchedule = this.schedule[this.currentMeasure]; // Next measure schedule
+
+                    if (currentSchedule && nextSchedule && staffRenderer) {
+                        // Pre-switch vocal part if it changes on next measure
+                        if (currentSchedule.vocalPart && nextSchedule.vocalPart &&
+                            currentSchedule.vocalPart !== nextSchedule.vocalPart) {
+                            staffRenderer.currentVocalPart = nextSchedule.vocalPart;
+                            // Update radio button
+                            if (nextSchedule.vocalPart === 1) {
+                                document.getElementById('vocalPart1Radio').checked = true;
+                            } else if (nextSchedule.vocalPart === 2) {
+                                document.getElementById('vocalPart2Radio').checked = true;
+                            }
+                            staffRenderer.draw();
+                        }
+
+                        // Pre-switch rap part if it changes on next measure
+                        if (currentSchedule.rapPart && nextSchedule.rapPart &&
+                            currentSchedule.rapPart !== nextSchedule.rapPart) {
+                            staffRenderer.currentRapPart = nextSchedule.rapPart;
+                            // Update radio button
+                            if (nextSchedule.rapPart === 1) {
+                                document.getElementById('rapPart1Radio').checked = true;
+                            } else if (nextSchedule.rapPart === 2) {
+                                document.getElementById('rapPart2Radio').checked = true;
+                            } else if (nextSchedule.rapPart === 3) {
+                                document.getElementById('rapPart3Radio').checked = true;
+                            } else if (nextSchedule.rapPart === 4) {
+                                document.getElementById('rapPart4Radio').checked = true;
+                            }
+                            staffRenderer.draw();
+                        }
+                    }
+                }
+
+                // When we complete a measure
+                if (this.beatInMeasure >= this.beatsPerMeasure) {
+                    this.beatInMeasure = 0;
+                    this.currentMeasure++;
+
+                    // Update measure counter
+                    const measureCounter = document.getElementById('measureCounter');
+                    measureCounter.textContent = `Measure: ${this.currentMeasure}`;
+
+                    // Check if we've reached the end
+                    if (this.currentMeasure > this.totalMeasures) {
+                        this.stop();
+                        return;
+                    }
+
+                    // Apply the schedule for the new measure
+                    this.applySchedule();
+                }
+            }
+
+            applySchedule() {
+                const currentSchedule = this.schedule[this.currentMeasure - 1];
+                if (!currentSchedule) return;
+
+                // Update part visibility based on schedule
+                if (staffRenderer) {
+                    // Update part visibility
+                    staffRenderer.showRecorder = currentSchedule.recorder;
+                    staffRenderer.showVocal = currentSchedule.vocal;
+                    staffRenderer.showDrum = currentSchedule.drum;
+                    staffRenderer.showRap = currentSchedule.rap;
+
+                    // Set vocal part if specified
+                    if (currentSchedule.vocalPart) {
+                        staffRenderer.vocalAutoMode = false;
+                        staffRenderer.currentVocalPart = currentSchedule.vocalPart;
+                        // Update radio button
+                        if (currentSchedule.vocalPart === 1) {
+                            document.getElementById('vocalPart1Radio').checked = true;
+                        } else if (currentSchedule.vocalPart === 2) {
+                            document.getElementById('vocalPart2Radio').checked = true;
+                        }
+                    }
+
+                    // Set rap part if specified
+                    if (currentSchedule.rapPart) {
+                        staffRenderer.rapAutoMode = false;
+                        staffRenderer.currentRapPart = currentSchedule.rapPart;
+                        // Update radio button
+                        if (currentSchedule.rapPart === 1) {
+                            document.getElementById('rapPart1Radio').checked = true;
+                        } else if (currentSchedule.rapPart === 2) {
+                            document.getElementById('rapPart2Radio').checked = true;
+                        } else if (currentSchedule.rapPart === 3) {
+                            document.getElementById('rapPart3Radio').checked = true;
+                        } else if (currentSchedule.rapPart === 4) {
+                            document.getElementById('rapPart4Radio').checked = true;
+                        }
+                    }
+
+                    // Handle xylophone (whole staff display)
+                    const staffDisplay = document.getElementById('staffDisplay');
+                    if (currentSchedule.xylophone) {
+                        staffDisplay.classList.remove('hidden');
+                    } else {
+                        staffDisplay.classList.add('hidden');
+                    }
+
+                    // Update checkboxes to match (but don't trigger their event handlers)
+                    document.getElementById('xylophoneCheckbox').checked = currentSchedule.xylophone;
+                    document.getElementById('recorderCheckbox').checked = currentSchedule.recorder;
+                    document.getElementById('vocalCheckbox').checked = currentSchedule.vocal;
+                    document.getElementById('drumCheckbox').checked = currentSchedule.drum;
+                    document.getElementById('rapCheckbox').checked = currentSchedule.rap;
+
+                    staffRenderer.draw();
+                }
+
+                // Show warning if there is one
+                if (currentSchedule.warning) {
+                    this.showWarning(currentSchedule.warning);
+                }
+            }
+
+            showWarning(text) {
+                const warningDisplay = document.getElementById('warningDisplay');
+                warningDisplay.textContent = text;
+                warningDisplay.classList.add('show');
+
+                // Hide after 2 seconds
+                setTimeout(() => {
+                    warningDisplay.classList.remove('show');
+                }, 2000);
+            }
+        }
+
+        // Global performance manager instance
+        const performanceManager = new PerformanceManager();
+
+        // ============ STAFF RENDERER ============
+        class StaffRenderer {
+            constructor(canvasId) {
+                this.canvas = document.getElementById(canvasId);
+                this.ctx = this.canvas.getContext('2d');
+                this.scale = 1;
+
+                // Staff configuration
+                this.lineSpacing = 20; // pixels between staff lines
+                this.staffY = 80; // top position of staff
+                this.chordSpacing = 120; // horizontal space between chords
+                this.leftMargin = 80;
+
+                // Chord definitions (do = G)
+                // Em chord: E (bottom line/line 1), G (line 2), B (line 3/middle)
+                // G chord (1st inversion): D (space below line 1), G (line 2), B (line 3)
+                this.chords = [
+                    // Measure 1: Em (4 beats)
+                    { name: 'Em', notes: ['E', 'G', 'B'] },
+                    { name: 'Em', notes: ['E', 'G', 'B'] },
+                    { name: 'Em', notes: ['E', 'G', 'B'] },
+                    { name: 'Em', notes: ['E', 'G', 'B'] },
+                    // Measure 2: G (4 beats)
+                    { name: 'G', notes: ['D', 'G', 'B'] },
+                    { name: 'G', notes: ['D', 'G', 'B'] },
+                    { name: 'G', notes: ['D', 'G', 'B'] },
+                    { name: 'G', notes: ['D', 'G', 'B'] }
+                ];
+
+                // Note positions using formula: y = staffY + (lineSpacing * (4 - notePos))
+                // From bottom to top:
+                this.notePositions = {
+                    'D': -0.5,   // space below, touching bottom line (y = staffY + 4.5*lineSpacing)
+                    'E': 0,      // line 1 - bottom line (y = staffY + 4*lineSpacing)
+                    'F': 0.5,    // space 1 - between line 1 and line 2
+                    'G': 1,      // line 2 (y = staffY + 3*lineSpacing)
+                    'A': 1.5,    // space 2 - between line 2 and line 3
+                    'B': 2,      // line 3 - middle line (y = staffY + 2*lineSpacing)
+                    'C': 2.5,    // space 3 - between line 3 and line 4
+                    'D4': 3,     // line 4 (y = staffY + 1*lineSpacing)
+                    'E4': 3.5,   // space 4 - between line 4 and line 5
+                    'F5': 4      // line 5 - top line (y = staffY + 0*lineSpacing)
+                };
+
+                // Recorder part notes (beat 1-8)
+                this.recorderNotes = [
+                    // Beat 1: E (quarter note)
+                    { beat: 1, notes: [{ pitch: 'E', duration: 'quarter' }] },
+                    // Beat 2: rest
+                    { beat: 2, notes: [{ pitch: 'rest', duration: 'quarter' }] },
+                    // Beat 3: rest
+                    { beat: 3, notes: [{ pitch: 'rest', duration: 'quarter' }] },
+                    // Beat 4: B (sixteenth) + A (sixteenth) + G (eighth)
+                    { beat: 4, notes: [
+                        { pitch: 'B', duration: 'sixteenth', position: 0 },
+                        { pitch: 'A', duration: 'sixteenth', position: 0.25 },
+                        { pitch: 'G', duration: 'eighth', position: 0.5 }
+                    ]},
+                    // Beat 5: D (quarter note)
+                    { beat: 5, notes: [{ pitch: 'D', duration: 'quarter' }] },
+                    // Beat 6: rest
+                    { beat: 6, notes: [{ pitch: 'rest', duration: 'quarter' }] },
+                    // Beat 7: rest
+                    { beat: 7, notes: [{ pitch: 'rest', duration: 'quarter' }] },
+                    // Beat 8: B (sixteenth) + A (sixteenth) + G (eighth)
+                    { beat: 8, notes: [
+                        { pitch: 'B', duration: 'sixteenth', position: 0 },
+                        { pitch: 'A', duration: 'sixteenth', position: 0.25 },
+                        { pitch: 'G', duration: 'eighth', position: 0.5 }
+                    ]}
+                ];
+
+                // Vocal part 1 (2-measure ostinato)
+                this.vocalNotes1 = [
+                    // Measure 1 (beats 1-4)
+                    { beat: 1, position: 0, pitch: 'E', duration: 'eighth', lyric: 'I' },
+                    { beat: 1, position: 0.5, pitch: 'E', duration: 'eighth', lyric: 'have' },
+                    { beat: 2, position: 0, pitch: 'D', duration: 'eighth', lyric: 'a' },
+                    { beat: 2, position: 0.5, pitch: 'E', duration: 'quarter', lyric: 'dream' },
+                    { beat: 3, position: 0.5, pitch: 'rest', duration: 'eighth', lyric: '' },
+                    { beat: 4, position: 0, pitch: 'rest', duration: 'quarter', lyric: '' },
+                    // Measure 2 (beats 5-8)
+                    { beat: 5, position: 0, pitch: 'G', duration: 'eighth', lyric: 'You' },
+                    { beat: 5, position: 0.5, pitch: 'E', duration: 'eighth', lyric: 'have' },
+                    { beat: 6, position: 0, pitch: 'D', duration: 'eighth', lyric: 'a' },
+                    { beat: 6, position: 0.5, pitch: 'E', duration: 'quarter', lyric: 'dream' },
+                    { beat: 7, position: 0.5, pitch: 'rest', duration: 'eighth', lyric: '' },
+                    { beat: 8, position: 0, pitch: 'rest', duration: 'quarter', lyric: '' }
+                ];
+
+                // Vocal part 2 (2-measure ostinato)
+                this.vocalNotes2 = [
+                    // Measure 1 (beats 1-4)
+                    { beat: 1, position: 0, pitch: 'E', duration: 'eighth', lyric: 'Mar-' },
+                    { beat: 1, position: 0.5, pitch: 'E', duration: 'eighth', lyric: 'tin' },
+                    { beat: 2, position: 0, pitch: 'G', duration: 'eighth', lyric: 'Luth-' },
+                    { beat: 2, position: 0.5, pitch: 'G', duration: 'eighth', lyric: 'er' },
+                    { beat: 3, position: 0, pitch: 'A', duration: 'quarter', lyric: 'King' },
+                    { beat: 4, position: 0, pitch: 'G', duration: 'quarter', lyric: 'said' },
+                    // Measure 2 (beats 5-8)
+                    { beat: 5, position: 0, pitch: 'B', duration: 'eighth', lyric: 'he' },
+                    { beat: 5, position: 0.5, pitch: 'A', duration: 'eighth', lyric: 'had' },
+                    { beat: 6, position: 0, pitch: 'G', duration: 'eighth', lyric: 'a' },
+                    { beat: 6, position: 0.5, pitch: 'E', duration: 'quarter', lyric: 'dream.' },
+                    { beat: 7, position: 0.5, pitch: 'rest', duration: 'eighth', lyric: '' },
+                    { beat: 8, position: 0, pitch: 'rest', duration: 'quarter', lyric: '' }
+                ];
+
+                // Drum part (2-measure ostinato on 2-line staff)
+                this.drumNotes = [
+                    // Measure 1 (beats 1-4)
+                    { beat: 1, position: 0, pitch: 'low', duration: 'eighth' },
+                    { beat: 1, position: 0.5, pitch: 'low', duration: 'eighth' },
+                    { beat: 2, position: 0, pitch: 'high', duration: 'quarter' },
+                    { beat: 3, position: 0, pitch: 'low', duration: 'eighth' },
+                    { beat: 3, position: 0.5, pitch: 'low', duration: 'eighth' },
+                    { beat: 4, position: 0, pitch: 'high', duration: 'quarter' },
+                    // Measure 2 (beats 5-8) - same pattern
+                    { beat: 5, position: 0, pitch: 'low', duration: 'eighth' },
+                    { beat: 5, position: 0.5, pitch: 'low', duration: 'eighth' },
+                    { beat: 6, position: 0, pitch: 'high', duration: 'quarter' },
+                    { beat: 7, position: 0, pitch: 'low', duration: 'eighth' },
+                    { beat: 7, position: 0.5, pitch: 'low', duration: 'eighth' },
+                    { beat: 8, position: 0, pitch: 'high', duration: 'quarter' }
+                ];
+
+                // Rap part 1 (2-measure pattern on single line)
+                this.rapNotes1 = [
+                    // Measure 1
+                    { beat: 1, position: 0, duration: 'sixteenth', lyric: '(E)man-' },
+                    { beat: 1, position: 0.5, duration: 'sixteenth', lyric: 'ci-' },
+                    { beat: 1, position: 0.75, duration: 'sixteenth', lyric: 'pa-' },
+                    { beat: 2, position: 0.25, duration: 'dotted-eighth', lyric: 'tion' },
+                    { beat: 3, position: 0, duration: 'sixteenth', lyric: 'Pro-' },
+                    { beat: 3, position: 0.5, duration: 'sixteenth', lyric: 'cla-' },
+                    { beat: 3, position: 0.75, duration: 'sixteenth', lyric: 'ma-' },
+                    { beat: 4, position: 0.25, duration: 'dotted-eighth', lyric: 'tion' },
+                    // Measure 2
+                    { beat: 5, position: 0, duration: 'sixteenth', lyric: 'se-' },
+                    { beat: 5, position: 0.5, duration: 'sixteenth', lyric: 'gre-' },
+                    { beat: 5, position: 0.75, duration: 'sixteenth', lyric: 'ga-' },
+                    { beat: 6, position: 0.25, duration: 'dotted-eighth', lyric: 'tion' },
+                    { beat: 6, position: 0.75, duration: 'sixteenth', lyric: 'dis' },
+                    { beat: 7, position: 0, duration: 'eighth', lyric: 'cri' },
+                    { beat: 7, position: 0.5, duration: 'sixteenth', lyric: 'min-' },
+                    { beat: 7, position: 0.75, duration: 'sixteenth', lyric: 'a-' },
+                    { beat: 8, position: 0.25, duration: 'dotted-eighth', lyric: 'tion' }
+                ];
+
+                // Rap part 2
+                this.rapNotes2 = [
+                    // Measure 1
+                    { beat: 1, position: 0, duration: 'sixteenth', lyric: 'Bro-' },
+                    { beat: 1, position: 0.25, duration: 'sixteenth', lyric: 'ther-' },
+                    { beat: 1, position: 0.5, duration: 'eighth', lyric: 'hood' },
+                    { beat: 2, position: 0, duration: 'sixteenth', lyric: 'neigh-' },
+                    { beat: 2, position: 0.25, duration: 'sixteenth', lyric: 'bor-' },
+                    { beat: 2, position: 0.5, duration: 'eighth', lyric: 'hood' },
+                    { beat: 3, position: 0, duration: 'sixteenth', lyric: 'live-' },
+                    { beat: 3, position: 0.25, duration: 'sixteenth', lyric: 'li-' },
+                    { beat: 3, position: 0.5, duration: 'eighth', lyric: 'hood' },
+                    { beat: 4, position: 0, duration: 'sixteenth', lyric: 'un-' },
+                    { beat: 4, position: 0.25, duration: 'sixteenth', lyric: 'der-' },
+                    { beat: 4, position: 0.5, duration: 'eighth', lyric: 'stood' },
+                    // Measure 2 (with triplets)
+                    { beat: 5, position: 0, duration: 'triplet-eighth', lyric: 'He', triplet: true },
+                    { beat: 5, position: 0.333, duration: 'triplet-eighth', lyric: 'had', triplet: true },
+                    { beat: 5, position: 0.666, duration: 'triplet-eighth', lyric: 'a', triplet: true },
+                    { beat: 6, position: 0, duration: 'quarter', lyric: 'dream' },
+                    { beat: 7, position: 0, duration: 'triplet-eighth', lyric: 'We', triplet: true },
+                    { beat: 7, position: 0.333, duration: 'triplet-eighth', lyric: 'had', triplet: true },
+                    { beat: 7, position: 0.666, duration: 'triplet-eighth', lyric: 'a', triplet: true },
+                    { beat: 8, position: 0, duration: 'quarter', lyric: 'dream' }
+                ];
+
+                // Rap part 3 (same rhythm as part 1, different lyrics)
+                this.rapNotes3 = [
+                    // Measure 1
+                    { beat: 1, position: 0, duration: 'sixteenth', lyric: '(A)re-' },
+                    { beat: 1, position: 0.5, duration: 'sixteenth', lyric: 'for-' },
+                    { beat: 1, position: 0.75, duration: 'sixteenth', lyric: 'ma-' },
+                    { beat: 2, position: 0.25, duration: 'dotted-eighth', lyric: 'tion' },
+                    { beat: 3, position: 0, duration: 'sixteenth', lyric: 'pre-' },
+                    { beat: 3, position: 0.5, duration: 'sixteenth', lyric: 'ser-' },
+                    { beat: 3, position: 0.75, duration: 'sixteenth', lyric: 'va-' },
+                    { beat: 4, position: 0.25, duration: 'dotted-eighth', lyric: 'tion' },
+                    // Measure 2
+                    { beat: 5, position: 0, duration: 'sixteenth', lyric: 'med-' },
+                    { beat: 5, position: 0.5, duration: 'sixteenth', lyric: 'i-' },
+                    { beat: 5, position: 0.75, duration: 'sixteenth', lyric: 'a-' },
+                    { beat: 6, position: 0.25, duration: 'dotted-eighth', lyric: 'tion' },
+                    { beat: 6, position: 0.75, duration: 'sixteenth', lyric: 'com-' },
+                    { beat: 7, position: 0, duration: 'eighth', lyric: 'mu-' },
+                    { beat: 7, position: 0.5, duration: 'sixteenth', lyric: 'ni-' },
+                    { beat: 7, position: 0.75, duration: 'sixteenth', lyric: 'ca-' },
+                    { beat: 8, position: 0.25, duration: 'dotted-eighth', lyric: 'tion' }
+                ];
+
+                // Rap part 4 (same rhythm as part 2, different lyrics)
+                this.rapNotes4 = [
+                    // Measure 1
+                    { beat: 1, position: 0, duration: 'sixteenth', lyric: 'ci-' },
+                    { beat: 1, position: 0.25, duration: 'sixteenth', lyric: 'vil' },
+                    { beat: 1, position: 0.5, duration: 'eighth', lyric: 'rights' },
+                    { beat: 2, position: 0, duration: 'sixteenth', lyric: 'e-' },
+                    { beat: 2, position: 0.25, duration: 'sixteenth', lyric: 'qual' },
+                    { beat: 2, position: 0.5, duration: 'eighth', lyric: 'rights' },
+                    { beat: 3, position: 0, duration: 'sixteenth', lyric: 'le-' },
+                    { beat: 3, position: 0.25, duration: 'sixteenth', lyric: 'gal' },
+                    { beat: 3, position: 0.5, duration: 'eighth', lyric: 'rights' },
+                    { beat: 4, position: 0, duration: 'sixteenth', lyric: 'hu-' },
+                    { beat: 4, position: 0.25, duration: 'sixteenth', lyric: 'man' },
+                    { beat: 4, position: 0.5, duration: 'eighth', lyric: 'rights' },
+                    // Measure 2 (same as Part 2)
+                    { beat: 5, position: 0, duration: 'triplet-eighth', lyric: 'He', triplet: true },
+                    { beat: 5, position: 0.333, duration: 'triplet-eighth', lyric: 'had', triplet: true },
+                    { beat: 5, position: 0.666, duration: 'triplet-eighth', lyric: 'a', triplet: true },
+                    { beat: 6, position: 0, duration: 'quarter', lyric: 'dream' },
+                    { beat: 7, position: 0, duration: 'triplet-eighth', lyric: 'We', triplet: true },
+                    { beat: 7, position: 0.333, duration: 'triplet-eighth', lyric: 'had', triplet: true },
+                    { beat: 7, position: 0.666, duration: 'triplet-eighth', lyric: 'a', triplet: true },
+                    { beat: 8, position: 0, duration: 'quarter', lyric: 'dream' }
+                ];
+
+                this.showRecorder = true;
+                this.showVocal = true;
+                this.showDrum = true;
+                this.showRap = true;
+                this.currentVocalPart = 1; // Default to vocal part 1
+                this.vocalAutoMode = false; // Auto-switch between parts
+                this.currentRapPart = 1; // Default to rap part 1
+                this.rapAutoMode = false; // Auto-switch between rap parts
+
+                this.initCanvas();
+                this.draw();
+            }
+
+            initCanvas() {
+                // Set canvas size
+                const containerWidth = this.canvas.parentElement.offsetWidth;
+                this.canvas.width = Math.min(containerWidth - 60, 1200);
+                // Initial height will be set by updateCanvasHeight()
+
+                // Adjust scale for smaller screens
+                if (this.canvas.width < 900) {
+                    this.scale = this.canvas.width / 1000;
+                    this.chordSpacing = 100 * this.scale;
+                } else {
+                    this.chordSpacing = 120;
+                }
+
+                // Staff positions will be calculated dynamically
+            }
+
+            draw() {
+                const ctx = this.ctx;
+
+                // Calculate dynamic staff positions based on visible parts
+                this.calculateStaffPositions();
+
+                // Update canvas height based on visible parts
+                this.updateCanvasHeight();
+
+                ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw metronome circles once at the top
+                this.drawMetronomeCircles();
+
+                // Draw measure labels once (above top staff)
+                this.drawMeasureLabels(this.staffY);
+
+                // Draw xylophone staff
+                this.drawStaffLines(this.staffY, 'xylophone');
+                this.drawBarLine(this.staffY);
+                this.drawChords();
+
+                // Draw recorder staff if enabled
+                if (this.showRecorder) {
+                    this.drawStaffLines(this.recorderStaffY, 'recorder');
+                    this.drawBarLine(this.recorderStaffY);
+                    this.drawRecorderNotes();
+                }
+
+                // Draw vocal staff if enabled
+                if (this.showVocal) {
+                    this.drawStaffLines(this.vocalStaffY, 'vocal');
+                    this.drawBarLine(this.vocalStaffY);
+                    this.drawVocalNotes();
+                }
+
+                // Draw drum staff if enabled
+                if (this.showDrum) {
+                    this.drawDrumStaff(this.drumStaffY);
+                    this.drawDrumBarLine(this.drumStaffY);
+                    this.drawDrumNotes();
+                }
+
+                // Draw rap staff if enabled
+                if (this.showRap) {
+                    this.drawRapStaff(this.rapStaffY);
+                    this.drawRapBarLine(this.rapStaffY);
+                    this.drawRapNotes();
+                }
+            }
+
+            drawMetronomeCircles() {
+                // Draw metronome circles for all 8 beats above the top staff
+                for (let beatIndex = 0; beatIndex < 8; beatIndex++) {
+                    let x = this.leftMargin + (this.chordSpacing * beatIndex) + (this.chordSpacing / 2);
+
+                    // Add spacing after bar line for measure 2 (beats 5-8)
+                    if (beatIndex >= 4) {
+                        x += 15;
+                    }
+
+                    this.drawMetronomeCircle(x, beatIndex, this.staffY);
+                }
+            }
+
+            calculateStaffPositions() {
+                const staffSpacing = 115; // 80px staff height + 35px gap
+                const drumStaffSpacing = 75; // Smaller spacing for 2-line drum staff
+                const drumAfterVocalSpacing = 155; // Extra spacing after vocal to clear lyrics
+                const startY = 60;
+                let currentY = startY;
+
+                // Xylophone is always shown (it's the main staff)
+                this.staffY = currentY;
+                currentY += staffSpacing;
+
+                // Recorder position (if visible)
+                if (this.showRecorder) {
+                    this.recorderStaffY = currentY;
+                    currentY += staffSpacing;
+                }
+
+                // Track if vocal staff was just added
+                let vocalWasAdded = false;
+
+                // Vocal position (if visible)
+                if (this.showVocal) {
+                    this.vocalStaffY = currentY;
+                    currentY += staffSpacing;
+                    vocalWasAdded = true;
+                }
+
+                // Drum position (if visible) - use extra spacing if vocal was just added
+                if (this.showDrum) {
+                    if (vocalWasAdded) {
+                        currentY = this.vocalStaffY + drumAfterVocalSpacing;
+                    }
+                    this.drumStaffY = currentY;
+                    currentY += drumStaffSpacing;
+                }
+
+                // Rap position (if visible)
+                if (this.showRap) {
+                    this.rapStaffY = currentY;
+                    currentY += drumStaffSpacing; // Same spacing as drum (single line)
+                }
+            }
+
+            updateCanvasHeight() {
+                // Calculate total height based on visible parts
+                let totalHeight = 60; // Start Y
+                totalHeight += 115; // Xylophone (always visible)
+                if (this.showRecorder) totalHeight += 115;
+                if (this.showVocal) {
+                    if (this.showDrum) {
+                        // Vocal + drum needs extra spacing for lyrics
+                        totalHeight += 155; // Vocal with extra space for drum
+                        totalHeight += 75; // Drum staff
+                    } else {
+                        // Just vocal, normal spacing
+                        totalHeight += 115;
+                    }
+                } else if (this.showDrum) {
+                    // Drum without vocal, normal spacing
+                    totalHeight += 75;
+                }
+                if (this.showRap) totalHeight += 75; // Rap staff (single line)
+                totalHeight += 60; // Bottom margin
+
+                this.canvas.height = totalHeight;
+            }
+
+            drawStaffLines(staffY, partName) {
+                const ctx = this.ctx;
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+
+                // Draw 5 lines
+                for (let i = 0; i < 5; i++) {
+                    const y = staffY + (i * this.lineSpacing);
+                    ctx.beginPath();
+                    ctx.moveTo(this.leftMargin - 20, y);
+                    ctx.lineTo(this.leftMargin + (this.chordSpacing * 8) + 40, y);
+                    ctx.stroke();
+                }
+
+                // Draw part label on the left
+                ctx.save();
+                ctx.fillStyle = '#764ba2';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.translate(20, staffY + (this.lineSpacing * 2));
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText(partName.toUpperCase(), 0, 0);
+                ctx.restore();
+            }
+
+            drawMeasureLabels(staffY) {
+                const ctx = this.ctx;
+                ctx.fillStyle = '#764ba2';
+                ctx.font = 'bold 18px Arial';
+                ctx.textAlign = 'center';
+
+                // Measure 1: Em (beats 1-4)
+                const measure1X = this.leftMargin + (this.chordSpacing * 2);
+                ctx.fillText('Em (Measure 1)', measure1X, staffY - 80);
+
+                // Measure 2: G (beats 5-8, account for bar line spacing)
+                const measure2X = this.leftMargin + (this.chordSpacing * 6) + 15;
+                ctx.fillText('G (Measure 2)', measure2X, staffY - 80);
+            }
+
+            drawBarLine(staffY) {
+                const ctx = this.ctx;
+                // Position centered in the gap between beat 4 and beat 5
+                const x = this.leftMargin + (this.chordSpacing * 4) + 7.5; // Center in 15px gap
+
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x, staffY);
+                ctx.lineTo(x, staffY + (this.lineSpacing * 4));
+                ctx.stroke();
+            }
+
+            drawChords() {
+                this.chords.forEach((chord, index) => {
+                    let x = this.leftMargin + (this.chordSpacing * index) + (this.chordSpacing / 2);
+
+                    // Add spacing after bar line for measure 2 (beats 5-8)
+                    if (index >= 4) {
+                        x += 15; // Add 15px gap for the bar line
+                    }
+
+                    this.drawChord(x, chord, index);
+                });
+            }
+
+            drawChord(x, chord, beatIndex) {
+                const ctx = this.ctx;
+
+                // Check if this beat is active
+                const isActive = playbackManager.isPlaying && playbackManager.currentBeat === beatIndex;
+
+                // Draw each note in the chord
+                chord.notes.forEach(noteName => {
+                    const notePos = this.notePositions[noteName];
+                    const y = this.staffY + (this.lineSpacing * (4 - notePos)); // 4 - notePos because y increases downward
+
+                    // Apply glow effect if active
+                    if (isActive) {
+                        ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+                        ctx.shadowBlur = 15;
+                        ctx.strokeStyle = '#ff9800';
+                        ctx.lineWidth = 3;
+                        ctx.fillStyle = '#fff9c4';
+                    } else {
+                        ctx.shadowBlur = 0;
+                        ctx.strokeStyle = '#2c3e50';
+                        ctx.lineWidth = 2;
+                        ctx.fillStyle = 'white';
+                    }
+
+                    // Draw note head (whole note - open oval)
+                    ctx.beginPath();
+                    ctx.ellipse(x, y, 10, 7, -Math.PI / 6, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.stroke();
+                });
+
+                // Reset shadow
+                ctx.shadowBlur = 0;
+            }
+
+            drawMetronomeCircle(x, beatIndex, staffY) {
+                const ctx = this.ctx;
+                const y = staffY - 60;
+                const radius = (beatIndex === 0 || beatIndex === 4) ? 18 : 14; // Larger for downbeats
+
+                // Check if this beat is active
+                const isActive = playbackManager.isPlaying && playbackManager.currentBeat === beatIndex;
+
+                // Draw circle
+                if (isActive) {
+                    ctx.fillStyle = '#ffd700';
+                    ctx.strokeStyle = '#ff9800';
+                    ctx.lineWidth = 3;
+                } else {
+                    ctx.fillStyle = '#ddd';
+                    ctx.strokeStyle = '#999';
+                    ctx.lineWidth = 2;
+                }
+
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Add glow effect for active beat
+                if (isActive) {
+                    ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+                    ctx.shadowBlur = 20;
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.shadowBlur = 0;
+                }
+            }
+
+            drawRecorderNotes() {
+                this.recorderNotes.forEach((beatData, beatIndex) => {
+                    let baseX = this.leftMargin + (this.chordSpacing * beatIndex) + (this.chordSpacing / 2);
+
+                    // Add spacing after bar line for measure 2 (beats 5-8)
+                    if (beatIndex >= 4) {
+                        baseX += 15; // Add 15px gap for the bar line
+                    }
+
+                    // Check if we need to beam notes in this beat
+                    const flaggedNotes = beatData.notes.filter(n =>
+                        n.pitch !== 'rest' && (n.duration === 'eighth' || n.duration === 'sixteenth')
+                    );
+
+                    if (flaggedNotes.length > 1) {
+                        // Beam these notes together
+                        this.drawBeamedNotes(flaggedNotes, baseX, this.recorderStaffY, beatIndex);
+                    } else {
+                        // Draw notes individually
+                        beatData.notes.forEach(note => {
+                            if (note.pitch === 'rest') {
+                                this.drawRest(baseX, this.recorderStaffY, beatIndex);
+                            } else {
+                                const position = note.position || 0;
+                                const x = baseX + (this.chordSpacing * position);
+
+                                if (note.duration === 'quarter') {
+                                    this.drawQuarterNote(x, note.pitch, this.recorderStaffY, beatIndex);
+                                } else if (note.duration === 'eighth') {
+                                    this.drawEighthNote(x, note.pitch, this.recorderStaffY, beatIndex);
+                                } else if (note.duration === 'sixteenth') {
+                                    this.drawSixteenthNote(x, note.pitch, this.recorderStaffY, beatIndex);
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+
+            drawQuarterNote(x, pitch, staffY, beatIndex) {
+                const ctx = this.ctx;
+                const notePos = this.notePositions[pitch];
+                const y = staffY + (this.lineSpacing * (4 - notePos));
+                const isActive = playbackManager.isPlaying && playbackManager.currentBeat === beatIndex;
+
+                // Apply glow if active
+                if (isActive) {
+                    ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#ff9800';
+                    ctx.lineWidth = 3;
+                    ctx.fillStyle = '#2c3e50';
+                } else {
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = '#2c3e50';
+                    ctx.lineWidth = 2.5;
+                    ctx.fillStyle = '#2c3e50';
+                }
+
+                // Draw filled note head
+                ctx.beginPath();
+                ctx.ellipse(x, y, 10, 7, -Math.PI / 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw stem
+                ctx.beginPath();
+                ctx.moveTo(x + 9, y);
+                ctx.lineTo(x + 9, y - 50);
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+            }
+
+            drawEighthNote(x, pitch, staffY, beatIndex) {
+                const ctx = this.ctx;
+                const notePos = this.notePositions[pitch];
+                const y = staffY + (this.lineSpacing * (4 - notePos));
+                const isActive = playbackManager.isPlaying && playbackManager.currentBeat === beatIndex;
+
+                if (isActive) {
+                    ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#ff9800';
+                    ctx.lineWidth = 3;
+                    ctx.fillStyle = '#2c3e50';
+                } else {
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = '#2c3e50';
+                    ctx.lineWidth = 2.5;
+                    ctx.fillStyle = '#2c3e50';
+                }
+
+                // Draw filled note head
+                ctx.beginPath();
+                ctx.ellipse(x, y, 10, 7, -Math.PI / 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw stem
+                ctx.beginPath();
+                ctx.moveTo(x + 9, y);
+                ctx.lineTo(x + 9, y - 50);
+                ctx.stroke();
+
+                // Draw flag as a straight thick line
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(x + 9, y - 50); // Start at top of stem
+                ctx.lineTo(x + 20, y - 35); // Diagonal line down and to the right
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+            }
+
+            drawSixteenthNote(x, pitch, staffY, beatIndex) {
+                const ctx = this.ctx;
+                const notePos = this.notePositions[pitch];
+                const y = staffY + (this.lineSpacing * (4 - notePos));
+                const isActive = playbackManager.isPlaying && playbackManager.currentBeat === beatIndex;
+
+                if (isActive) {
+                    ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#ff9800';
+                    ctx.lineWidth = 3;
+                    ctx.fillStyle = '#2c3e50';
+                } else {
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = '#2c3e50';
+                    ctx.lineWidth = 2.5;
+                    ctx.fillStyle = '#2c3e50';
+                }
+
+                // Draw filled note head
+                ctx.beginPath();
+                ctx.ellipse(x, y, 10, 7, -Math.PI / 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw stem
+                ctx.beginPath();
+                ctx.moveTo(x + 9, y);
+                ctx.lineTo(x + 9, y - 50);
+                ctx.stroke();
+
+                // Draw two flags as straight thick lines
+                ctx.lineWidth = 4;
+
+                // First flag (upper)
+                ctx.beginPath();
+                ctx.moveTo(x + 9, y - 50);
+                ctx.lineTo(x + 20, y - 35);
+                ctx.stroke();
+
+                // Second flag (lower)
+                ctx.beginPath();
+                ctx.moveTo(x + 9, y - 42);
+                ctx.lineTo(x + 20, y - 27);
+                ctx.stroke();
+
+                ctx.shadowBlur = 0;
+            }
+
+            drawBeamedNotes(notes, baseX, staffY, beatIndex) {
+                const ctx = this.ctx;
+                const isActive = playbackManager.isPlaying && playbackManager.currentBeat === beatIndex;
+
+                // Calculate positions and draw note heads + stems
+                const noteData = notes.map(note => {
+                    const position = note.position || 0;
+                    const x = baseX + (this.chordSpacing * position);
+                    const notePos = this.notePositions[note.pitch];
+                    const y = staffY + (this.lineSpacing * (4 - notePos));
+
+                    return { x, y, pitch: note.pitch, duration: note.duration };
+                });
+
+                // Set colors based on active state
+                if (isActive) {
+                    ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#ff9800';
+                    ctx.lineWidth = 3;
+                    ctx.fillStyle = '#2c3e50';
+                } else {
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = '#2c3e50';
+                    ctx.lineWidth = 2.5;
+                    ctx.fillStyle = '#2c3e50';
+                }
+
+                // Draw note heads and stems
+                noteData.forEach(data => {
+                    // Draw note head
+                    ctx.beginPath();
+                    ctx.ellipse(data.x, data.y, 10, 7, -Math.PI / 6, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Draw stem
+                    ctx.beginPath();
+                    ctx.moveTo(data.x + 9, data.y);
+                    ctx.lineTo(data.x + 9, data.y - 50);
+                    ctx.stroke();
+                });
+
+                // Draw beams connecting the stems
+                if (noteData.length > 0) {
+                    const firstX = noteData[0].x + 9;
+                    const lastX = noteData[noteData.length - 1].x + 9;
+                    const firstBeamY = noteData[0].y - 50;
+                    const lastBeamY = noteData[noteData.length - 1].y - 50;
+
+                    ctx.lineWidth = 4;
+
+                    // Draw primary beam (for all eighth/sixteenth notes) - angled to connect stem tops
+                    ctx.beginPath();
+                    ctx.moveTo(firstX, firstBeamY);
+                    ctx.lineTo(lastX, lastBeamY);
+                    ctx.stroke();
+
+                    // Secondary beam - only for CONSECUTIVE sixteenth notes
+                    let i = 0;
+                    while (i < notes.length) {
+                        if (notes[i].duration === 'sixteenth') {
+                            let startIdx = i;
+                            let endIdx = i;
+                            while (endIdx + 1 < notes.length && notes[endIdx + 1].duration === 'sixteenth') {
+                                endIdx++;
+                            }
+
+                            if (endIdx > startIdx) {
+                                const secondaryStartX = noteData[startIdx].x + 9;
+                                const secondaryEndX = noteData[endIdx].x + 9;
+                                const secondaryStartY = noteData[startIdx].y - 50 + 8;
+                                const secondaryEndY = noteData[endIdx].y - 50 + 8;
+                                ctx.beginPath();
+                                ctx.moveTo(secondaryStartX, secondaryStartY);
+                                ctx.lineTo(secondaryEndX, secondaryEndY);
+                                ctx.stroke();
+                            }
+
+                            i = endIdx + 1;
+                        } else {
+                            i++;
+                        }
+                    }
+                }
+
+                ctx.shadowBlur = 0;
+            }
+
+            drawRest(x, staffY, beatIndex) {
+                const ctx = this.ctx;
+                const y = staffY + (this.lineSpacing * 2); // Middle of staff
+
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = 'bold 75px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('𝄽', x, y + 20); // Quarter rest symbol (2.5x larger)
+            }
+
+            drawEighthRest(x, staffY) {
+                const ctx = this.ctx;
+                const y = staffY + (this.lineSpacing * 2); // Middle of staff
+
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = 'bold 50px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('𝄾', x, y + 10); // Eighth rest symbol
+            }
+
+            drawVocalNotes() {
+                // Select the appropriate vocal part
+                const vocalNotes = this.currentVocalPart === 1 ? this.vocalNotes1 : this.vocalNotes2;
+
+                // Group vocal notes by beat
+                const notesByBeat = {};
+                vocalNotes.forEach(note => {
+                    const beatIndex = note.beat - 1;
+                    if (!notesByBeat[beatIndex]) {
+                        notesByBeat[beatIndex] = [];
+                    }
+                    notesByBeat[beatIndex].push(note);
+                });
+
+                // Draw each beat's notes
+                Object.keys(notesByBeat).forEach(beatKey => {
+                    const beatIndex = parseInt(beatKey);
+                    const notesInBeat = notesByBeat[beatIndex];
+
+                    let baseX = this.leftMargin + (this.chordSpacing * beatIndex) + (this.chordSpacing / 2);
+
+                    // Add spacing after bar line for measure 2 (beats 5-8)
+                    if (beatIndex >= 4) {
+                        baseX += 15;
+                    }
+
+                    // Check if we need to beam notes in this beat
+                    const flaggedNotes = notesInBeat.filter(n =>
+                        n.pitch !== 'rest' && (n.duration === 'eighth' || n.duration === 'sixteenth')
+                    );
+
+                    if (flaggedNotes.length > 1) {
+                        // Beam these notes together
+                        this.drawBeamedNotesWithLyrics(flaggedNotes, baseX, this.vocalStaffY, beatIndex);
+                    } else {
+                        // Draw notes individually
+                        notesInBeat.forEach(note => {
+                            let x = baseX + (this.chordSpacing * note.position);
+
+                            if (note.pitch === 'rest') {
+                                if (note.duration === 'quarter') {
+                                    this.drawRest(x, this.vocalStaffY, beatIndex);
+                                } else if (note.duration === 'eighth') {
+                                    this.drawEighthRest(x, this.vocalStaffY);
+                                }
+                            } else {
+                                // Draw note with lyric
+                                if (note.duration === 'quarter') {
+                                    this.drawQuarterNoteWithLyric(x, note.pitch, this.vocalStaffY, beatIndex, note.lyric);
+                                } else if (note.duration === 'eighth') {
+                                    this.drawEighthNoteWithLyric(x, note.pitch, this.vocalStaffY, beatIndex, note.lyric);
+                                }
+                            }
+                        });
+                    }
+                });
+            }
+
+            drawBeamedNotesWithLyrics(notes, baseX, staffY, beatIndex) {
+                const ctx = this.ctx;
+                const isActive = playbackManager.isPlaying && playbackManager.currentBeat === beatIndex;
+
+                // Calculate positions and draw note heads + stems
+                const noteData = notes.map(note => {
+                    const position = note.position || 0;
+                    const x = baseX + (this.chordSpacing * position);
+                    const notePos = this.notePositions[note.pitch];
+                    const y = staffY + (this.lineSpacing * (4 - notePos));
+
+                    return { x, y, pitch: note.pitch, duration: note.duration, lyric: note.lyric };
+                });
+
+                // Set colors based on active state
+                if (isActive) {
+                    ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#ff9800';
+                    ctx.lineWidth = 3;
+                    ctx.fillStyle = '#2c3e50';
+                } else {
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = '#2c3e50';
+                    ctx.lineWidth = 2.5;
+                    ctx.fillStyle = '#2c3e50';
+                }
+
+                // Draw note heads and stems
+                noteData.forEach(data => {
+                    // Draw note head
+                    ctx.beginPath();
+                    ctx.ellipse(data.x, data.y, 10, 7, -Math.PI / 6, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Draw stem
+                    ctx.beginPath();
+                    ctx.moveTo(data.x + 9, data.y);
+                    ctx.lineTo(data.x + 9, data.y - 50);
+                    ctx.stroke();
+                });
+
+                // Draw beams connecting the stems
+                if (noteData.length > 0) {
+                    const firstX = noteData[0].x + 9;
+                    const lastX = noteData[noteData.length - 1].x + 9;
+                    const firstBeamY = noteData[0].y - 50;
+                    const lastBeamY = noteData[noteData.length - 1].y - 50;
+
+                    ctx.lineWidth = 4;
+
+                    // Draw primary beam (for all eighth/sixteenth notes) - angled to connect stem tops
+                    ctx.beginPath();
+                    ctx.moveTo(firstX, firstBeamY);
+                    ctx.lineTo(lastX, lastBeamY);
+                    ctx.stroke();
+
+                    // Secondary beam - only for CONSECUTIVE sixteenth notes
+                    let i = 0;
+                    while (i < notes.length) {
+                        if (notes[i].duration === 'sixteenth') {
+                            let startIdx = i;
+                            let endIdx = i;
+                            while (endIdx + 1 < notes.length && notes[endIdx + 1].duration === 'sixteenth') {
+                                endIdx++;
+                            }
+
+                            if (endIdx > startIdx) {
+                                const secondaryStartX = noteData[startIdx].x + 9;
+                                const secondaryEndX = noteData[endIdx].x + 9;
+                                const secondaryStartY = noteData[startIdx].y - 50 + 8;
+                                const secondaryEndY = noteData[endIdx].y - 50 + 8;
+                                ctx.beginPath();
+                                ctx.moveTo(secondaryStartX, secondaryStartY);
+                                ctx.lineTo(secondaryEndX, secondaryEndY);
+                                ctx.stroke();
+                            }
+
+                            i = endIdx + 1;
+                        } else {
+                            i++;
+                        }
+                    }
+                }
+
+                ctx.shadowBlur = 0;
+
+                // Draw lyrics below each note
+                noteData.forEach(data => {
+                    const lyricY = staffY + (this.lineSpacing * 4) + 40; // Reduced from 50
+                    ctx.fillStyle = '#2c3e50';
+                    ctx.font = 'bold 18px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(data.lyric, data.x, lyricY);
+                });
+            }
+
+            drawQuarterNoteWithLyric(x, pitch, staffY, beatIndex, lyric) {
+                this.drawQuarterNote(x, pitch, staffY, beatIndex);
+
+                // Draw lyric below the note
+                const ctx = this.ctx;
+                const y = staffY + (this.lineSpacing * 4) + 40; // Reduced from 50
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = 'bold 18px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(lyric, x, y);
+            }
+
+            drawEighthNoteWithLyric(x, pitch, staffY, beatIndex, lyric) {
+                this.drawEighthNote(x, pitch, staffY, beatIndex);
+
+                // Draw lyric below the note
+                const ctx = this.ctx;
+                const y = staffY + (this.lineSpacing * 4) + 40; // Reduced from 50
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = 'bold 18px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(lyric, x, y);
+            }
+
+            drawDrumStaff(staffY) {
+                const ctx = this.ctx;
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+
+                // Draw 2 lines (high and low)
+                // Bottom line (low)
+                ctx.beginPath();
+                ctx.moveTo(this.leftMargin - 20, staffY + 20);
+                ctx.lineTo(this.leftMargin + (this.chordSpacing * 8) + 40, staffY + 20);
+                ctx.stroke();
+
+                // Top line (high)
+                ctx.beginPath();
+                ctx.moveTo(this.leftMargin - 20, staffY);
+                ctx.lineTo(this.leftMargin + (this.chordSpacing * 8) + 40, staffY);
+                ctx.stroke();
+
+                // Draw part label on the left
+                ctx.save();
+                ctx.fillStyle = '#764ba2';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.translate(20, staffY + 10);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText('DRUM', 0, 0);
+                ctx.restore();
+            }
+
+            drawDrumBarLine(staffY) {
+                const ctx = this.ctx;
+                const x = this.leftMargin + (this.chordSpacing * 4) + 7.5;
+
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x, staffY);
+                ctx.lineTo(x, staffY + 20); // Only 2 lines, so bar line is shorter
+                ctx.stroke();
+            }
+
+            drawDrumNotes() {
+                this.drumNotes.forEach((note, index) => {
+                    const beatIndex = note.beat - 1;
+                    let x = this.leftMargin + (this.chordSpacing * beatIndex) + (this.chordSpacing / 2);
+                    x += (this.chordSpacing * note.position);
+
+                    // Add spacing after bar line for measure 2
+                    if (beatIndex >= 4) {
+                        x += 15;
+                    }
+
+                    // Determine Y position (high = top line, low = bottom line)
+                    const y = note.pitch === 'high' ? this.drumStaffY : this.drumStaffY + 20;
+
+                    const isActive = playbackManager.isPlaying && playbackManager.currentBeat === beatIndex;
+
+                    this.drawDrumNote(x, y, note.duration, isActive);
+                });
+            }
+
+            drawDrumNote(x, y, duration, isActive) {
+                const ctx = this.ctx;
+
+                // Set colors based on active state
+                if (isActive) {
+                    ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#ff9800';
+                    ctx.lineWidth = 3;
+                    ctx.fillStyle = '#2c3e50';
+                } else {
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = '#2c3e50';
+                    ctx.lineWidth = 2.5;
+                    ctx.fillStyle = '#2c3e50';
+                }
+
+                // Draw filled note head (ellipse)
+                ctx.beginPath();
+                ctx.ellipse(x, y, 10, 7, -Math.PI / 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw stem
+                ctx.beginPath();
+                ctx.moveTo(x + 9, y);
+                ctx.lineTo(x + 9, y - 40);
+                ctx.stroke();
+
+                // Draw flag for eighth notes
+                if (duration === 'eighth') {
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(x + 9, y - 40);
+                    ctx.lineTo(x + 20, y - 25);
+                    ctx.stroke();
+                }
+
+                ctx.shadowBlur = 0;
+            }
+
+            drawRapStaff(staffY) {
+                const ctx = this.ctx;
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+
+                // Draw single line for rap
+                ctx.beginPath();
+                ctx.moveTo(this.leftMargin - 20, staffY);
+                ctx.lineTo(this.leftMargin + (this.chordSpacing * 8) + 40, staffY);
+                ctx.stroke();
+
+                // Draw part label on the left
+                ctx.save();
+                ctx.fillStyle = '#764ba2';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.translate(20, staffY);
+                ctx.rotate(-Math.PI / 2);
+                ctx.fillText('RAP', 0, 0);
+                ctx.restore();
+            }
+
+            drawRapBarLine(staffY) {
+                const ctx = this.ctx;
+                const x = this.leftMargin + (this.chordSpacing * 4) + 7.5;
+
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(x, staffY - 10);
+                ctx.lineTo(x, staffY + 10);
+                ctx.stroke();
+            }
+
+            drawRapNotes() {
+                // Select the appropriate rap part
+                const rapNotes = this.currentRapPart === 1 ? this.rapNotes1 :
+                                 this.currentRapPart === 2 ? this.rapNotes2 :
+                                 this.currentRapPart === 3 ? this.rapNotes3 :
+                                 this.rapNotes4;
+
+                if (rapNotes.length === 0) return; // No notes for this part yet
+
+                // Group notes by beat for beaming
+                const notesByBeat = {};
+                rapNotes.forEach(note => {
+                    const beatIndex = note.beat - 1;
+                    if (!notesByBeat[beatIndex]) {
+                        notesByBeat[beatIndex] = [];
+                    }
+                    notesByBeat[beatIndex].push(note);
+                });
+
+                // Draw each beat's notes
+                Object.keys(notesByBeat).forEach(beatKey => {
+                    const beatIndex = parseInt(beatKey);
+                    const notesInBeat = notesByBeat[beatIndex];
+
+                    let baseX = this.leftMargin + (this.chordSpacing * beatIndex) + (this.chordSpacing / 2);
+
+                    if (beatIndex >= 4) {
+                        baseX += 15; // Add spacing after bar line
+                    }
+
+                    // Check if we need to beam notes in this beat
+                    const flaggedNotes = notesInBeat.filter(n =>
+                        n.duration === 'eighth' || n.duration === 'sixteenth' ||
+                        n.duration === 'dotted-eighth' || n.duration === 'triplet-eighth'
+                    );
+
+                    if (flaggedNotes.length > 1) {
+                        // Check if this is a triplet group
+                        const isTriplet = flaggedNotes.every(n => n.triplet);
+                        // Beam these notes together
+                        this.drawBeamedRapNotes(flaggedNotes, baseX, this.rapStaffY, beatIndex, isTriplet);
+                    } else {
+                        // Draw notes individually
+                        notesInBeat.forEach(note => {
+                            let x = baseX + (this.chordSpacing * note.position);
+                            this.drawRapNote(x, this.rapStaffY, note.duration, note.lyric, beatIndex);
+                        });
+                    }
+                });
+            }
+
+            drawRapNote(x, y, duration, lyric, beatIndex) {
+                const ctx = this.ctx;
+                const isActive = playbackManager.isPlaying && playbackManager.currentBeat === beatIndex;
+
+                // Set colors based on active state
+                if (isActive) {
+                    ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#ff9800';
+                    ctx.lineWidth = 3;
+                    ctx.fillStyle = '#2c3e50';
+                } else {
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = '#2c3e50';
+                    ctx.lineWidth = 2.5;
+                    ctx.fillStyle = '#2c3e50';
+                }
+
+                // Draw filled note head
+                ctx.beginPath();
+                ctx.ellipse(x, y, 10, 7, -Math.PI / 6, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Draw stem
+                ctx.beginPath();
+                ctx.moveTo(x + 9, y);
+                ctx.lineTo(x + 9, y - 40);
+                ctx.stroke();
+
+                // Draw flags/dots
+                if (duration === 'eighth' || duration === 'triplet-eighth') {
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(x + 9, y - 40);
+                    ctx.lineTo(x + 20, y - 25);
+                    ctx.stroke();
+                } else if (duration === 'sixteenth') {
+                    ctx.lineWidth = 4;
+                    // First flag
+                    ctx.beginPath();
+                    ctx.moveTo(x + 9, y - 40);
+                    ctx.lineTo(x + 20, y - 25);
+                    ctx.stroke();
+                    // Second flag
+                    ctx.beginPath();
+                    ctx.moveTo(x + 9, y - 32);
+                    ctx.lineTo(x + 20, y - 17);
+                    ctx.stroke();
+                } else if (duration === 'dotted-eighth') {
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(x + 9, y - 40);
+                    ctx.lineTo(x + 20, y - 25);
+                    ctx.stroke();
+                    // Draw dot
+                    ctx.fillStyle = isActive ? '#ff9800' : '#2c3e50';
+                    ctx.beginPath();
+                    ctx.arc(x + 15, y, 3, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                // Quarter notes don't need flags (no stem extension beyond basic stem)
+
+                ctx.shadowBlur = 0;
+
+                // Draw lyric below the note
+                const lyricY = y + 40;
+                ctx.fillStyle = '#2c3e50';
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(lyric, x, lyricY);
+            }
+
+            drawBeamedRapNotes(notes, baseX, staffY, beatIndex, isTriplet = false) {
+                const ctx = this.ctx;
+                const isActive = playbackManager.isPlaying && playbackManager.currentBeat === beatIndex;
+
+                // Calculate positions and draw note heads + stems
+                const noteData = notes.map(note => {
+                    const position = note.position || 0;
+                    const x = baseX + (this.chordSpacing * position);
+                    return { x, y: staffY, duration: note.duration, lyric: note.lyric };
+                });
+
+                // Set colors
+                if (isActive) {
+                    ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#ff9800';
+                    ctx.lineWidth = 3;
+                    ctx.fillStyle = '#2c3e50';
+                } else {
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = '#2c3e50';
+                    ctx.lineWidth = 2.5;
+                    ctx.fillStyle = '#2c3e50';
+                }
+
+                // Draw note heads and stems
+                noteData.forEach(data => {
+                    ctx.beginPath();
+                    ctx.ellipse(data.x, data.y, 10, 7, -Math.PI / 6, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.beginPath();
+                    ctx.moveTo(data.x + 9, data.y);
+                    ctx.lineTo(data.x + 9, data.y - 40);
+                    ctx.stroke();
+                });
+
+                // Draw beams
+                if (noteData.length > 0) {
+                    const firstX = noteData[0].x + 9;
+                    const lastX = noteData[noteData.length - 1].x + 9;
+                    const beamY = staffY - 40;
+
+                    ctx.lineWidth = 4;
+
+                    // Primary beam (connects all notes)
+                    ctx.beginPath();
+                    ctx.moveTo(firstX, beamY);
+                    ctx.lineTo(lastX, beamY);
+                    ctx.stroke();
+
+                    // Secondary beam - only for CONSECUTIVE sixteenth notes
+                    let i = 0;
+                    while (i < notes.length) {
+                        if (notes[i].duration === 'sixteenth') {
+                            // Found a sixteenth note, check for consecutive sixteenths
+                            let startIdx = i;
+                            let endIdx = i;
+                            while (endIdx + 1 < notes.length && notes[endIdx + 1].duration === 'sixteenth') {
+                                endIdx++;
+                            }
+
+                            // Draw secondary beam only if we have 2+ consecutive sixteenths
+                            if (endIdx > startIdx) {
+                                const secondaryStartX = noteData[startIdx].x + 9;
+                                const secondaryEndX = noteData[endIdx].x + 9;
+                                ctx.beginPath();
+                                ctx.moveTo(secondaryStartX, beamY + 8);
+                                ctx.lineTo(secondaryEndX, beamY + 8);
+                                ctx.stroke();
+                            }
+
+                            i = endIdx + 1;
+                        } else {
+                            i++;
+                        }
+                    }
+                }
+
+                ctx.shadowBlur = 0;
+
+                // Draw lyrics
+                noteData.forEach(data => {
+                    const lyricY = staffY + 40;
+                    ctx.fillStyle = '#2c3e50';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(data.lyric, data.x, lyricY);
+                });
+
+                // Draw triplet bracket if this is a triplet group
+                if (isTriplet && noteData.length > 0) {
+                    const firstX = noteData[0].x;
+                    const lastX = noteData[noteData.length - 1].x;
+                    const bracketY = staffY - 55;
+
+                    ctx.strokeStyle = isActive ? '#ff9800' : '#2c3e50';
+                    ctx.lineWidth = 1.5;
+
+                    // Draw bracket
+                    ctx.beginPath();
+                    ctx.moveTo(firstX, bracketY + 5);
+                    ctx.lineTo(firstX, bracketY);
+                    ctx.lineTo(lastX, bracketY);
+                    ctx.lineTo(lastX, bracketY + 5);
+                    ctx.stroke();
+
+                    // Draw "3" in the middle
+                    const midX = (firstX + lastX) / 2;
+                    ctx.fillStyle = isActive ? '#ff9800' : '#2c3e50';
+                    ctx.font = 'bold 14px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('3', midX, bracketY - 3);
+                }
+            }
+
+            updateBeatDisplay() {
+                // Redraw only the metronome circles
+                this.draw();
+            }
+        }
+
+        // Global staff renderer instance
+        let staffRenderer = null;
+
+        // ============ CHECKLIST MANAGEMENT ============
+        // Define the checklist items with week associations
+        const checklistItems = [
+            { id: 'listened', label: 'Listened to the song', week: 'Week 1' },
+            { id: 'chords', label: 'Learned Em & G chords (xylophone)', week: 'Week 1' },
+            { id: 'singing', label: 'Learned simple singing parts', week: 'Week 1' },
+            { id: 'bodyPercussion', label: 'Added body percussion (high/low)', week: 'Week 2' },
+            { id: 'rap', label: 'Learned the rap (verses)', week: 'Week 3' },
+            { id: 'recorder', label: 'Added recorder parts', week: 'Week 4' },
+            { id: 'performance', label: 'Performance ready!', week: 'Weeks 5-6' }
+        ];
+
+        // Module state
+        let moduleState = {
+            checklist: {}
+        };
+
+        let currentContext = null;
+
+        // Initialize checklist state
+        checklistItems.forEach(item => {
+            moduleState.checklist[item.id] = false;
+        });
+
+        // TaskModule interface
+        window.TaskModule = {
+            init: function(context) {
+                currentContext = context;
+
+                // Load existing response if available
+                if (context.existingResponse) {
+                    try {
+                        const savedState = JSON.parse(context.existingResponse);
+                        moduleState = savedState;
+                    } catch (e) {
+                        console.error('Error parsing existing response:', e);
+                    }
+                }
+
+                // Render the checklist
+                renderChecklist();
+            },
+
+            getResponse: function() {
+                return JSON.stringify(moduleState);
+            },
+
+            isComplete: function() {
+                // Always complete - we're tracking progress, not completion
+                return true;
+            },
+
+            reset: function() {
+                // Reset all checkboxes
+                checklistItems.forEach(item => {
+                    moduleState.checklist[item.id] = false;
+                });
+                renderChecklist();
+                notifyParent();
+            }
+        };
+
+        function renderChecklist() {
+            const grid = document.getElementById('checklistGrid');
+            grid.innerHTML = '';
+
+            checklistItems.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'checklist-item' + (moduleState.checklist[item.id] ? ' checked' : '');
+
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = 'check_' + item.id;
+                checkbox.checked = moduleState.checklist[item.id];
+                checkbox.addEventListener('change', (e) => {
+                    moduleState.checklist[item.id] = e.target.checked;
+                    div.classList.toggle('checked', e.target.checked);
+                    notifyParent();
+                    showSaveIndicator();
+                });
+
+                const label = document.createElement('label');
+                label.htmlFor = 'check_' + item.id;
+                label.textContent = item.label;
+
+                const badge = document.createElement('span');
+                badge.className = 'week-badge';
+                badge.textContent = item.week;
+
+                div.appendChild(checkbox);
+                div.appendChild(label);
+                div.appendChild(badge);
+
+                // Make entire item clickable
+                div.addEventListener('click', (e) => {
+                    if (e.target !== checkbox) {
+                        checkbox.click();
+                    }
+                });
+
+                grid.appendChild(div);
+            });
+        }
+
+        function notifyParent() {
+            window.parent.postMessage({
+                type: 'taskmodule:response',
+                value: JSON.stringify(moduleState),
+                isComplete: true
+            }, '*');
+        }
+
+        function showSaveIndicator() {
+            const indicator = document.getElementById('saveIndicator');
+            indicator.classList.add('show');
+            setTimeout(() => {
+                indicator.classList.remove('show');
+            }, 2000);
+        }
+
+        function toggleChecklist() {
+            const checklist = document.getElementById('progressChecklist');
+            checklist.classList.toggle('show');
+        }
+
+        function toggleMetronomeDropdown() {
+            const dropdown = document.getElementById('metronomeDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        function setBPM(bpm) {
+            if (playbackManager) {
+                playbackManager.bpm = bpm;
+                updateMetronomeButtonText();
+
+                // If metronome is playing, restart with new BPM
+                if (playbackManager.isPlaying) {
+                    playbackManager.stop();
+                    setTimeout(() => playbackManager.start(), 100);
+                }
+            }
+        }
+
+        function toggleMetronomeClicks() {
+            playbackManager.toggleMetronome();
+            updateMetronomeButtonText();
+        }
+
+        function updateMetronomeButtonText() {
+            const btn = document.getElementById('metronomeBtn');
+            const icon = playbackManager.metronomeEnabled ? '🔊' : '🔇';
+            btn.textContent = `${icon} ${playbackManager.bpm} BPM`;
+        }
+
+        function togglePlayback() {
+            // Don't allow manual playback control during practice performance
+            if (performanceManager.isActive) {
+                return;
+            }
+
+            const playBtn = document.getElementById('playBtn');
+
+            if (playbackManager.isPlaying) {
+                playbackManager.stop();
+                playBtn.textContent = '▶️ PLAY';
+                playBtn.classList.remove('playing');
+            } else {
+                playbackManager.start();
+                playBtn.textContent = '⏹️ STOP';
+                playBtn.classList.add('playing');
+            }
+        }
+
+        function togglePracticePerformance() {
+            if (performanceManager.isActive) {
+                performanceManager.stop();
+            } else {
+                performanceManager.start();
+            }
+        }
+
+        function toggleStaffDisplay() {
+            const staffDisplay = document.getElementById('staffDisplay');
+            const checkbox = document.getElementById('xylophoneCheckbox');
+            staffDisplay.classList.toggle('hidden');
+            // Keep checkbox in sync
+            checkbox.checked = !staffDisplay.classList.contains('hidden');
+        }
+
+        function togglePartsDropdown() {
+            const dropdown = document.getElementById('partsDropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        function toggleXylophone() {
+            const staffDisplay = document.getElementById('staffDisplay');
+            const checkbox = document.getElementById('xylophoneCheckbox');
+
+            if (checkbox.checked) {
+                staffDisplay.classList.remove('hidden');
+            } else {
+                staffDisplay.classList.add('hidden');
+            }
+        }
+
+        function toggleRecorder() {
+            const checkbox = document.getElementById('recorderCheckbox');
+            if (staffRenderer) {
+                staffRenderer.showRecorder = checkbox.checked;
+                staffRenderer.draw();
+            }
+        }
+
+        function toggleVocal() {
+            const checkbox = document.getElementById('vocalCheckbox');
+            if (staffRenderer) {
+                staffRenderer.showVocal = checkbox.checked;
+                staffRenderer.draw();
+            }
+        }
+
+        function switchToVocalPart1() {
+            if (staffRenderer) {
+                staffRenderer.vocalAutoMode = false;
+                staffRenderer.currentVocalPart = 1;
+                staffRenderer.draw();
+            }
+        }
+
+        function switchToVocalPart2() {
+            if (staffRenderer) {
+                staffRenderer.vocalAutoMode = false;
+                staffRenderer.currentVocalPart = 2;
+                staffRenderer.draw();
+            }
+        }
+
+        function switchToVocalAuto() {
+            if (staffRenderer) {
+                staffRenderer.vocalAutoMode = true;
+                // Start with part 1 when enabling auto mode
+                staffRenderer.currentVocalPart = 1;
+                staffRenderer.draw();
+            }
+        }
+
+        function toggleDrum() {
+            const checkbox = document.getElementById('drumCheckbox');
+            if (staffRenderer) {
+                staffRenderer.showDrum = checkbox.checked;
+                staffRenderer.draw();
+            }
+        }
+
+        function toggleRap() {
+            const checkbox = document.getElementById('rapCheckbox');
+            if (staffRenderer) {
+                staffRenderer.showRap = checkbox.checked;
+                staffRenderer.draw();
+            }
+        }
+
+        function switchToRapPart1() {
+            if (staffRenderer) {
+                staffRenderer.rapAutoMode = false;
+                staffRenderer.currentRapPart = 1;
+                staffRenderer.draw();
+            }
+        }
+
+        function switchToRapPart2() {
+            if (staffRenderer) {
+                staffRenderer.rapAutoMode = false;
+                staffRenderer.currentRapPart = 2;
+                staffRenderer.draw();
+            }
+        }
+
+        function switchToRapPart3() {
+            if (staffRenderer) {
+                staffRenderer.rapAutoMode = false;
+                staffRenderer.currentRapPart = 3;
+                staffRenderer.draw();
+            }
+        }
+
+        function switchToRapPart4() {
+            if (staffRenderer) {
+                staffRenderer.rapAutoMode = false;
+                staffRenderer.currentRapPart = 4;
+                staffRenderer.draw();
+            }
+        }
+
+        function switchToRapAuto() {
+            if (staffRenderer) {
+                staffRenderer.rapAutoMode = true;
+                // Start with part 1 when enabling auto mode
+                staffRenderer.currentRapPart = 1;
+                staffRenderer.draw();
+            }
+        }
+
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function(event) {
+            // Close parts dropdown
+            const partsDropdown = document.getElementById('partsDropdown');
+            const partsDropdownContainers = document.querySelectorAll('.parts-dropdown');
+
+            let clickedInsidePartsDropdown = false;
+            partsDropdownContainers.forEach(container => {
+                if (container.contains(event.target) && container.querySelector('#partsDropdown')) {
+                    clickedInsidePartsDropdown = true;
+                }
+            });
+
+            if (!clickedInsidePartsDropdown) {
+                partsDropdown.classList.remove('show');
+            }
+
+            // Close metronome dropdown
+            const metronomeDropdown = document.getElementById('metronomeDropdown');
+            const metronomeDropdownContainer = metronomeDropdown?.parentElement;
+
+            if (metronomeDropdownContainer && !metronomeDropdownContainer.contains(event.target)) {
+                metronomeDropdown.classList.remove('show');
+            }
+        });
+
+        // Set up toggle buttons
+        document.getElementById('toggleChecklistBtn').addEventListener('click', toggleChecklist);
+        document.getElementById('metronomeBtn').addEventListener('click', toggleMetronomeDropdown);
+        document.getElementById('playBtn').addEventListener('click', togglePlayback);
+        document.getElementById('practiceBtn').addEventListener('click', togglePracticePerformance);
+
+        // BPM selection
+        document.getElementById('bpm60Radio').addEventListener('change', () => setBPM(60));
+        document.getElementById('bpm70Radio').addEventListener('change', () => setBPM(70));
+        document.getElementById('bpm75Radio').addEventListener('change', () => setBPM(75));
+        document.getElementById('bpm80Radio').addEventListener('change', () => setBPM(80));
+        document.getElementById('muteCheckbox').addEventListener('change', toggleMetronomeClicks);
+        document.getElementById('staffLabel').addEventListener('click', toggleStaffDisplay);
+        document.getElementById('partsBtn').addEventListener('click', togglePartsDropdown);
+        document.getElementById('xylophoneCheckbox').addEventListener('change', toggleXylophone);
+        document.getElementById('recorderCheckbox').addEventListener('change', toggleRecorder);
+        document.getElementById('vocalCheckbox').addEventListener('change', toggleVocal);
+        document.getElementById('drumCheckbox').addEventListener('change', toggleDrum);
+        document.getElementById('rapCheckbox').addEventListener('change', toggleRap);
+        document.getElementById('vocalPart1Radio').addEventListener('change', switchToVocalPart1);
+        document.getElementById('vocalPart2Radio').addEventListener('change', switchToVocalPart2);
+        document.getElementById('vocalAutoRadio').addEventListener('change', switchToVocalAuto);
+        document.getElementById('rapPart1Radio').addEventListener('change', switchToRapPart1);
+        document.getElementById('rapPart2Radio').addEventListener('change', switchToRapPart2);
+        document.getElementById('rapPart3Radio').addEventListener('change', switchToRapPart3);
+        document.getElementById('rapPart4Radio').addEventListener('change', switchToRapPart4);
+        document.getElementById('rapAutoRadio').addEventListener('change', switchToRapAuto);
+
+        // Listen for initialization
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'taskmodule:init') {
+                window.TaskModule.init(event.data.context);
+            }
+        });
+
+        // Initialize staff renderer
+        window.addEventListener('load', function() {
+            staffRenderer = new StaffRenderer('staffCanvas');
+        });
+
+        // Auto-initialize if context is already available (for testing)
+        if (window.parent !== window) {
+            // We're in an iframe, wait for init message
+        } else {
+            // Standalone testing mode
+            window.TaskModule.init({
+                studentId: 'test',
+                taskId: 'martins-dream',
+                grade: '1',
+                studentName: 'Test Class',
+                question: 'Martin\'s Dream Progress',
+                existingResponse: ''
+            });
+        }
+    </script>
+</body>
+</html>
