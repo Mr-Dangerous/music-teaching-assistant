@@ -1813,20 +1813,40 @@
                 const ctx = this.ctx;
                 const y = staffY + (this.lineSpacing * 2); // Middle of staff
 
-                ctx.fillStyle = '#2c3e50';
-                ctx.font = 'bold 75px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('𝄽', x, y + 20); // Quarter rest symbol (2.5x larger)
+                // Draw a "Z" shape for quarter rest
+                ctx.strokeStyle = '#2c3e50';
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                ctx.beginPath();
+                // Top horizontal line
+                ctx.moveTo(x - 8, y - 15);
+                ctx.lineTo(x + 8, y - 15);
+                // Diagonal
+                ctx.lineTo(x - 8, y + 15);
+                // Bottom horizontal line
+                ctx.lineTo(x + 8, y + 15);
+                ctx.stroke();
             }
 
             drawEighthRest(x, staffY) {
                 const ctx = this.ctx;
                 const y = staffY + (this.lineSpacing * 2); // Middle of staff
 
-                ctx.fillStyle = '#2c3e50';
-                ctx.font = 'bold 50px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillText('𝄾', x, y + 10); // Eighth rest symbol
+                // Draw a "7" shape for eighth rest
+                ctx.strokeStyle = '#2c3e50';
+                ctx.lineWidth = 3;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+
+                ctx.beginPath();
+                // Top horizontal line
+                ctx.moveTo(x - 8, y - 10);
+                ctx.lineTo(x + 8, y - 10);
+                // Diagonal down
+                ctx.lineTo(x - 5, y + 10);
+                ctx.stroke();
             }
 
             drawVocalNotes() {
