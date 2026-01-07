@@ -1,5 +1,5 @@
 {
-  "version": "1.4.4",
+  "version": "1.4.5",
   "lastUpdated": "2026-01-07",
-  "description": "Hide footer banner to maximize screen space for smartboard use"
+  "description": "Fix dance dropdown timing with iframe message delay and logging"
 }

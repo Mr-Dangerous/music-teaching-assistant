@@ -612,9 +612,11 @@
 
         // Listen for messages from parent app
         window.addEventListener('message', function (event) {
+            console.log('Dance viewer received message:', event.data);
             if (event.data && event.data.type === 'taskmodule:init') {
                 window.TaskModule.init(event.data.context);
             } else if (event.data && event.data.type === 'danceList') {
+                console.log('Received dance list:', event.data.dances);
                 // Populate the dance selector with available dances
                 window.TaskModule.populateDanceSelector(event.data.dances);
             }
