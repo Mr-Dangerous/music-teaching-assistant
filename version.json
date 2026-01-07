@@ -1,5 +1,5 @@
 {
-  "version": "1.3.3",
-  "lastUpdated": "2025-01-05",
-  "description": "Fixed drum eighth note beaming and vocal part timing in Practice Performance Mode"
+  "version": "1.4.1",
+  "lastUpdated": "2026-01-07",
+  "description": "Added dance viewer module with dropdown selector for folk dance beat charts and audio playback"
 }

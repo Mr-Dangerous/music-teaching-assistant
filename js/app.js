@@ -2481,6 +2481,135 @@ class TeachingAssistantApp {
       console.error('Error getting boomwhacker songs:', error);
     }
   }
+
+  /**
+   * Load a dance configuration by ID from dances.csv
+   */
+  async loadDance(danceId) {
+    try {
+      const csvPath = 'data/dances.csv';
+      const response = await fetch(csvPath);
+      const csvText = await response.text();
+      const lines = csvText.trim().split('\n');
+
+      // Find the dance by ID
+      for (let i = 1; i < lines.length; i++) {
+        const parsed = this.csvHandler.parseCSVLines(lines[i]);
+        if (parsed[0] && parsed[0][0] === danceId) {
+          // Return the JSON string (already unescaped by CSV parser)
+          return parsed[0][1];
+        }
+      }
+
+      throw new Error(`Dance "${danceId}" not found in dances.csv`);
+    } catch (error) {
+      console.error('[loadDance] Error:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Save a dance configuration (optional, for future dance builder tool)
+   */
+  async saveDance(danceId, danceJson) {
+    try {
+      const csvPath = 'data/dances.csv';
+      let csvText;
+      let lines;
+
+      try {
+        const response = await fetch(csvPath);
+        csvText = await response.text();
+        lines = csvText.trim().split('\n');
+      } catch (e) {
+        // File doesn't exist yet, create header
+        lines = ['dance_id,dance_json'];
+      }
+
+      // Check if dance already exists
+      const existingIndex = lines.findIndex((line, i) => {
+        if (i === 0) return false; // Skip header
+        const parts = line.split(',');
+        return parts[0] === danceId;
+      });
+
+      const escapedJson = danceJson.replace(/"/g, '""'); // Escape quotes for CSV
+      const newLine = `${danceId},"${escapedJson}"`;
+
+      if (existingIndex > 0) {
+        lines[existingIndex] = newLine; // Update existing
+      } else {
+        lines.push(newLine); // Add new
+      }
+
+      const newCsv = lines.join('\n');
+
+      // Save using fileManager
+      if (this.fileManager && this.fileManager.saveFileToFolder) {
+        const blob = new Blob([newCsv], { type: 'text/csv' });
+        await this.fileManager.saveFileToFolder('dances.csv', blob);
+        this.showNotification(`Dance "${danceId}" saved successfully!`, 'success');
+      } else {
+        // Fallback: download file
+        const blob = new Blob([newCsv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'dances.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+        this.showNotification(`Dance "${danceId}" saved! Replace the CSV file in data/ folder.`, 'warning');
+      }
+    } catch (error) {
+      console.error('[saveDance] Error:', error);
+      this.showNotification(`Error saving dance: ${error.message}`, 'error');
+    }
+  }
+
+  /**
+   * Get list of all available dances
+   */
+  async getDances() {
+    try {
+      const csvPath = 'data/dances.csv';
+      const response = await fetch(csvPath);
+      const csvText = await response.text();
+      const lines = csvText.trim().split('\n');
+
+      const dances = [];
+      for (let i = 1; i < lines.length; i++) {
+        if (lines[i].trim() === '') continue;
+        const parsed = this.csvHandler.parseCSVLines(lines[i]);
+        if (parsed[0] && parsed[0][0]) {
+          const danceId = parsed[0][0];
+          const danceJson = parsed[0][1];
+          try {
+            const danceData = JSON.parse(danceJson);
+            dances.push({
+              id: danceId,
+              title: danceData.title || danceId
+            });
+          } catch (e) {
+            console.warn(`Could not parse dance ${danceId}:`, e);
+          }
+        }
+      }
+
+      // Send to module
+      const iframe = document.getElementById('task-module-frame');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+          type: 'danceList',
+          dances: dances
+        }, '*');
+      }
+
+      return dances;
+    } catch (error) {
+      console.error('Error getting dances:', error);
+      return [];
+    }
+  }
 }
 
 // Initialize app when page loads
