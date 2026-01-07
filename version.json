@@ -1,5 +1,5 @@
 {
-  "version": "1.3.2",
+  "version": "1.3.3",
   "lastUpdated": "2025-01-05",
-  "description": "Fixed rest symbols to use canvas-drawn shapes (Z for quarter rest, 7 for eighth rest) instead of Unicode characters"
+  "description": "Fixed drum eighth note beaming and vocal part timing in Practice Performance Mode"
 }

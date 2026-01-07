@@ -907,7 +907,9 @@
 
                     if (currentSchedule && nextSchedule && staffRenderer) {
                         // Pre-switch vocal part if it changes on next measure
-                        if (currentSchedule.vocalPart && nextSchedule.vocalPart &&
+                        // ONLY if vocals are enabled in BOTH current and next measures
+                        if (currentSchedule.vocal && nextSchedule.vocal &&
+                            currentSchedule.vocalPart && nextSchedule.vocalPart &&
                             currentSchedule.vocalPart !== nextSchedule.vocalPart) {
                             staffRenderer.currentVocalPart = nextSchedule.vocalPart;
                             // Update radio button
@@ -920,7 +922,9 @@
                         }
 
                         // Pre-switch rap part if it changes on next measure
-                        if (currentSchedule.rapPart && nextSchedule.rapPart &&
+                        // ONLY if rap is enabled in BOTH current and next measures
+                        if (currentSchedule.rap && nextSchedule.rap &&
+                            currentSchedule.rapPart && nextSchedule.rapPart &&
                             currentSchedule.rapPart !== nextSchedule.rapPart) {
                             staffRenderer.currentRapPart = nextSchedule.rapPart;
                             // Update radio button
@@ -2070,23 +2074,105 @@
             }
 
             drawDrumNotes() {
-                this.drumNotes.forEach((note, index) => {
-                    const beatIndex = note.beat - 1;
-                    let x = this.leftMargin + (this.chordSpacing * beatIndex) + (this.chordSpacing / 2);
-                    x += (this.chordSpacing * note.position);
-
-                    // Add spacing after bar line for measure 2
-                    if (beatIndex >= 4) {
-                        x += 15;
+                // Group drum notes by beat
+                const notesByBeat = {};
+                this.drumNotes.forEach(note => {
+                    const beatKey = note.beat;
+                    if (!notesByBeat[beatKey]) {
+                        notesByBeat[beatKey] = [];
                     }
+                    notesByBeat[beatKey].push(note);
+                });
 
-                    // Determine Y position (high = top line, low = bottom line)
-                    const y = note.pitch === 'high' ? this.drumStaffY : this.drumStaffY + 20;
-
+                // Draw notes, beaming eighth notes within the same beat
+                Object.keys(notesByBeat).forEach(beatKey => {
+                    const notes = notesByBeat[beatKey];
+                    const beatIndex = parseInt(beatKey) - 1;
                     const isActive = playbackManager.isPlaying && playbackManager.currentBeat === beatIndex;
 
-                    this.drawDrumNote(x, y, note.duration, isActive);
+                    // Check if we should beam (multiple eighth notes in same beat)
+                    const eighthNotes = notes.filter(n => n.duration === 'eighth');
+
+                    if (eighthNotes.length > 1) {
+                        // Draw beamed eighth notes
+                        this.drawBeamedDrumNotes(notes, beatIndex, isActive);
+                    } else {
+                        // Draw individual notes
+                        notes.forEach(note => {
+                            let x = this.leftMargin + (this.chordSpacing * beatIndex) + (this.chordSpacing / 2);
+                            x += (this.chordSpacing * note.position);
+
+                            // Add spacing after bar line for measure 2
+                            if (beatIndex >= 4) {
+                                x += 15;
+                            }
+
+                            const y = note.pitch === 'high' ? this.drumStaffY : this.drumStaffY + 20;
+                            this.drawDrumNote(x, y, note.duration, isActive);
+                        });
+                    }
                 });
+            }
+
+            drawBeamedDrumNotes(notes, beatIndex, isActive) {
+                const ctx = this.ctx;
+                let baseX = this.leftMargin + (this.chordSpacing * beatIndex) + (this.chordSpacing / 2);
+
+                // Add spacing after bar line for measure 2
+                if (beatIndex >= 4) {
+                    baseX += 15;
+                }
+
+                // Set colors
+                if (isActive) {
+                    ctx.shadowColor = 'rgba(255, 215, 0, 0.8)';
+                    ctx.shadowBlur = 15;
+                    ctx.strokeStyle = '#ff9800';
+                    ctx.fillStyle = '#2c3e50';
+                } else {
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = '#2c3e50';
+                    ctx.fillStyle = '#2c3e50';
+                }
+
+                // Store note positions for beaming
+                const noteData = [];
+
+                // Draw note heads and stems
+                notes.forEach(note => {
+                    const x = baseX + (this.chordSpacing * note.position);
+                    const y = note.pitch === 'high' ? this.drumStaffY : this.drumStaffY + 20;
+
+                    // Draw note head
+                    ctx.beginPath();
+                    ctx.ellipse(x, y, 10, 7, -Math.PI / 6, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Draw stem (upward)
+                    ctx.lineWidth = 2.5;
+                    ctx.beginPath();
+                    ctx.moveTo(x + 9, y);
+                    ctx.lineTo(x + 9, y - 40);
+                    ctx.stroke();
+
+                    noteData.push({ x: x, y: y, duration: note.duration });
+                });
+
+                // Draw beam connecting eighth notes
+                if (noteData.length > 1) {
+                    const firstX = noteData[0].x + 9;
+                    const lastX = noteData[noteData.length - 1].x + 9;
+                    const firstBeamY = noteData[0].y - 40;
+                    const lastBeamY = noteData[noteData.length - 1].y - 40;
+
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(firstX, firstBeamY);
+                    ctx.lineTo(lastX, lastBeamY);
+                    ctx.stroke();
+                }
+
+                ctx.shadowBlur = 0;
             }
 
             drawDrumNote(x, y, duration, isActive) {
