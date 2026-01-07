@@ -351,8 +351,12 @@
                 console.log('Dance Viewer init with context:', context);
 
                 try {
-                    // Request the list of available dances from parent app
-                    await window.parent.app.getDances();
+                    // Get the list of available dances from parent app
+                    const dances = await window.parent.app.getDances();
+                    console.log('Received dances from parent:', dances);
+
+                    // Populate the dropdown with the dances
+                    this.populateDanceSelector(dances);
 
                     // Set up the dance selector change handler
                     const selector = document.getElementById('danceSelector');
@@ -612,13 +616,8 @@
 
         // Listen for messages from parent app
         window.addEventListener('message', function (event) {
-            console.log('Dance viewer received message:', event.data);
             if (event.data && event.data.type === 'taskmodule:init') {
                 window.TaskModule.init(event.data.context);
-            } else if (event.data && event.data.type === 'danceList') {
-                console.log('Received dance list:', event.data.dances);
-                // Populate the dance selector with available dances
-                window.TaskModule.populateDanceSelector(event.data.dances);
             }
         });
 

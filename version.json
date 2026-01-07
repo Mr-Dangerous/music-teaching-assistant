@@ -1,5 +1,5 @@
 {
-  "version": "1.4.5",
+  "version": "1.4.6",
   "lastUpdated": "2026-01-07",
-  "description": "Fix dance dropdown timing with iframe message delay and logging"
+  "description": "Fix dance dropdown by returning dances directly instead of postMessage"
 }

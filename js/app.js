@@ -2610,20 +2610,7 @@ class TeachingAssistantApp {
 
       console.log(`Loaded ${dances.length} dances:`, dances);
 
-      // Send to module (with small delay to ensure iframe is ready)
-      setTimeout(() => {
-        const iframe = document.getElementById('task-module-frame');
-        if (iframe && iframe.contentWindow) {
-          console.log('Sending dance list to module via postMessage');
-          iframe.contentWindow.postMessage({
-            type: 'danceList',
-            dances: dances
-          }, '*');
-        } else {
-          console.warn('iframe not found or not ready');
-        }
-      }, 100);
-
+      // Return dances directly - module will populate its own dropdown
       return dances;
     } catch (error) {
       console.error('Error getting dances:', error);
