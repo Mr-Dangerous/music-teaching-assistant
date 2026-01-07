@@ -1,5 +1,5 @@
 {
-  "version": "1.4.6",
+  "version": "1.4.7",
   "lastUpdated": "2026-01-07",
-  "description": "Fix dance dropdown by returning dances directly instead of postMessage"
+  "description": "Add error display in dropdown to show what's preventing dances from loading"
 }

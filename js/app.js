@@ -2574,8 +2574,9 @@ class TeachingAssistantApp {
   async getDances() {
     try {
       if (!this.fileManager.folderHandle) {
-        console.log('No folder selected yet - dances will load after folder is selected');
-        return [];
+        const errorMsg = 'No folder selected yet - please load your data folder first';
+        console.error(errorMsg);
+        throw new Error(errorMsg);
       }
 
       // Load from File System Access API (not fetch)
@@ -2610,11 +2611,15 @@ class TeachingAssistantApp {
 
       console.log(`Loaded ${dances.length} dances:`, dances);
 
+      if (dances.length === 0) {
+        throw new Error('dances.csv file is empty or has no valid entries');
+      }
+
       // Return dances directly - module will populate its own dropdown
       return dances;
     } catch (error) {
       console.error('Error getting dances:', error);
-      return [];
+      throw error; // Re-throw instead of returning empty array
     }
   }
 }

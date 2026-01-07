@@ -355,6 +355,17 @@
                     const dances = await window.parent.app.getDances();
                     console.log('Received dances from parent:', dances);
 
+                    if (!dances) {
+                        throw new Error('getDances() returned null or undefined');
+                    }
+
+                    if (dances.length === 0) {
+                        const selector = document.getElementById('danceSelector');
+                        selector.innerHTML = '<option value="">No dances found - check dances.csv exists in data folder</option>';
+                        this.showError('No dances found in dances.csv. Make sure the file exists in your data folder with dance entries.');
+                        return;
+                    }
+
                     // Populate the dropdown with the dances
                     this.populateDanceSelector(dances);
 
@@ -369,7 +380,9 @@
 
                 } catch (error) {
                     console.error('Error initializing dance viewer:', error);
-                    this.showError(error.message);
+                    const selector = document.getElementById('danceSelector');
+                    selector.innerHTML = '<option value="">Error: ' + error.message + '</option>';
+                    this.showError('Failed to load dances: ' + error.message);
                 }
             },
 
