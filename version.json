@@ -1,5 +1,5 @@
 {
-  "version": "1.4.8",
+  "version": "1.4.9",
   "lastUpdated": "2026-01-07",
-  "description": "Add detailed logging to debug getDances flow"
+  "description": "Compact header layout and fix audio loading from File System API"
 }

@@ -32,51 +32,24 @@
 
         .header {
             background: rgba(255, 255, 255, 0.95);
-            padding: calc(15px * var(--module-scale));
+            padding: calc(8px * var(--module-scale)) calc(12px * var(--module-scale));
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
             flex-shrink: 0;
-        }
-
-        .dance-title {
-            font-size: calc(36px * var(--module-scale));
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: calc(5px * var(--module-scale));
-            text-align: center;
-        }
-
-        .dance-subtitle {
-            font-size: calc(20px * var(--module-scale));
-            font-style: italic;
-            color: #555;
-            text-align: center;
-            margin-bottom: calc(12px * var(--module-scale));
-        }
-
-        .dance-selector-container {
             display: flex;
-            justify-content: center;
             align-items: center;
-            gap: calc(12px * var(--module-scale));
-            margin-bottom: calc(12px * var(--module-scale));
-        }
-
-        .dance-selector-label {
-            font-size: calc(18px * var(--module-scale));
-            font-weight: bold;
-            color: #2c3e50;
+            gap: calc(15px * var(--module-scale));
         }
 
         .dance-selector {
-            padding: calc(10px * var(--module-scale)) calc(16px * var(--module-scale));
-            font-size: calc(18px * var(--module-scale));
-            border: 2px solid #667eea;
-            border-radius: calc(8px * var(--module-scale));
+            padding: calc(6px * var(--module-scale)) calc(10px * var(--module-scale));
+            font-size: calc(14px * var(--module-scale));
+            border: 1px solid #667eea;
+            border-radius: calc(4px * var(--module-scale));
             background: white;
             color: #2c3e50;
             cursor: pointer;
-            transition: border-color 0.2s, box-shadow 0.2s;
-            min-width: calc(250px * var(--module-scale));
+            transition: border-color 0.2s;
+            min-width: calc(180px * var(--module-scale));
         }
 
         .dance-selector:hover {
@@ -86,20 +59,28 @@
         .dance-selector:focus {
             outline: none;
             border-color: #764ba2;
-            box-shadow: 0 0 0 3px rgba(118, 75, 162, 0.1);
+        }
+
+        .dance-title {
+            font-size: calc(16px * var(--module-scale));
+            font-weight: bold;
+            color: #2c3e50;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
         }
 
         .audio-controls {
             display: flex;
             align-items: center;
-            justify-content: center;
-            gap: calc(12px * var(--module-scale));
-            margin-top: calc(10px * var(--module-scale));
+            gap: calc(8px * var(--module-scale));
+            flex-shrink: 0;
         }
 
         .play-btn {
-            width: calc(60px * var(--module-scale));
-            height: calc(60px * var(--module-scale));
+            width: calc(32px * var(--module-scale));
+            height: calc(32px * var(--module-scale));
             border-radius: 50%;
             background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
             border: none;
@@ -107,17 +88,16 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+            transition: transform 0.1s;
+            flex-shrink: 0;
         }
 
         .play-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(76, 175, 80, 0.6);
+            transform: scale(1.05);
         }
 
         .play-btn:active {
-            transform: translateY(0);
+            transform: scale(0.95);
         }
 
         .play-btn:disabled {
@@ -126,8 +106,8 @@
         }
 
         .play-icon, .pause-icon {
-            width: calc(24px * var(--module-scale));
-            height: calc(24px * var(--module-scale));
+            width: calc(14px * var(--module-scale));
+            height: calc(14px * var(--module-scale));
             fill: white;
         }
 
@@ -145,10 +125,10 @@
 
         .progress-container {
             flex: 1;
-            max-width: calc(400px * var(--module-scale));
-            height: calc(20px * var(--module-scale));
+            max-width: calc(250px * var(--module-scale));
+            height: calc(8px * var(--module-scale));
             background: #e0e0e0;
-            border-radius: calc(10px * var(--module-scale));
+            border-radius: calc(4px * var(--module-scale));
             overflow: hidden;
             cursor: pointer;
             position: relative;
@@ -162,10 +142,11 @@
         }
 
         .time-display {
-            font-size: calc(14px * var(--module-scale));
+            font-size: calc(11px * var(--module-scale));
             color: #666;
-            min-width: calc(100px * var(--module-scale));
-            text-align: center;
+            min-width: calc(60px * var(--module-scale));
+            text-align: right;
+            white-space: nowrap;
         }
 
         .dance-chart-container {
@@ -302,32 +283,26 @@
 </head>
 <body>
     <div class="header">
-        <div class="dance-selector-container">
-            <label class="dance-selector-label" for="danceSelector">Select Dance:</label>
-            <select class="dance-selector" id="danceSelector">
-                <option value="">Loading dances...</option>
-            </select>
-        </div>
+        <select class="dance-selector" id="danceSelector">
+            <option value="">Loading dances...</option>
+        </select>
 
         <div class="dance-title" id="danceTitle">Select a dance to begin</div>
-        <div class="dance-subtitle" id="danceSubtitle"></div>
 
-        <div class="audio-controls">
-            <button class="play-btn" id="playBtn" disabled>
-                <svg class="play-icon" viewBox="0 0 24 24">
-                    <path d="M8 5v14l11-7z"/>
-                </svg>
-                <svg class="pause-icon" viewBox="0 0 24 24">
-                    <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
-                </svg>
-            </button>
+        <button class="play-btn" id="playBtn" disabled>
+            <svg class="play-icon" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+            </svg>
+            <svg class="pause-icon" viewBox="0 0 24 24">
+                <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
+            </svg>
+        </button>
 
-            <div class="progress-container" id="progressContainer">
-                <div class="progress-bar" id="progressBar"></div>
-            </div>
-
-            <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
+        <div class="progress-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
         </div>
+
+        <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
     </div>
 
     <div class="dance-chart-container" id="danceChartContainer">
@@ -402,7 +377,7 @@
                     this.renderDance(currentDance);
 
                     // Load audio
-                    this.loadAudio(currentDance.audioFile);
+                    await this.loadAudio(currentDance.audioFile);
 
                 } catch (error) {
                     console.error('Error loading dance:', error);
@@ -435,14 +410,16 @@
                 // Auto-select first dance if available
                 if (dances.length > 0 && dances[0].id) {
                     selector.value = dances[0].id;
-                    this.loadAndDisplayDance(dances[0].id);
+                    // Don't await here - let it load in background
+                    this.loadAndDisplayDance(dances[0].id).catch(err => {
+                        console.error('Error auto-loading first dance:', err);
+                    });
                 }
             },
 
             renderDance(dance) {
-                // Set title and subtitle
+                // Set title (subtitle removed to save space)
                 document.getElementById('danceTitle').textContent = dance.title || 'Untitled Dance';
-                document.getElementById('danceSubtitle').textContent = dance.subtitle || '';
 
                 // Render sections
                 const container = document.getElementById('danceChartContainer');
@@ -543,14 +520,38 @@
                 return sectionDiv;
             },
 
-            loadAudio(audioPath) {
+            async loadAudio(audioPath) {
                 audioElement = document.getElementById('danceAudio');
                 const playBtn = document.getElementById('playBtn');
                 const progressBar = document.getElementById('progressBar');
                 const progressContainer = document.getElementById('progressContainer');
                 const timeDisplay = document.getElementById('timeDisplay');
 
-                audioElement.src = audioPath;
+                try {
+                    // Extract filename from path (e.g., "data/dance_audio_tracks/fjaskern.mp3" -> "fjaskern.mp3")
+                    const filename = audioPath.split('/').pop();
+
+                    // Load audio file from parent app's folder handle
+                    const folderHandle = window.parent.app.fileManager.folderHandle;
+                    if (!folderHandle) {
+                        throw new Error('No folder handle available');
+                    }
+
+                    // Navigate to dance_audio_tracks folder
+                    const audioFolderHandle = await folderHandle.getDirectoryHandle('dance_audio_tracks');
+                    const fileHandle = await audioFolderHandle.getFileHandle(filename);
+                    const file = await fileHandle.getFile();
+
+                    // Create blob URL from file
+                    const blobURL = URL.createObjectURL(file);
+                    audioElement.src = blobURL;
+
+                    console.log(`Loaded audio file: ${filename}`);
+                } catch (error) {
+                    console.error('Error loading audio file:', audioPath, error);
+                    timeDisplay.textContent = 'Audio file not found';
+                    return;
+                }
 
                 // Enable play button when audio is loaded
                 audioElement.addEventListener('canplay', () => {
@@ -605,7 +606,6 @@
 
             showError(message) {
                 document.getElementById('danceTitle').textContent = 'Error';
-                document.getElementById('danceSubtitle').textContent = '';
                 document.getElementById('danceChartContainer').innerHTML =
                     `<div class="error-message">${message}</div>`;
             },
