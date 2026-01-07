@@ -390,20 +390,29 @@
             },
 
             populateDanceSelector(dances) {
+                console.log('Populating dance selector with:', dances);
                 const selector = document.getElementById('danceSelector');
                 selector.innerHTML = '<option value="">-- Select a Dance --</option>';
 
+                if (!dances || dances.length === 0) {
+                    selector.innerHTML = '<option value="">No dances available</option>';
+                    this.showError('No dances found in dances.csv');
+                    return;
+                }
+
                 dances.forEach(dance => {
-                    const option = document.createElement('option');
-                    option.value = dance.id;
-                    option.textContent = dance.title;
-                    selector.appendChild(option);
+                    if (dance && dance.id && dance.title) {
+                        const option = document.createElement('option');
+                        option.value = dance.id;
+                        option.textContent = dance.title;
+                        selector.appendChild(option);
+                    }
                 });
 
                 availableDances = dances;
 
                 // Auto-select first dance if available
-                if (dances.length > 0) {
+                if (dances.length > 0 && dances[0].id) {
                     selector.value = dances[0].id;
                     this.loadAndDisplayDance(dances[0].id);
                 }

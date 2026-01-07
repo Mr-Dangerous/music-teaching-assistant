@@ -1,5 +1,5 @@
 {
-  "version": "1.4.1",
+  "version": "1.4.2",
   "lastUpdated": "2026-01-07",
-  "description": "Added dance viewer module with dropdown selector for folk dance beat charts and audio playback"
+  "description": "Improved error handling and null checking in dance viewer module"
 }

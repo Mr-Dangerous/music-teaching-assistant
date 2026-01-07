@@ -2578,22 +2578,29 @@ class TeachingAssistantApp {
 
       const dances = [];
       for (let i = 1; i < lines.length; i++) {
-        if (lines[i].trim() === '') continue;
-        const parsed = this.csvHandler.parseCSVLines(lines[i]);
-        if (parsed[0] && parsed[0][0]) {
+        if (!lines[i] || lines[i].trim() === '') continue;
+
+        try {
+          const parsed = this.csvHandler.parseCSVLines(lines[i]);
+          if (!parsed || !parsed[0] || !parsed[0][0] || !parsed[0][1]) {
+            console.warn(`Skipping invalid dance row ${i}:`, lines[i]);
+            continue;
+          }
+
           const danceId = parsed[0][0];
           const danceJson = parsed[0][1];
-          try {
-            const danceData = JSON.parse(danceJson);
-            dances.push({
-              id: danceId,
-              title: danceData.title || danceId
-            });
-          } catch (e) {
-            console.warn(`Could not parse dance ${danceId}:`, e);
-          }
+
+          const danceData = JSON.parse(danceJson);
+          dances.push({
+            id: danceId,
+            title: danceData.title || danceId
+          });
+        } catch (e) {
+          console.warn(`Could not parse dance at line ${i}:`, e.message);
         }
       }
+
+      console.log(`Loaded ${dances.length} dances:`, dances);
 
       // Send to module
       const iframe = document.getElementById('task-module-frame');
