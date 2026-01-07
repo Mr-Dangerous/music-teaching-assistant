@@ -351,9 +351,13 @@
                 console.log('Dance Viewer init with context:', context);
 
                 try {
+                    console.log('About to call getDances()...');
                     // Get the list of available dances from parent app
                     const dances = await window.parent.app.getDances();
+                    console.log('getDances() call completed');
                     console.log('Received dances from parent:', dances);
+                    console.log('Type of dances:', typeof dances);
+                    console.log('Is array?', Array.isArray(dances));
 
                     if (!dances) {
                         throw new Error('getDances() returned null or undefined');
