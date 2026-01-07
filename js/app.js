@@ -2487,9 +2487,14 @@ class TeachingAssistantApp {
    */
   async loadDance(danceId) {
     try {
-      const csvPath = 'data/dances.csv';
-      const response = await fetch(csvPath);
-      const csvText = await response.text();
+      if (!this.fileManager.folderHandle) {
+        throw new Error('No data folder loaded. Please load your data folder first.');
+      }
+
+      // Load from File System Access API (not fetch)
+      const handle = await this.fileManager.folderHandle.getFileHandle('dances.csv');
+      const file = await handle.getFile();
+      const csvText = await file.text();
       const lines = csvText.trim().split('\n');
 
       // Find the dance by ID
@@ -2513,13 +2518,18 @@ class TeachingAssistantApp {
    */
   async saveDance(danceId, danceJson) {
     try {
-      const csvPath = 'data/dances.csv';
+      if (!this.fileManager.folderHandle) {
+        throw new Error('No folder selected. Please load your data folder first.');
+      }
+
       let csvText;
       let lines;
 
       try {
-        const response = await fetch(csvPath);
-        csvText = await response.text();
+        // Load from File System Access API
+        const handle = await this.fileManager.folderHandle.getFileHandle('dances.csv');
+        const file = await handle.getFile();
+        csvText = await file.text();
         lines = csvText.trim().split('\n');
       } catch (e) {
         // File doesn't exist yet, create header
@@ -2544,22 +2554,14 @@ class TeachingAssistantApp {
 
       const newCsv = lines.join('\n');
 
-      // Save using fileManager
-      if (this.fileManager && this.fileManager.saveFileToFolder) {
-        const blob = new Blob([newCsv], { type: 'text/csv' });
-        await this.fileManager.saveFileToFolder('dances.csv', blob);
-        this.showNotification(`Dance "${danceId}" saved successfully!`, 'success');
-      } else {
-        // Fallback: download file
-        const blob = new Blob([newCsv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'dances.csv';
-        a.click();
-        URL.revokeObjectURL(url);
-        this.showNotification(`Dance "${danceId}" saved! Replace the CSV file in data/ folder.`, 'warning');
-      }
+      // Save using File System Access API
+      const handle = await this.fileManager.folderHandle.getFileHandle('dances.csv', { create: true });
+      const writable = await handle.createWritable();
+      await writable.write(newCsv);
+      await writable.close();
+
+      this.showNotification(`Dance "${danceId}" saved successfully!`, 'success');
+      console.log('✓ Saved dances.csv to data folder');
     } catch (error) {
       console.error('[saveDance] Error:', error);
       this.showNotification(`Error saving dance: ${error.message}`, 'error');
@@ -2571,9 +2573,15 @@ class TeachingAssistantApp {
    */
   async getDances() {
     try {
-      const csvPath = 'data/dances.csv';
-      const response = await fetch(csvPath);
-      const csvText = await response.text();
+      if (!this.fileManager.folderHandle) {
+        console.log('No folder selected yet - dances will load after folder is selected');
+        return [];
+      }
+
+      // Load from File System Access API (not fetch)
+      const handle = await this.fileManager.folderHandle.getFileHandle('dances.csv');
+      const file = await handle.getFile();
+      const csvText = await file.text();
       const lines = csvText.trim().split('\n');
 
       const dances = [];
