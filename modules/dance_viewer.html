@@ -520,31 +520,63 @@
                 const beatBoxes = document.querySelectorAll('.beat-box');
                 console.log(`Found ${beatBoxes.length} beat boxes to resize`);
 
-                const moduleScale = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--module-scale').trim()) || 1;
-                console.log(`Module scale: ${moduleScale}`);
-
                 beatBoxes.forEach(box => {
                     const text = box.textContent.trim();
                     if (!text) return; // Skip empty boxes
 
-                    const boxWidth = box.clientWidth - (8 * moduleScale); // Account for padding
-                    const boxHeight = box.clientHeight - (8 * moduleScale);
+                    // Get actual box dimensions
+                    const boxWidth = box.clientWidth;
+                    const boxHeight = box.clientHeight;
 
-                    console.log(`Box "${text}": ${boxWidth}x${boxHeight}px`);
+                    console.log(`Box "${text}": ${boxWidth.toFixed(1)}x${boxHeight.toFixed(1)}px`);
 
-                    // Start with a large font size and scale down to fit
-                    let fontSize = boxHeight * 0.85; // Start at 85% of box height
-                    box.style.fontSize = fontSize + 'px';
-
-                    // Reduce font size until text fits width
-                    let iterations = 0;
-                    while ((box.scrollWidth > boxWidth || box.scrollHeight > boxHeight) && iterations < 50) {
-                        fontSize *= 0.92;
-                        box.style.fontSize = fontSize + 'px';
-                        iterations++;
+                    if (boxWidth === 0 || boxHeight === 0) {
+                        console.warn(`Box "${text}" has zero dimensions, skipping`);
+                        return;
                     }
 
-                    console.log(`Beat box "${text}": final font-size=${fontSize.toFixed(1)}px (${iterations} iterations)`);
+                    // Get padding from computed style
+                    const computedStyle = window.getComputedStyle(box);
+                    const paddingTop = parseFloat(computedStyle.paddingTop) || 0;
+                    const paddingBottom = parseFloat(computedStyle.paddingBottom) || 0;
+                    const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
+                    const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
+
+                    const availableWidth = boxWidth - paddingLeft - paddingRight;
+                    const availableHeight = boxHeight - paddingTop - paddingBottom;
+
+                    console.log(`Available space: ${availableWidth.toFixed(1)}x${availableHeight.toFixed(1)}px (padding: ${paddingTop}/${paddingRight}/${paddingBottom}/${paddingLeft})`);
+
+                    // Binary search for optimal font size
+                    let minSize = 8; // Minimum readable size
+                    let maxSize = availableHeight * 0.95; // Start near full height
+                    let bestSize = minSize;
+
+                    for (let i = 0; i < 20; i++) {
+                        const testSize = (minSize + maxSize) / 2;
+                        box.style.fontSize = testSize + 'px';
+
+                        // Force layout recalculation
+                        box.offsetHeight;
+
+                        const fitsWidth = box.scrollWidth <= availableWidth;
+                        const fitsHeight = box.scrollHeight <= availableHeight;
+
+                        console.log(`  Test ${testSize.toFixed(1)}px: scrollW=${box.scrollWidth.toFixed(1)} scrollH=${box.scrollHeight.toFixed(1)} fits=${fitsWidth && fitsHeight}`);
+
+                        if (fitsWidth && fitsHeight) {
+                            bestSize = testSize;
+                            minSize = testSize;
+                        } else {
+                            maxSize = testSize;
+                        }
+
+                        // If we're converging, stop
+                        if (maxSize - minSize < 0.5) break;
+                    }
+
+                    box.style.fontSize = bestSize + 'px';
+                    console.log(`Beat box "${text}": final font-size=${bestSize.toFixed(1)}px`);
                 });
             },
 

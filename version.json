@@ -1,5 +1,5 @@
 {
-  "version": "1.7.2",
+  "version": "1.7.3",
   "lastUpdated": "2026-01-08",
-  "description": "Fix dynamic text sizing timing issue - now properly waits for DOM layout before resizing text"
+  "description": "Fix text disappearing bug - rewrite sizing algorithm with binary search and minimum font size protection"
 }
