@@ -1,5 +1,5 @@
 {
-  "version": "1.7.4",
+  "version": "1.7.5",
   "lastUpdated": "2026-01-08",
-  "description": "Use !important flag to ensure individual font sizes stick per box and aren't overridden by CSS cascade"
+  "description": "Complete rewrite of text sizing - use temporary measurer element for accurate dimensions instead of broken scrollWidth measurements"
 }

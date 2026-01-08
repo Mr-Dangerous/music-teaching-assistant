@@ -518,67 +518,94 @@
 
             autoSizeBeatBoxText() {
                 const beatBoxes = document.querySelectorAll('.beat-box');
-                console.log(`Found ${beatBoxes.length} beat boxes to resize`);
+                console.log(`\n=== RESIZING ${beatBoxes.length} BEAT BOXES ===`);
 
-                beatBoxes.forEach(box => {
+                beatBoxes.forEach((box, index) => {
                     const text = box.textContent.trim();
-                    if (!text) return; // Skip empty boxes
-
-                    // Get actual box dimensions
-                    const boxWidth = box.clientWidth;
-                    const boxHeight = box.clientHeight;
-
-                    console.log(`Box "${text}": ${boxWidth.toFixed(1)}x${boxHeight.toFixed(1)}px`);
-
-                    if (boxWidth === 0 || boxHeight === 0) {
-                        console.warn(`Box "${text}" has zero dimensions, skipping`);
+                    if (!text) {
+                        console.log(`Box ${index}: empty, skipping`);
                         return;
                     }
 
-                    // Get padding from computed style
+                    console.log(`\n--- Box ${index}: "${text}" ---`);
+
+                    // Get box dimensions (includes padding/border)
+                    const boxWidth = box.offsetWidth;
+                    const boxHeight = box.offsetHeight;
+
+                    if (boxWidth === 0 || boxHeight === 0) {
+                        console.warn(`Box has zero dimensions, skipping`);
+                        return;
+                    }
+
+                    console.log(`Box outer dimensions: ${boxWidth}x${boxHeight}px`);
+
+                    // Get padding and border from computed style
                     const computedStyle = window.getComputedStyle(box);
                     const paddingTop = parseFloat(computedStyle.paddingTop) || 0;
                     const paddingBottom = parseFloat(computedStyle.paddingBottom) || 0;
                     const paddingLeft = parseFloat(computedStyle.paddingLeft) || 0;
                     const paddingRight = parseFloat(computedStyle.paddingRight) || 0;
+                    const borderTop = parseFloat(computedStyle.borderTopWidth) || 0;
+                    const borderBottom = parseFloat(computedStyle.borderBottomWidth) || 0;
+                    const borderLeft = parseFloat(computedStyle.borderLeftWidth) || 0;
+                    const borderRight = parseFloat(computedStyle.borderRightWidth) || 0;
 
-                    const availableWidth = boxWidth - paddingLeft - paddingRight;
-                    const availableHeight = boxHeight - paddingTop - paddingBottom;
+                    const availableWidth = boxWidth - paddingLeft - paddingRight - borderLeft - borderRight - 4; // -4 for safety margin
+                    const availableHeight = boxHeight - paddingTop - paddingBottom - borderTop - borderBottom - 4;
 
-                    console.log(`Available space: ${availableWidth.toFixed(1)}x${availableHeight.toFixed(1)}px (padding: ${paddingTop}/${paddingRight}/${paddingBottom}/${paddingLeft})`);
+                    console.log(`Available: ${availableWidth.toFixed(1)}x${availableHeight.toFixed(1)}px (after padding/border)`);
+
+                    // Create temporary span to measure text
+                    const measurer = document.createElement('span');
+                    measurer.style.position = 'absolute';
+                    measurer.style.visibility = 'hidden';
+                    measurer.style.whiteSpace = 'nowrap';
+                    measurer.style.fontWeight = computedStyle.fontWeight;
+                    measurer.style.fontFamily = computedStyle.fontFamily;
+                    measurer.textContent = text;
+                    document.body.appendChild(measurer);
 
                     // Binary search for optimal font size
-                    let minSize = 8; // Minimum readable size
-                    let maxSize = availableHeight * 0.95; // Start near full height
+                    let minSize = 10;
+                    let maxSize = 100; // Start high
                     let bestSize = minSize;
+                    let iterations = 0;
 
-                    for (let i = 0; i < 20; i++) {
+                    while (maxSize - minSize > 0.5 && iterations < 30) {
                         const testSize = (minSize + maxSize) / 2;
-                        box.style.setProperty('font-size', testSize + 'px', 'important');
+                        measurer.style.fontSize = testSize + 'px';
+                        measurer.style.lineHeight = '1';
 
-                        // Force layout recalculation
-                        box.offsetHeight;
+                        const textWidth = measurer.offsetWidth;
+                        const textHeight = measurer.offsetHeight;
 
-                        const fitsWidth = box.scrollWidth <= availableWidth;
-                        const fitsHeight = box.scrollHeight <= availableHeight;
+                        const fits = (textWidth <= availableWidth && textHeight <= availableHeight);
 
-                        console.log(`  Test ${testSize.toFixed(1)}px: scrollW=${box.scrollWidth.toFixed(1)} scrollH=${box.scrollHeight.toFixed(1)} fits=${fitsWidth && fitsHeight}`);
+                        if (iterations < 5 || fits || !fits && iterations < 10) { // Log first few and important ones
+                            console.log(`  [${iterations}] Test ${testSize.toFixed(1)}px: text=${textWidth.toFixed(1)}x${textHeight.toFixed(1)} vs avail=${availableWidth.toFixed(1)}x${availableHeight.toFixed(1)} => ${fits ? 'FITS' : 'TOO BIG'}`);
+                        }
 
-                        if (fitsWidth && fitsHeight) {
+                        if (fits) {
                             bestSize = testSize;
                             minSize = testSize;
                         } else {
                             maxSize = testSize;
                         }
 
-                        // If we're converging, stop
-                        if (maxSize - minSize < 0.5) break;
+                        iterations++;
                     }
 
-                    // Set final size with !important to ensure it sticks
+                    document.body.removeChild(measurer);
+
+                    // Apply the final size
                     box.style.setProperty('font-size', bestSize + 'px', 'important');
-                    console.log(`Beat box "${text}": FINAL font-size=${bestSize.toFixed(1)}px (individual per box)`);
+                    box.style.setProperty('line-height', '1', 'important');
+
+                    console.log(`✓ Box ${index} "${text}": FINAL SIZE = ${bestSize.toFixed(1)}px`);
                 });
+
+                console.log(`\n=== RESIZING COMPLETE ===\n`);
             },
 
             createSectionElement(section) {
