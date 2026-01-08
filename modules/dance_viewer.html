@@ -105,6 +105,67 @@
             cursor: not-allowed;
         }
 
+        .control-btn {
+            width: calc(28px * var(--module-scale));
+            height: calc(28px * var(--module-scale));
+            border-radius: calc(4px * var(--module-scale));
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.1s;
+            flex-shrink: 0;
+            font-size: calc(11px * var(--module-scale));
+            color: white;
+            font-weight: bold;
+        }
+
+        .control-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .control-btn:active {
+            transform: scale(0.95);
+        }
+
+        .control-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .speed-btn {
+            width: calc(36px * var(--module-scale));
+            height: calc(28px * var(--module-scale));
+            border-radius: calc(4px * var(--module-scale));
+            background: white;
+            border: 2px solid #667eea;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s;
+            flex-shrink: 0;
+            font-size: calc(10px * var(--module-scale));
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .speed-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .speed-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .speed-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         .play-icon, .pause-icon {
             width: calc(14px * var(--module-scale));
             height: calc(14px * var(--module-scale));
@@ -297,6 +358,14 @@
                 <path d="M6 4h4v16H6V4zm8 0h4v16h-4V4z"/>
             </svg>
         </button>
+
+        <button class="control-btn" id="restartBtn" disabled title="Restart">↺</button>
+        <button class="control-btn" id="backBtn" disabled title="Back 10 seconds">-10</button>
+        <button class="control-btn" id="forwardBtn" disabled title="Forward 10 seconds">+10</button>
+
+        <button class="speed-btn" id="speed90Btn" disabled title="90% speed">90%</button>
+        <button class="speed-btn" id="speed95Btn" disabled title="95% speed">95%</button>
+        <button class="speed-btn active" id="speed100Btn" disabled title="100% speed">100%</button>
 
         <div class="progress-container" id="progressContainer">
             <div class="progress-bar" id="progressBar"></div>
@@ -529,14 +598,26 @@
                 }
 
                 const playBtn = document.getElementById('playBtn');
+                const restartBtn = document.getElementById('restartBtn');
+                const backBtn = document.getElementById('backBtn');
+                const forwardBtn = document.getElementById('forwardBtn');
+                const speed90Btn = document.getElementById('speed90Btn');
+                const speed95Btn = document.getElementById('speed95Btn');
+                const speed100Btn = document.getElementById('speed100Btn');
                 const progressBar = document.getElementById('progressBar');
                 const progressContainer = document.getElementById('progressContainer');
                 const timeDisplay = document.getElementById('timeDisplay');
 
-                // Enable play button when audio is loaded
+                // Enable controls when audio is loaded
                 audioElement.addEventListener('canplay', () => {
-                    console.log('Audio canplay event - enabling play button');
+                    console.log('Audio canplay event - enabling controls');
                     playBtn.disabled = false;
+                    restartBtn.disabled = false;
+                    backBtn.disabled = false;
+                    forwardBtn.disabled = false;
+                    speed90Btn.disabled = false;
+                    speed95Btn.disabled = false;
+                    speed100Btn.disabled = false;
                 });
 
                 // Play/Pause button
@@ -549,6 +630,39 @@
                         playBtn.classList.remove('playing');
                     }
                 });
+
+                // Restart button
+                restartBtn.addEventListener('click', () => {
+                    audioElement.currentTime = 0;
+                    if (audioElement.paused) {
+                        audioElement.play();
+                        playBtn.classList.add('playing');
+                    }
+                });
+
+                // Back 10 seconds button
+                backBtn.addEventListener('click', () => {
+                    audioElement.currentTime = Math.max(0, audioElement.currentTime - 10);
+                });
+
+                // Forward 10 seconds button
+                forwardBtn.addEventListener('click', () => {
+                    audioElement.currentTime = Math.min(audioElement.duration, audioElement.currentTime + 10);
+                });
+
+                // Speed control buttons
+                const setSpeed = (speed, activeBtn) => {
+                    audioElement.playbackRate = speed;
+                    speed90Btn.classList.remove('active');
+                    speed95Btn.classList.remove('active');
+                    speed100Btn.classList.remove('active');
+                    activeBtn.classList.add('active');
+                    console.log('Playback speed set to:', speed);
+                };
+
+                speed90Btn.addEventListener('click', () => setSpeed(0.9, speed90Btn));
+                speed95Btn.addEventListener('click', () => setSpeed(0.95, speed95Btn));
+                speed100Btn.addEventListener('click', () => setSpeed(1.0, speed100Btn));
 
                 // Update progress bar
                 audioElement.addEventListener('timeupdate', () => {
@@ -584,6 +698,12 @@
 
             async loadAudio(audioPath) {
                 const playBtn = document.getElementById('playBtn');
+                const restartBtn = document.getElementById('restartBtn');
+                const backBtn = document.getElementById('backBtn');
+                const forwardBtn = document.getElementById('forwardBtn');
+                const speed90Btn = document.getElementById('speed90Btn');
+                const speed95Btn = document.getElementById('speed95Btn');
+                const speed100Btn = document.getElementById('speed100Btn');
                 const progressBar = document.getElementById('progressBar');
                 const timeDisplay = document.getElementById('timeDisplay');
 
@@ -597,8 +717,21 @@
                 console.log('Cleaning up old audio state before loading new audio');
                 audioElement.pause();
                 audioElement.currentTime = 0;
+                audioElement.playbackRate = 1.0; // Reset playback speed
                 playBtn.classList.remove('playing');
                 playBtn.disabled = true;
+                restartBtn.disabled = true;
+                backBtn.disabled = true;
+                forwardBtn.disabled = true;
+                speed90Btn.disabled = true;
+                speed95Btn.disabled = true;
+                speed100Btn.disabled = true;
+
+                // Reset speed button visual state
+                speed90Btn.classList.remove('active');
+                speed95Btn.classList.remove('active');
+                speed100Btn.classList.add('active');
+
                 progressBar.style.width = '0%';
                 timeDisplay.textContent = '0:00 / 0:00';
 

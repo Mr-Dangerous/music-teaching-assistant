@@ -1,5 +1,5 @@
 {
-  "version": "1.5.1",
+  "version": "1.6.1",
   "lastUpdated": "2026-01-08",
-  "description": "Fix dance viewer audio switching bug - prevent duplicate event listeners and properly clean up blob URLs"
+  "description": "Add comprehensive audio controls to dance viewer - restart, skip forward/back 10s, and playback speed options (90%, 95%, 100%)"
 }
