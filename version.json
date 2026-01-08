@@ -1,5 +1,5 @@
 {
-  "version": "1.8.3",
+  "version": "1.9.1",
   "lastUpdated": "2026-01-08",
-  "description": "Fix metronome audio - properly resume AudioContext to handle browser autoplay policy and add detailed logging"
+  "description": "Add meter controls to metronome - 2, 3, 4, 6, 8, 16 beats per measure with downbeat emphasis on beat 1"
 }

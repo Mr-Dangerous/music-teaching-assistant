@@ -335,6 +335,33 @@
             color: white;
         }
 
+        .meter-btn {
+            width: calc(32px * var(--module-scale));
+            height: calc(28px * var(--module-scale));
+            border-radius: calc(4px * var(--module-scale));
+            background: white;
+            border: 2px solid #9c27b0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s;
+            flex-shrink: 0;
+            font-size: calc(10px * var(--module-scale));
+            color: #9c27b0;
+            font-weight: bold;
+            margin-right: calc(2px * var(--module-scale));
+        }
+
+        .meter-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .meter-btn.active {
+            background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+            color: white;
+        }
+
         .repeat-end {
             font-size: calc(36px * var(--module-scale));
             font-weight: bold;
@@ -399,6 +426,13 @@
         <button class="metronome-btn" id="metro95Btn" title="95 BPM Metronome">95</button>
         <button class="metronome-btn metronome-stop" id="metroStopBtn" title="Stop Metronome">STOP</button>
 
+        <button class="meter-btn" id="meter2Btn" title="2/4 Meter">2</button>
+        <button class="meter-btn" id="meter3Btn" title="3/4 Meter">3</button>
+        <button class="meter-btn active" id="meter4Btn" title="4/4 Meter">4</button>
+        <button class="meter-btn" id="meter6Btn" title="6/8 Meter">6</button>
+        <button class="meter-btn" id="meter8Btn" title="8/8 Meter">8</button>
+        <button class="meter-btn" id="meter16Btn" title="16/16 Meter">16</button>
+
         <div class="dance-title" id="danceTitle">Select a dance to begin</div>
 
         <button class="play-btn" id="playBtn" disabled>
@@ -450,6 +484,8 @@
         let currentBeatIndex = -1;
         let countdownBeats = 0;
         let audioContext = null;
+        let metronomeMeter = 4; // Default 4/4 time
+        let currentBeatInMeasure = 0; // Track position within measure (0-indexed)
 
         // Initialize audio context for metronome clicks
         function initAudioContext() {
@@ -460,7 +496,7 @@
         }
 
         // Play metronome click sound
-        function playMetronomeClick(isDownbeat = false) {
+        function playMetronomeClick(beatInMeasure) {
             try {
                 const ctx = initAudioContext();
 
@@ -472,7 +508,12 @@
                     });
                 }
 
-                console.log(`Playing ${isDownbeat ? 'DOWNBEAT' : 'beat'} click at ${isDownbeat ? 1200 : 800}Hz, context state: ${ctx.state}`);
+                // Beat 1 of measure is downbeat (highest pitch)
+                const isDownbeat = (beatInMeasure === 0);
+                const frequency = isDownbeat ? 1200 : 800;
+                const volume = isDownbeat ? 0.6 : 0.4;
+
+                console.log(`Playing ${isDownbeat ? 'DOWNBEAT' : 'beat'} (${beatInMeasure + 1}/${metronomeMeter}) at ${frequency}Hz, context state: ${ctx.state}`);
 
                 const oscillator = ctx.createOscillator();
                 const gainNode = ctx.createGain();
@@ -480,11 +521,10 @@
                 oscillator.connect(gainNode);
                 gainNode.connect(ctx.destination);
 
-                // Higher pitch for downbeat (first beat), lower for others
-                oscillator.frequency.value = isDownbeat ? 1200 : 800;
+                oscillator.frequency.value = frequency;
                 oscillator.type = 'sine';
 
-                gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
+                gainNode.gain.setValueAtTime(volume, ctx.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
 
                 oscillator.start(ctx.currentTime);
@@ -569,6 +609,14 @@
                     document.getElementById('metro85Btn').addEventListener('click', async () => await this.startMetronome(85));
                     document.getElementById('metro95Btn').addEventListener('click', async () => await this.startMetronome(95));
                     document.getElementById('metroStopBtn').addEventListener('click', () => this.stopMetronome());
+
+                    // Set up meter button handlers
+                    document.getElementById('meter2Btn').addEventListener('click', () => this.setMeter(2));
+                    document.getElementById('meter3Btn').addEventListener('click', () => this.setMeter(3));
+                    document.getElementById('meter4Btn').addEventListener('click', () => this.setMeter(4));
+                    document.getElementById('meter6Btn').addEventListener('click', () => this.setMeter(6));
+                    document.getElementById('meter8Btn').addEventListener('click', () => this.setMeter(8));
+                    document.getElementById('meter16Btn').addEventListener('click', () => this.setMeter(16));
 
                 } catch (error) {
                     console.error('Error initializing dance viewer:', error);
@@ -1057,6 +1105,22 @@
                 return true;
             },
 
+            setMeter(beats) {
+                console.log(`Setting meter to ${beats} beats per measure`);
+                metronomeMeter = beats;
+                currentBeatInMeasure = 0;
+
+                // Update button states
+                document.getElementById('meter2Btn').classList.remove('active');
+                document.getElementById('meter3Btn').classList.remove('active');
+                document.getElementById('meter4Btn').classList.remove('active');
+                document.getElementById('meter6Btn').classList.remove('active');
+                document.getElementById('meter8Btn').classList.remove('active');
+                document.getElementById('meter16Btn').classList.remove('active');
+
+                document.getElementById(`meter${beats}Btn`).classList.add('active');
+            },
+
             buildBeatBoxList() {
                 // Build a flat list of all beat boxes in order, respecting repeats
                 beatBoxes = [];
@@ -1133,8 +1197,9 @@
                 // Start countdown
                 countdownBeats = 4;
                 currentBeatIndex = -1;
+                currentBeatInMeasure = 0; // Reset measure position
 
-                console.log(`Countdown starting: 4 beats at ${beatDuration.toFixed(0)}ms per beat`);
+                console.log(`Countdown starting: 4 beats at ${beatDuration.toFixed(0)}ms per beat, meter: ${metronomeMeter}/4`);
 
                 metronomeInterval = setInterval(() => {
                     if (countdownBeats > 0) {
@@ -1161,12 +1226,12 @@
                 // Loop back to start if at end
                 if (currentBeatIndex >= beatBoxes.length) {
                     currentBeatIndex = 0;
+                    currentBeatInMeasure = 0; // Reset measure on loop
                     console.log('Looping back to start');
                 }
 
-                // Play metronome click (downbeat on first beat)
-                const isDownbeat = (currentBeatIndex === 0);
-                playMetronomeClick(isDownbeat);
+                // Play metronome click with current beat in measure
+                playMetronomeClick(currentBeatInMeasure);
 
                 // Highlight current beat
                 beatBoxes[currentBeatIndex].classList.add('highlighted');
@@ -1177,7 +1242,10 @@
                     block: 'center'
                 });
 
-                console.log(`Beat ${currentBeatIndex + 1}/${beatBoxes.length}: "${beatBoxes[currentBeatIndex].textContent}"`);
+                console.log(`Beat ${currentBeatIndex + 1}/${beatBoxes.length}: "${beatBoxes[currentBeatIndex].textContent}" (measure beat ${currentBeatInMeasure + 1}/${metronomeMeter})`);
+
+                // Advance beat in measure
+                currentBeatInMeasure = (currentBeatInMeasure + 1) % metronomeMeter;
             },
 
             stopMetronome() {
@@ -1198,6 +1266,7 @@
                 currentBeatIndex = -1;
                 countdownBeats = 0;
                 metronomeBPM = null;
+                currentBeatInMeasure = 0;
 
                 // Update button states
                 document.getElementById('metro65Btn').classList.remove('active');
