@@ -529,7 +529,7 @@
 
                     console.log(`\n--- Box ${index}: "${text}" ---`);
 
-                    // Get box dimensions (includes padding/border)
+                    // Get box dimensions
                     const boxWidth = box.offsetWidth;
                     const boxHeight = box.offsetHeight;
 
@@ -551,39 +551,57 @@
                     const borderLeft = parseFloat(computedStyle.borderLeftWidth) || 0;
                     const borderRight = parseFloat(computedStyle.borderRightWidth) || 0;
 
-                    const availableWidth = boxWidth - paddingLeft - paddingRight - borderLeft - borderRight - 4; // -4 for safety margin
-                    const availableHeight = boxHeight - paddingTop - paddingBottom - borderTop - borderBottom - 4;
+                    console.log(`Padding: T=${paddingTop} R=${paddingRight} B=${paddingBottom} L=${paddingLeft}`);
+                    console.log(`Border: T=${borderTop} R=${borderRight} B=${borderBottom} L=${borderLeft}`);
 
-                    console.log(`Available: ${availableWidth.toFixed(1)}x${availableHeight.toFixed(1)}px (after padding/border)`);
+                    // Calculate available space - be less aggressive with margins
+                    const availableWidth = boxWidth - paddingLeft - paddingRight - borderLeft - borderRight - 2;
+                    const availableHeight = boxHeight - paddingTop - paddingBottom - borderTop - borderBottom - 2;
+
+                    console.log(`Available: ${availableWidth.toFixed(1)}x${availableHeight.toFixed(1)}px`);
+
+                    if (availableWidth < 10 || availableHeight < 10) {
+                        console.error(`Available space too small! Check CSS - boxes may be collapsed.`);
+                        return;
+                    }
 
                     // Create temporary span to measure text
                     const measurer = document.createElement('span');
-                    measurer.style.position = 'absolute';
-                    measurer.style.visibility = 'hidden';
-                    measurer.style.whiteSpace = 'nowrap';
-                    measurer.style.fontWeight = computedStyle.fontWeight;
-                    measurer.style.fontFamily = computedStyle.fontFamily;
+                    measurer.style.cssText = `
+                        position: absolute;
+                        visibility: hidden;
+                        white-space: nowrap;
+                        font-weight: bold;
+                        font-family: Arial, sans-serif;
+                        line-height: 1;
+                        padding: 0;
+                        margin: 0;
+                    `;
                     measurer.textContent = text;
                     document.body.appendChild(measurer);
 
                     // Binary search for optimal font size
                     let minSize = 10;
-                    let maxSize = 100; // Start high
+                    let maxSize = Math.min(120, availableHeight * 1.2); // Cap based on available height
                     let bestSize = minSize;
                     let iterations = 0;
+
+                    console.log(`Starting binary search: ${minSize}px to ${maxSize.toFixed(1)}px`);
 
                     while (maxSize - minSize > 0.5 && iterations < 30) {
                         const testSize = (minSize + maxSize) / 2;
                         measurer.style.fontSize = testSize + 'px';
-                        measurer.style.lineHeight = '1';
 
+                        // Force layout
                         const textWidth = measurer.offsetWidth;
                         const textHeight = measurer.offsetHeight;
 
-                        const fits = (textWidth <= availableWidth && textHeight <= availableHeight);
+                        const fitsWidth = textWidth <= availableWidth;
+                        const fitsHeight = textHeight <= availableHeight;
+                        const fits = fitsWidth && fitsHeight;
 
-                        if (iterations < 5 || fits || !fits && iterations < 10) { // Log first few and important ones
-                            console.log(`  [${iterations}] Test ${testSize.toFixed(1)}px: text=${textWidth.toFixed(1)}x${textHeight.toFixed(1)} vs avail=${availableWidth.toFixed(1)}x${availableHeight.toFixed(1)} => ${fits ? 'FITS' : 'TOO BIG'}`);
+                        if (iterations < 8) { // Log first several iterations
+                            console.log(`  [${iterations}] ${testSize.toFixed(1)}px: ${textWidth.toFixed(0)}x${textHeight.toFixed(0)} vs ${availableWidth.toFixed(0)}x${availableHeight.toFixed(0)} => ${fits ? '✓ FITS' : '✗ TOO BIG'}`);
                         }
 
                         if (fits) {
@@ -602,7 +620,7 @@
                     box.style.setProperty('font-size', bestSize + 'px', 'important');
                     box.style.setProperty('line-height', '1', 'important');
 
-                    console.log(`✓ Box ${index} "${text}": FINAL SIZE = ${bestSize.toFixed(1)}px`);
+                    console.log(`✓✓✓ Box ${index} "${text}": FINAL SIZE = ${bestSize.toFixed(1)}px (${iterations} iterations) ✓✓✓`);
                 });
 
                 console.log(`\n=== RESIZING COMPLETE ===\n`);

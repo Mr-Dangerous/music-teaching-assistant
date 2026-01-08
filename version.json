@@ -1,5 +1,5 @@
 {
-  "version": "1.7.5",
+  "version": "1.7.6",
   "lastUpdated": "2026-01-08",
-  "description": "Complete rewrite of text sizing - use temporary measurer element for accurate dimensions instead of broken scrollWidth measurements"
+  "description": "Fix 8px bug - reduce safety margin, add space validation, improve measurer setup, enhance diagnostics"
 }
