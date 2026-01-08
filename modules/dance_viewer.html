@@ -281,12 +281,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: calc(16px * var(--module-scale));
             color: #222;
             padding: calc(4px * var(--module-scale));
             text-align: center;
             word-wrap: break-word;
-            line-height: 1.2;
+            line-height: 1;
+            font-weight: bold;
+            overflow: hidden;
         }
 
         .repeat-end {
@@ -504,6 +505,36 @@
                 dance.sections.forEach(section => {
                     const sectionEl = this.createSectionElement(section);
                     container.appendChild(sectionEl);
+                });
+
+                // Dynamically size text in all beat boxes after rendering
+                this.autoSizeBeatBoxText();
+            },
+
+            autoSizeBeatBoxText() {
+                const beatBoxes = document.querySelectorAll('.beat-box');
+                const moduleScale = getComputedStyle(document.documentElement).getPropertyValue('--module-scale').trim() || 1;
+
+                beatBoxes.forEach(box => {
+                    const text = box.textContent.trim();
+                    if (!text) return; // Skip empty boxes
+
+                    const boxWidth = box.clientWidth - (8 * moduleScale); // Account for padding
+                    const boxHeight = box.clientHeight - (8 * moduleScale);
+
+                    // Start with a large font size and scale down to fit
+                    let fontSize = boxHeight * 0.9; // Start at 90% of box height
+                    box.style.fontSize = fontSize + 'px';
+
+                    // Reduce font size until text fits width
+                    let iterations = 0;
+                    while ((box.scrollWidth > boxWidth || box.scrollHeight > boxHeight) && iterations < 50) {
+                        fontSize *= 0.95;
+                        box.style.fontSize = fontSize + 'px';
+                        iterations++;
+                    }
+
+                    console.log(`Beat box "${text}": font-size=${fontSize.toFixed(1)}px`);
                 });
             },
 
