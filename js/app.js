@@ -451,7 +451,10 @@ class TeachingAssistantApp {
       'smlrd_composer_working.html',
       'so_la_mi_re_do_trainer.html',
       'so_la_mi_trainer.html',
-      'string.html'
+      'string.html',
+      'student_notes.html',
+      'video-player.html',
+      'word-ending.html'
     ];
 
     // Just load all modules - they're part of the application, not user data
