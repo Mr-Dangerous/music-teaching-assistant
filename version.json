@@ -1,5 +1,5 @@
 {
-  "version": "1.7.1",
+  "version": "1.7.2",
   "lastUpdated": "2026-01-08",
-  "description": "Add dynamic text sizing to dance beat boxes - text now fills boxes vertically and scales to fit horizontally for maximum readability on smartboards"
+  "description": "Fix dynamic text sizing timing issue - now properly waits for DOM layout before resizing text"
 }
