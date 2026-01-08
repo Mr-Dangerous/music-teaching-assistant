@@ -1,5 +1,5 @@
 {
-  "version": "2.0.3",
+  "version": "2.0.4",
   "lastUpdated": "2026-01-08",
-  "description": "Add missing modules to fallback list (student_notes, video-player, word-ending)"
+  "description": "Fix 404 error handling - properly trigger fallback when modules/ fetch fails"
 }

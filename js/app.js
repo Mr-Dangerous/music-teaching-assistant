@@ -393,6 +393,12 @@ class TeachingAssistantApp {
       // Fetch the list of files in the modules/ directory
       // This requires the server to provide directory listing or we scan known modules
       const response = await fetch('modules/');
+
+      // Check if fetch was successful (directory listing might not be available)
+      if (!response.ok) {
+        throw new Error(`Failed to fetch modules/ directory: ${response.status} ${response.statusText}`);
+      }
+
       const html = await response.text();
 
       // Parse HTML to find .html files (basic approach)
