@@ -1,5 +1,5 @@
 {
-  "version": "1.4.10",
-  "lastUpdated": "2026-01-07",
-  "description": "Add detailed audio loading error messages and remove old error handler"
+  "version": "1.5.1",
+  "lastUpdated": "2026-01-08",
+  "description": "Fix dance viewer audio switching bug - prevent duplicate event listeners and properly clean up blob URLs"
 }
