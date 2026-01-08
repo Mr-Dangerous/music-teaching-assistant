@@ -288,6 +288,51 @@
             line-height: 1;
             font-weight: bold;
             overflow: hidden;
+            transition: all 0.1s;
+        }
+
+        .beat-box.highlighted {
+            border: calc(4px * var(--module-scale)) solid #ff6b6b;
+            box-shadow: 0 0 calc(15px * var(--module-scale)) rgba(255, 107, 107, 0.6);
+            transform: scale(1.05);
+        }
+
+        .metronome-btn {
+            width: calc(50px * var(--module-scale));
+            height: calc(28px * var(--module-scale));
+            border-radius: calc(4px * var(--module-scale));
+            background: white;
+            border: 2px solid #ff9800;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s;
+            flex-shrink: 0;
+            font-size: calc(11px * var(--module-scale));
+            color: #ff9800;
+            font-weight: bold;
+            margin-right: calc(4px * var(--module-scale));
+        }
+
+        .metronome-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .metronome-btn.active {
+            background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+            color: white;
+        }
+
+        .metronome-stop {
+            background: white;
+            border-color: #e53935;
+            color: #e53935;
+        }
+
+        .metronome-stop.active {
+            background: linear-gradient(135deg, #e53935 0%, #c62828 100%);
+            color: white;
         }
 
         .repeat-end {
@@ -349,6 +394,11 @@
             <option value="">Loading dances...</option>
         </select>
 
+        <button class="metronome-btn" id="metro65Btn" title="65 BPM Metronome">65</button>
+        <button class="metronome-btn" id="metro85Btn" title="85 BPM Metronome">85</button>
+        <button class="metronome-btn" id="metro95Btn" title="95 BPM Metronome">95</button>
+        <button class="metronome-btn metronome-stop" id="metroStopBtn" title="Stop Metronome">STOP</button>
+
         <div class="dance-title" id="danceTitle">Select a dance to begin</div>
 
         <button class="play-btn" id="playBtn" disabled>
@@ -393,6 +443,13 @@
         let currentBlobURL = null;
         let audioListenersInitialized = false;
 
+        // Metronome state
+        let metronomeInterval = null;
+        let metronomeBPM = null;
+        let beatBoxes = [];
+        let currentBeatIndex = -1;
+        let countdownBeats = 0;
+
         window.TaskModule = {
             async init(context) {
                 console.log('Dance Viewer init with context:', context);
@@ -428,6 +485,12 @@
                             await this.loadAndDisplayDance(danceId);
                         }
                     });
+
+                    // Set up metronome button handlers
+                    document.getElementById('metro65Btn').addEventListener('click', () => this.startMetronome(65));
+                    document.getElementById('metro85Btn').addEventListener('click', () => this.startMetronome(85));
+                    document.getElementById('metro95Btn').addEventListener('click', () => this.startMetronome(95));
+                    document.getElementById('metroStopBtn').addEventListener('click', () => this.stopMetronome());
 
                 } catch (error) {
                     console.error('Error initializing dance viewer:', error);
@@ -916,7 +979,151 @@
                 return true;
             },
 
+            buildBeatBoxList() {
+                // Build a flat list of all beat boxes in order, respecting repeats
+                beatBoxes = [];
+
+                if (!currentDance || !currentDance.sections) {
+                    console.warn('No dance loaded');
+                    return;
+                }
+
+                currentDance.sections.forEach(section => {
+                    const sectionBoxes = [];
+
+                    // Find all beat boxes in this section
+                    const sectionElements = document.querySelectorAll('.section');
+                    sectionElements.forEach(sectionEl => {
+                        const letterEl = sectionEl.querySelector('.section-letter');
+                        if (letterEl && letterEl.textContent === section.letter) {
+                            const boxes = sectionEl.querySelectorAll('.beat-box');
+                            boxes.forEach(box => {
+                                if (box.textContent.trim()) { // Only non-empty boxes
+                                    sectionBoxes.push(box);
+                                }
+                            });
+                        }
+                    });
+
+                    // Add section boxes once
+                    beatBoxes.push(...sectionBoxes);
+
+                    // If section repeats, add again
+                    if (section.repeats) {
+                        beatBoxes.push(...sectionBoxes);
+                    }
+                });
+
+                console.log(`Built beat box list: ${beatBoxes.length} beats`);
+            },
+
+            startMetronome(bpm) {
+                console.log(`Starting metronome at ${bpm} BPM`);
+
+                // Stop any existing metronome
+                this.stopMetronome();
+
+                // Build the beat list
+                this.buildBeatBoxList();
+
+                if (beatBoxes.length === 0) {
+                    console.warn('No beats to highlight - load a dance first');
+                    return;
+                }
+
+                // Update button states
+                document.getElementById('metro65Btn').classList.remove('active');
+                document.getElementById('metro85Btn').classList.remove('active');
+                document.getElementById('metro95Btn').classList.remove('active');
+                document.getElementById('metroStopBtn').classList.remove('active');
+
+                if (bpm === 65) document.getElementById('metro65Btn').classList.add('active');
+                if (bpm === 85) document.getElementById('metro85Btn').classList.add('active');
+                if (bpm === 95) document.getElementById('metro95Btn').classList.add('active');
+
+                metronomeBPM = bpm;
+                const beatDuration = (60 / bpm) * 1000; // ms per beat
+
+                // Start countdown
+                countdownBeats = 4;
+                currentBeatIndex = -1;
+
+                console.log(`Countdown starting: 4 beats at ${beatDuration.toFixed(0)}ms per beat`);
+
+                metronomeInterval = setInterval(() => {
+                    if (countdownBeats > 0) {
+                        // Countdown phase
+                        console.log(`Countdown: ${countdownBeats}`);
+                        countdownBeats--;
+                    } else {
+                        // Beat highlighting phase
+                        this.nextBeat();
+                    }
+                }, beatDuration);
+            },
+
+            nextBeat() {
+                // Remove highlight from previous beat
+                if (currentBeatIndex >= 0 && currentBeatIndex < beatBoxes.length) {
+                    beatBoxes[currentBeatIndex].classList.remove('highlighted');
+                }
+
+                // Advance to next beat
+                currentBeatIndex++;
+
+                // Loop back to start if at end
+                if (currentBeatIndex >= beatBoxes.length) {
+                    currentBeatIndex = 0;
+                    console.log('Looping back to start');
+                }
+
+                // Highlight current beat
+                beatBoxes[currentBeatIndex].classList.add('highlighted');
+
+                // Scroll to keep current beat visible
+                beatBoxes[currentBeatIndex].scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+
+                console.log(`Beat ${currentBeatIndex + 1}/${beatBoxes.length}: "${beatBoxes[currentBeatIndex].textContent}"`);
+            },
+
+            stopMetronome() {
+                console.log('Stopping metronome');
+
+                // Clear interval
+                if (metronomeInterval) {
+                    clearInterval(metronomeInterval);
+                    metronomeInterval = null;
+                }
+
+                // Remove all highlights
+                document.querySelectorAll('.beat-box.highlighted').forEach(box => {
+                    box.classList.remove('highlighted');
+                });
+
+                // Reset state
+                currentBeatIndex = -1;
+                countdownBeats = 0;
+                metronomeBPM = null;
+
+                // Update button states
+                document.getElementById('metro65Btn').classList.remove('active');
+                document.getElementById('metro85Btn').classList.remove('active');
+                document.getElementById('metro95Btn').classList.remove('active');
+                document.getElementById('metroStopBtn').classList.add('active');
+
+                // Remove stop button active state after a moment
+                setTimeout(() => {
+                    document.getElementById('metroStopBtn').classList.remove('active');
+                }, 200);
+            },
+
             reset() {
+                // Stop metronome
+                this.stopMetronome();
+
                 // Stop audio playback and clean up
                 if (audioElement) {
                     audioElement.pause();

@@ -1,5 +1,5 @@
 {
-  "version": "1.7.6",
+  "version": "1.8.1",
   "lastUpdated": "2026-01-08",
-  "description": "Fix 8px bug - reduce safety margin, add space validation, improve measurer setup, enhance diagnostics"
+  "description": "Add metronome with 65/85/95 BPM, 4-beat countdown, beat highlighting, repeat support, and auto-loop"
 }
