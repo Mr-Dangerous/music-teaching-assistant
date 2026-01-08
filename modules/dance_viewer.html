@@ -530,15 +530,19 @@
                 try {
                     // Extract filename from path (e.g., "data/dance_audio_tracks/fjaskern.mp3" -> "fjaskern.mp3")
                     const filename = audioPath.split('/').pop();
+                    console.log('Attempting to load audio file:', filename);
 
                     // Load audio file from parent app's folder handle
                     const folderHandle = window.parent.app.fileManager.folderHandle;
                     if (!folderHandle) {
-                        throw new Error('No folder handle available');
+                        throw new Error('No folder handle available - data folder not loaded');
                     }
 
+                    console.log('Looking for dance_audio_tracks folder...');
                     // Navigate to dance_audio_tracks folder
                     const audioFolderHandle = await folderHandle.getDirectoryHandle('dance_audio_tracks');
+                    console.log('Found dance_audio_tracks folder, looking for file:', filename);
+
                     const fileHandle = await audioFolderHandle.getFileHandle(filename);
                     const file = await fileHandle.getFile();
 
@@ -546,10 +550,17 @@
                     const blobURL = URL.createObjectURL(file);
                     audioElement.src = blobURL;
 
-                    console.log(`Loaded audio file: ${filename}`);
+                    console.log(`Successfully loaded audio file: ${filename} as blob URL`);
                 } catch (error) {
-                    console.error('Error loading audio file:', audioPath, error);
-                    timeDisplay.textContent = 'Audio file not found';
+                    console.error('Failed to load audio file:', audioPath);
+                    console.error('Error details:', error.name, error.message);
+
+                    if (error.name === 'NotFoundError') {
+                        timeDisplay.textContent = 'Create dance_audio_tracks folder in data/';
+                        this.showError('Audio folder not found. Create a "dance_audio_tracks" folder inside your data folder and place MP3 files there.');
+                    } else {
+                        timeDisplay.textContent = 'Audio unavailable';
+                    }
                     return;
                 }
 
@@ -595,12 +606,6 @@
                 audioElement.addEventListener('ended', () => {
                     playBtn.classList.remove('playing');
                     progressBar.style.width = '0%';
-                });
-
-                // Handle audio load errors
-                audioElement.addEventListener('error', () => {
-                    console.error('Error loading audio file:', audioPath);
-                    timeDisplay.textContent = 'Audio unavailable';
                 });
             },
 

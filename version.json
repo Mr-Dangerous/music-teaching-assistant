@@ -1,5 +1,5 @@
 {
-  "version": "1.4.9",
+  "version": "1.4.10",
   "lastUpdated": "2026-01-07",
-  "description": "Compact header layout and fix audio loading from File System API"
+  "description": "Add detailed audio loading error messages and remove old error handler"
 }
