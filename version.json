@@ -1,5 +1,5 @@
 {
-  "version": "1.8.1",
+  "version": "1.8.2",
   "lastUpdated": "2026-01-08",
-  "description": "Add metronome with 65/85/95 BPM, 4-beat countdown, beat highlighting, repeat support, and auto-loop"
+  "description": "Add audio clicks to metronome - countdown beeps and tick sounds with distinct downbeat"
 }

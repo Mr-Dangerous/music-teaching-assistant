@@ -449,6 +449,54 @@
         let beatBoxes = [];
         let currentBeatIndex = -1;
         let countdownBeats = 0;
+        let audioContext = null;
+
+        // Initialize audio context for metronome clicks
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            return audioContext;
+        }
+
+        // Play metronome click sound
+        function playMetronomeClick(isDownbeat = false) {
+            const ctx = initAudioContext();
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            // Higher pitch for downbeat (first beat), lower for others
+            oscillator.frequency.value = isDownbeat ? 1200 : 800;
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + 0.1);
+        }
+
+        // Play countdown click (different sound)
+        function playCountdownClick() {
+            const ctx = initAudioContext();
+            const oscillator = ctx.createOscillator();
+            const gainNode = ctx.createGain();
+
+            oscillator.connect(gainNode);
+            gainNode.connect(ctx.destination);
+
+            oscillator.frequency.value = 600; // Lower pitch for countdown
+            oscillator.type = 'sine';
+
+            gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+
+            oscillator.start(ctx.currentTime);
+            oscillator.stop(ctx.currentTime + 0.08);
+        }
 
         window.TaskModule = {
             async init(context) {
@@ -1053,6 +1101,7 @@
                 metronomeInterval = setInterval(() => {
                     if (countdownBeats > 0) {
                         // Countdown phase
+                        playCountdownClick();
                         console.log(`Countdown: ${countdownBeats}`);
                         countdownBeats--;
                     } else {
@@ -1076,6 +1125,10 @@
                     currentBeatIndex = 0;
                     console.log('Looping back to start');
                 }
+
+                // Play metronome click (downbeat on first beat)
+                const isDownbeat = (currentBeatIndex === 0);
+                playMetronomeClick(isDownbeat);
 
                 // Highlight current beat
                 beatBoxes[currentBeatIndex].classList.add('highlighted');
