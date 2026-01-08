@@ -1,5 +1,5 @@
 {
-  "version": "2.0.0",
+  "version": "2.0.1",
   "lastUpdated": "2026-01-08",
-  "description": "MAJOR: Remove tasks.csv - tasks now loaded from modules/ folder. Removed grade levels - all tasks available to all students."
+  "description": "Fix module loading - add complete fallback list of all 20 modules and handle hyphenated filenames"
 }

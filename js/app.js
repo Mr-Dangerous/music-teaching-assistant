@@ -429,12 +429,28 @@ class TeachingAssistantApp {
    * Fallback method: Load a hardcoded list of known modules
    */
   async loadKnownModules() {
-    // List of known module files
+    // List of all known module files (update this when adding new modules)
     const knownModules = [
+      'audio-player.html',
+      'boomwhacker_assigner.html',
+      'chord_progression_composer.html',
       'dance_viewer.html',
-      'compose_melody.html',
-      'rhythm_practice.html'
-      // Add more as needed
+      'greig_boomwhacker_assignment.html',
+      'interval_trainer.html',
+      'martins-dream-of-1963.html',
+      'pentatonic_composer.html',
+      'piano_octave_1.html',
+      'picture.html',
+      'presentation_viewer.html',
+      'results-viewer.html',
+      'simple-button-test.html',
+      's_l_m_composer.html',
+      's_l_m_composer_modular.html',
+      'smlrd_composer.html',
+      'smlrd_composer_working.html',
+      'so_la_mi_re_do_trainer.html',
+      'so_la_mi_trainer.html',
+      'string.html'
     ];
 
     const tasks = [];
@@ -452,19 +468,22 @@ class TeachingAssistantApp {
         }
       } catch (e) {
         // Module doesn't exist, skip
+        console.log(`Module ${moduleFile} not accessible`);
       }
     }
 
+    console.log(`Fallback loaded ${tasks.length} modules`);
     return tasks;
   }
 
   /**
    * Convert module filename to readable display name
    * E.g., "rhythm_practice" -> "Rhythm Practice"
+   * E.g., "audio-player" -> "Audio Player"
    */
   formatModuleName(moduleName) {
     return moduleName
-      .split('_')
+      .split(/[-_]/) // Split on both hyphens and underscores
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' ');
   }
