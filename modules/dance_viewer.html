@@ -554,7 +554,7 @@
 
                     for (let i = 0; i < 20; i++) {
                         const testSize = (minSize + maxSize) / 2;
-                        box.style.fontSize = testSize + 'px';
+                        box.style.setProperty('font-size', testSize + 'px', 'important');
 
                         // Force layout recalculation
                         box.offsetHeight;
@@ -575,8 +575,9 @@
                         if (maxSize - minSize < 0.5) break;
                     }
 
-                    box.style.fontSize = bestSize + 'px';
-                    console.log(`Beat box "${text}": final font-size=${bestSize.toFixed(1)}px`);
+                    // Set final size with !important to ensure it sticks
+                    box.style.setProperty('font-size', bestSize + 'px', 'important');
+                    console.log(`Beat box "${text}": FINAL font-size=${bestSize.toFixed(1)}px (individual per box)`);
                 });
             },
 
