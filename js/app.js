@@ -427,6 +427,7 @@ class TeachingAssistantApp {
 
   /**
    * Fallback method: Load a hardcoded list of known modules
+   * Just loads all modules directly without checking - they're part of the app
    */
   async loadKnownModules() {
     // List of all known module files (update this when adding new modules)
@@ -453,26 +454,17 @@ class TeachingAssistantApp {
       'string.html'
     ];
 
-    const tasks = [];
-    for (const moduleFile of knownModules) {
-      // Check if module exists
-      try {
-        const response = await fetch(`modules/${moduleFile}`, { method: 'HEAD' });
-        if (response.ok) {
-          const moduleName = moduleFile.replace('.html', '');
-          tasks.push({
-            task_id: moduleName,
-            question: this.formatModuleName(moduleName),
-            module_path: `modules/${moduleFile}`
-          });
-        }
-      } catch (e) {
-        // Module doesn't exist, skip
-        console.log(`Module ${moduleFile} not accessible`);
-      }
-    }
+    // Just load all modules - they're part of the application, not user data
+    const tasks = knownModules.map(moduleFile => {
+      const moduleName = moduleFile.replace('.html', '');
+      return {
+        task_id: moduleName,
+        question: this.formatModuleName(moduleName),
+        module_path: `modules/${moduleFile}`
+      };
+    });
 
-    console.log(`Fallback loaded ${tasks.length} modules`);
+    console.log(`Loaded ${tasks.length} modules from fallback list`);
     return tasks;
   }
 

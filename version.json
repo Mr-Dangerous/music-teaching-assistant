@@ -1,5 +1,5 @@
 {
-  "version": "2.0.1",
+  "version": "2.0.2",
   "lastUpdated": "2026-01-08",
-  "description": "Fix module loading - add complete fallback list of all 20 modules and handle hyphenated filenames"
+  "description": "Simplify module loading - load all 20 modules directly without existence checks"
 }
