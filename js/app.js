@@ -265,23 +265,23 @@ class TeachingAssistantApp {
       this.showLoading(true);
       // this.showNotification('Loading files... Please select the three CSV files when prompted.', 'info');
 
-      // Load all three files
-      const { studentsContent, tasksContent, resultsContent } = await this.fileManager.loadFiles();
+      // Load two CSV files (tasks loaded from modules/)
+      const { studentsContent, resultsContent } = await this.fileManager.loadFiles();
 
       // Parse students.csv (student_id, name, grade, class)
       // this.showNotification('Parsing student roster...', 'info');
       this.students = this.parseStudentsCSV(studentsContent);
 
-      // Parse tasks.csv (task_id, question, question_type, input_type, grade)
-      // this.showNotification('Parsing task definitions...', 'info');
-      this.tasks = this.parseTasksCSV(tasksContent);
+      // Load tasks from modules/ folder (no more tasks.csv)
+      // this.showNotification('Loading available modules...', 'info');
+      await this.loadTasksFromModules();
 
       // Parse results.csv (student_id, task_id, response, completed_date)
       // this.showNotification('Parsing student responses...', 'info');
       this.results = this.parseResultsCSV(resultsContent);
 
       console.log(`Loaded ${this.students.length} students`);
-      console.log(`Loaded ${this.tasks.length} tasks`);
+      console.log(`Loaded ${this.tasks.length} tasks from modules/`);
       console.log(`Loaded ${this.results.length} responses`);
 
       // Load presentation links (optional file)
@@ -382,26 +382,91 @@ class TeachingAssistantApp {
   /**
    * Parse tasks.csv content
    */
-  parseTasksCSV(csvText) {
-    const lines = this.csvHandler.parseCSVLines(csvText);
-    if (lines.length === 0) return [];
+  /**
+   * Load tasks by scanning modules/ folder for .html files
+   * No more tasks.csv - all modules in the folder become available tasks
+   */
+  async loadTasksFromModules() {
+    this.tasks = [];
 
-    const headers = lines[0];
-    const tasks = [];
+    try {
+      // Fetch the list of files in the modules/ directory
+      // This requires the server to provide directory listing or we scan known modules
+      const response = await fetch('modules/');
+      const html = await response.text();
 
-    for (let i = 1; i < lines.length; i++) {
-      const line = lines[i];
-      if (line.length === 0 || (line.length === 1 && line[0] === '')) continue;
+      // Parse HTML to find .html files (basic approach)
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      const links = doc.querySelectorAll('a');
 
-      tasks.push({
-        task_id: line[0],
-        question: line[1],
-        grade: line[2],
-        module_path: line[3]
+      links.forEach(link => {
+        const href = link.getAttribute('href');
+        if (href && href.endsWith('.html') && !href.startsWith('_')) {
+          // Extract module name from filename (e.g., "rhythm_game.html" -> "rhythm_game")
+          const moduleName = href.replace('.html', '');
+
+          // Create task object
+          this.tasks.push({
+            task_id: moduleName,
+            question: this.formatModuleName(moduleName), // Convert to readable name
+            module_path: `modules/${href}`
+          });
+        }
       });
+
+      console.log(`Discovered ${this.tasks.length} modules:`, this.tasks.map(t => t.task_id));
+    } catch (error) {
+      console.error('Failed to load tasks from modules folder:', error);
+      console.log('Using fallback: loading hardcoded module list');
+
+      // Fallback: Manually list known modules if directory listing fails
+      this.tasks = await this.loadKnownModules();
+    }
+  }
+
+  /**
+   * Fallback method: Load a hardcoded list of known modules
+   */
+  async loadKnownModules() {
+    // List of known module files
+    const knownModules = [
+      'dance_viewer.html',
+      'compose_melody.html',
+      'rhythm_practice.html'
+      // Add more as needed
+    ];
+
+    const tasks = [];
+    for (const moduleFile of knownModules) {
+      // Check if module exists
+      try {
+        const response = await fetch(`modules/${moduleFile}`, { method: 'HEAD' });
+        if (response.ok) {
+          const moduleName = moduleFile.replace('.html', '');
+          tasks.push({
+            task_id: moduleName,
+            question: this.formatModuleName(moduleName),
+            module_path: `modules/${moduleFile}`
+          });
+        }
+      } catch (e) {
+        // Module doesn't exist, skip
+      }
     }
 
     return tasks;
+  }
+
+  /**
+   * Convert module filename to readable display name
+   * E.g., "rhythm_practice" -> "Rhythm Practice"
+   */
+  formatModuleName(moduleName) {
+    return moduleName
+      .split('_')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   }
 
   /**
@@ -431,28 +496,20 @@ class TeachingAssistantApp {
 
   /**
    * Populate task selector dropdown
-   * @param {string} filterGrade - Optional grade to filter tasks by
+   * No grade filtering - all tasks shown for all classes
    */
-  populateTaskSelector(filterGrade = null) {
+  populateTaskSelector() {
     const taskSelector = document.getElementById('task-selector');
     if (!taskSelector) return;
 
     // Clear existing options except first
     taskSelector.innerHTML = '<option value="">Select Task...</option>';
 
-    // Filter tasks by grade if specified
-    const tasksToShow = filterGrade
-      ? this.tasks.filter(task => task.grade === filterGrade)
-      : this.tasks;
-
-    // Add task options
-    tasksToShow.forEach(task => {
+    // Add all tasks (no filtering)
+    this.tasks.forEach(task => {
       const option = document.createElement('option');
       option.value = task.task_id;
-
-      // Format grade display (K stays as K, numbers get "Grade" prefix)
-      const gradeDisplay = task.grade === 'K' ? 'Grade K' : `Grade ${task.grade}`;
-      option.textContent = `${task.task_id} (${gradeDisplay})`;
+      option.textContent = task.question; // Display formatted name
 
       if (task.task_id === this.selectedTask) {
         option.selected = true;
@@ -460,16 +517,6 @@ class TeachingAssistantApp {
 
       taskSelector.appendChild(option);
     });
-
-    // If current selected task is not in filtered list, clear selection
-    if (filterGrade && this.selectedTask) {
-      const taskExists = tasksToShow.find(t => t.task_id === this.selectedTask);
-      if (!taskExists && tasksToShow.length > 0) {
-        // Auto-select first task in filtered list
-        this.selectedTask = tasksToShow[0].task_id;
-        taskSelector.value = this.selectedTask;
-      }
-    }
   }
 
   /**
@@ -827,8 +874,8 @@ class TeachingAssistantApp {
       classStudents = this.students.filter(s => s.class === this.selectedClass);
     }
 
-    // Show all tasks (no grade filtering)
-    this.populateTaskSelector(null);
+    // Show all tasks
+    this.populateTaskSelector();
 
     // Sort students by name
     classStudents.sort((a, b) => a.name.localeCompare(b.name));

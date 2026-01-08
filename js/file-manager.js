@@ -4,9 +4,8 @@
 
 class FileManager {
   constructor() {
-    // File handles for three files
+    // File handles for two files (tasks.csv removed - tasks loaded from modules/ folder)
     this.studentsFileHandle = null;
-    this.tasksFileHandle = null;
     this.resultsFileHandle = null;
 
     // Folder handle for directory-based loading
@@ -14,7 +13,6 @@ class FileManager {
 
     // File names
     this.studentsFileName = '';
-    this.tasksFileName = '';
     this.resultsFileName = '';
 
     this.hasUnsavedChanges = false;
@@ -34,9 +32,10 @@ class FileManager {
   }
 
   /**
-   * Load all three CSV files: students.csv, tasks.csv, and results.csv
+   * Load two CSV files: students.csv and results.csv
    * Try folder loading first, then fall back to individual file selection
-   * @returns {Promise<Object>} - Object with studentsContent, tasksContent, and resultsContent
+   * Tasks are loaded from modules/ folder instead of CSV
+   * @returns {Promise<Object>} - Object with studentsContent and resultsContent
    */
   async loadFiles() {
     // Try folder-based loading first
@@ -53,7 +52,6 @@ class FileManager {
 
     // Fall back to original approach: try remembered handles, then batch selection, then individual
     let studentsContent = null;
-    let tasksContent = null;
     let resultsContent = null;
 
     if (this.supportsFileSystemAccess) {
@@ -65,17 +63,6 @@ class FileManager {
         } catch (error) {
           console.log('Could not load students.csv from remembered location:', error.message);
           this.studentsFileHandle = null;
-        }
-      }
-
-      // Try to load tasks.csv from remembered handle
-      if (this.tasksFileHandle) {
-        try {
-          tasksContent = await this.readFileFromHandle(this.tasksFileHandle);
-          this.tasksFileName = this.tasksFileHandle.name;
-        } catch (error) {
-          console.log('Could not load tasks.csv from remembered location:', error.message);
-          this.tasksFileHandle = null;
         }
       }
 
@@ -92,12 +79,11 @@ class FileManager {
     }
 
     // If any file wasn't loaded, try to load all at once
-    if (!studentsContent || !tasksContent || !resultsContent) {
+    if (!studentsContent || !resultsContent) {
       try {
         const allFiles = await this.loadAllFilesAtOnce();
         if (allFiles) {
           studentsContent = allFiles.studentsContent || studentsContent;
-          tasksContent = allFiles.tasksContent || tasksContent;
           resultsContent = allFiles.resultsContent || resultsContent;
         }
       } catch (error) {
@@ -107,15 +93,11 @@ class FileManager {
 
     // If any file still wasn't loaded, prompt user to select them individually
     if (!studentsContent) {
-      studentsContent = await this.openFile('students', 'Step 1 of 3: Select STUDENTS.CSV (student roster with names, grades, classes)');
-    }
-
-    if (!tasksContent) {
-      tasksContent = await this.openFile('tasks', 'Step 2 of 3: Select TASKS.CSV (task definitions with grade levels)');
+      studentsContent = await this.openFile('students', 'Step 1 of 2: Select STUDENTS.CSV (student roster with names, grades, classes)');
     }
 
     if (!resultsContent) {
-      resultsContent = await this.openFile('results', 'Step 3 of 3: Select RESULTS.CSV (student responses to tasks)');
+      resultsContent = await this.openFile('results', 'Step 2 of 2: Select RESULTS.CSV (student responses to tasks)');
     }
 
     // Remember the file handles
@@ -123,14 +105,14 @@ class FileManager {
 
     return {
       studentsContent,
-      tasksContent,
       resultsContent
     };
   }
 
   /**
-   * Load all three CSV files from a selected folder
-   * @returns {Promise<Object|null>} - Object with studentsContent, tasksContent, and resultsContent, or null if failed
+   * Load two CSV files from a selected folder (students.csv and results.csv)
+   * Tasks are loaded from modules/ folder instead
+   * @returns {Promise<Object|null>} - Object with studentsContent and resultsContent, or null if failed
    */
   async loadFilesFromFolder() {
     try {
@@ -142,10 +124,9 @@ class FileManager {
 
       this.folderHandle = folderHandle;
 
-      // Look for the three CSV files in the folder
+      // Look for the two CSV files in the folder (tasks loaded from modules/)
       const requiredFiles = {
         students: null,
-        tasks: null,
         results: null
       };
 
@@ -156,8 +137,6 @@ class FileManager {
 
           if (fileName.includes('student')) {
             requiredFiles.students = entry;
-          } else if (fileName.includes('task')) {
-            requiredFiles.tasks = entry;
           } else if (fileName.includes('result')) {
             requiredFiles.results = entry;
           }
@@ -165,31 +144,26 @@ class FileManager {
       }
 
       // Check if all required files were found
-      if (!requiredFiles.students || !requiredFiles.tasks || !requiredFiles.results) {
+      if (!requiredFiles.students || !requiredFiles.results) {
         const missing = [];
         if (!requiredFiles.students) missing.push('students.csv');
-        if (!requiredFiles.tasks) missing.push('tasks.csv');
         if (!requiredFiles.results) missing.push('results.csv');
 
         throw new Error(`Missing files in folder: ${missing.join(', ')}`);
       }
 
-      // Read all three files
+      // Read both files
       const studentsFile = await requiredFiles.students.getFile();
-      const tasksFile = await requiredFiles.tasks.getFile();
       const resultsFile = await requiredFiles.results.getFile();
 
       const studentsContent = await studentsFile.text();
-      const tasksContent = await tasksFile.text();
       const resultsContent = await resultsFile.text();
 
       // Store file handles for future saves
       this.studentsFileHandle = requiredFiles.students;
-      this.tasksFileHandle = requiredFiles.tasks;
       this.resultsFileHandle = requiredFiles.results;
 
       this.studentsFileName = requiredFiles.students.name;
-      this.tasksFileName = requiredFiles.tasks.name;
       this.resultsFileName = requiredFiles.results.name;
 
       console.log(`✓ Loaded files from folder: ${folderHandle.name}`);
@@ -199,7 +173,6 @@ class FileManager {
 
       return {
         studentsContent,
-        tasksContent,
         resultsContent
       };
     } catch (error) {
@@ -211,8 +184,8 @@ class FileManager {
   }
 
   /**
-   * Load all three CSV files at once with auto-detection
-   * @returns {Promise<Object|null>} - Object with studentsContent, tasksContent, and resultsContent, or null if failed
+   * Load both CSV files at once with auto-detection
+   * @returns {Promise<Object|null>} - Object with studentsContent and resultsContent, or null if failed
    */
   async loadAllFilesAtOnce() {
     if (this.supportsFileSystemAccess) {
@@ -223,13 +196,13 @@ class FileManager {
   }
 
   /**
-   * Load all files at once using File System Access API
+   * Load both files at once using File System Access API
    */
   async loadAllFilesWithAPI() {
     try {
       const fileHandles = await window.showOpenFilePicker({
         types: [{
-          description: 'Select all 3 CSV files (students.csv, tasks.csv, results.csv)',
+          description: 'Select 2 CSV files (students.csv and results.csv)',
           accept: {
             'text/csv': ['.csv']
           }
@@ -237,13 +210,12 @@ class FileManager {
         multiple: true
       });
 
-      if (fileHandles.length !== 3) {
-        throw new Error('Please select exactly 3 CSV files');
+      if (fileHandles.length !== 2) {
+        throw new Error('Please select exactly 2 CSV files');
       }
 
       const results = {
         studentsContent: null,
-        tasksContent: null,
         resultsContent: null
       };
 
@@ -257,10 +229,6 @@ class FileManager {
           results.studentsContent = content;
           this.studentsFileHandle = fileHandle;
           this.studentsFileName = fileHandle.name;
-        } else if (fileName.includes('task')) {
-          results.tasksContent = content;
-          this.tasksFileHandle = fileHandle;
-          this.tasksFileName = fileHandle.name;
         } else if (fileName.includes('result')) {
           results.resultsContent = content;
           this.resultsFileHandle = fileHandle;
@@ -269,8 +237,8 @@ class FileManager {
       }
 
       // Verify all files were detected
-      if (!results.studentsContent || !results.tasksContent || !results.resultsContent) {
-        throw new Error('Could not auto-detect all file types. Make sure filenames contain "student", "task", or "result"');
+      if (!results.studentsContent || !results.resultsContent) {
+        throw new Error('Could not auto-detect all file types. Make sure filenames contain "student" or "result"');
       }
 
       return results;
@@ -283,11 +251,11 @@ class FileManager {
   }
 
   /**
-   * Load all files at once using traditional file input (fallback)
+   * Load both files at once using traditional file input (fallback)
    */
   async loadAllFilesWithFallback() {
     return new Promise((resolve, reject) => {
-      alert('Select all 3 CSV files at once (students.csv, tasks.csv, results.csv)');
+      alert('Select 2 CSV files at once (students.csv and results.csv)');
 
       const input = document.createElement('input');
       input.type = 'file';
@@ -296,14 +264,13 @@ class FileManager {
 
       input.onchange = async (e) => {
         const files = Array.from(e.target.files);
-        if (files.length !== 3) {
-          reject(new Error('Please select exactly 3 CSV files'));
+        if (files.length !== 2) {
+          reject(new Error('Please select exactly 2 CSV files'));
           return;
         }
 
         const results = {
           studentsContent: null,
-          tasksContent: null,
           resultsContent: null
         };
 
@@ -316,9 +283,6 @@ class FileManager {
             if (fileName.includes('student')) {
               results.studentsContent = content;
               this.studentsFileName = file.name;
-            } else if (fileName.includes('task')) {
-              results.tasksContent = content;
-              this.tasksFileName = file.name;
             } else if (fileName.includes('result')) {
               results.resultsContent = content;
               this.resultsFileName = file.name;
@@ -326,8 +290,8 @@ class FileManager {
           }
 
           // Verify all files were detected
-          if (!results.studentsContent || !results.tasksContent || !results.resultsContent) {
-            reject(new Error('Could not auto-detect all file types. Make sure filenames contain "student", "task", or "result"'));
+          if (!results.studentsContent || !results.resultsContent) {
+            reject(new Error('Could not auto-detect all file types. Make sure filenames contain "student" or "result"'));
             return;
           }
 
@@ -394,9 +358,6 @@ class FileManager {
       if (fileType === 'students') {
         this.studentsFileHandle = fileHandle;
         this.studentsFileName = fileHandle.name;
-      } else if (fileType === 'tasks') {
-        this.tasksFileHandle = fileHandle;
-        this.tasksFileName = fileHandle.name;
       } else {
         this.resultsFileHandle = fileHandle;
         this.resultsFileName = fileHandle.name;
@@ -567,7 +528,6 @@ class FileManager {
   getFileNames() {
     return {
       students: this.studentsFileName,
-      tasks: this.tasksFileName,
       results: this.resultsFileName
     };
   }

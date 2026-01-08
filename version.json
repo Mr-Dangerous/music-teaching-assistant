@@ -1,5 +1,5 @@
 {
-  "version": "1.9.1",
+  "version": "2.0.0",
   "lastUpdated": "2026-01-08",
-  "description": "Add meter controls to metronome - 2, 3, 4, 6, 8, 16 beats per measure with downbeat emphasis on beat 1"
+  "description": "MAJOR: Remove tasks.csv - tasks now loaded from modules/ folder. Removed grade levels - all tasks available to all students."
 }
