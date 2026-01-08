@@ -1,5 +1,5 @@
 {
-  "version": "1.8.2",
+  "version": "1.8.3",
   "lastUpdated": "2026-01-08",
-  "description": "Add audio clicks to metronome - countdown beeps and tick sounds with distinct downbeat"
+  "description": "Fix metronome audio - properly resume AudioContext to handle browser autoplay policy and add detailed logging"
 }

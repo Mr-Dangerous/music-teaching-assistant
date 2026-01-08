@@ -461,41 +461,71 @@
 
         // Play metronome click sound
         function playMetronomeClick(isDownbeat = false) {
-            const ctx = initAudioContext();
-            const oscillator = ctx.createOscillator();
-            const gainNode = ctx.createGain();
+            try {
+                const ctx = initAudioContext();
 
-            oscillator.connect(gainNode);
-            gainNode.connect(ctx.destination);
+                // Resume context if suspended (browser autoplay policy)
+                if (ctx.state === 'suspended') {
+                    console.warn('AudioContext suspended, attempting to resume...');
+                    ctx.resume().then(() => {
+                        console.log('AudioContext resumed');
+                    });
+                }
 
-            // Higher pitch for downbeat (first beat), lower for others
-            oscillator.frequency.value = isDownbeat ? 1200 : 800;
-            oscillator.type = 'sine';
+                console.log(`Playing ${isDownbeat ? 'DOWNBEAT' : 'beat'} click at ${isDownbeat ? 1200 : 800}Hz, context state: ${ctx.state}`);
 
-            gainNode.gain.setValueAtTime(0.3, ctx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
 
-            oscillator.start(ctx.currentTime);
-            oscillator.stop(ctx.currentTime + 0.1);
+                oscillator.connect(gainNode);
+                gainNode.connect(ctx.destination);
+
+                // Higher pitch for downbeat (first beat), lower for others
+                oscillator.frequency.value = isDownbeat ? 1200 : 800;
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.5, ctx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
+
+                oscillator.start(ctx.currentTime);
+                oscillator.stop(ctx.currentTime + 0.1);
+            } catch (error) {
+                console.error('Error playing metronome click:', error);
+            }
         }
 
         // Play countdown click (different sound)
         function playCountdownClick() {
-            const ctx = initAudioContext();
-            const oscillator = ctx.createOscillator();
-            const gainNode = ctx.createGain();
+            try {
+                const ctx = initAudioContext();
 
-            oscillator.connect(gainNode);
-            gainNode.connect(ctx.destination);
+                // Resume context if suspended
+                if (ctx.state === 'suspended') {
+                    console.warn('AudioContext suspended, attempting to resume...');
+                    ctx.resume().then(() => {
+                        console.log('AudioContext resumed');
+                    });
+                }
 
-            oscillator.frequency.value = 600; // Lower pitch for countdown
-            oscillator.type = 'sine';
+                console.log(`Playing countdown click at 600Hz, context state: ${ctx.state}`);
 
-            gainNode.gain.setValueAtTime(0.2, ctx.currentTime);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+                const oscillator = ctx.createOscillator();
+                const gainNode = ctx.createGain();
 
-            oscillator.start(ctx.currentTime);
-            oscillator.stop(ctx.currentTime + 0.08);
+                oscillator.connect(gainNode);
+                gainNode.connect(ctx.destination);
+
+                oscillator.frequency.value = 600; // Lower pitch for countdown
+                oscillator.type = 'sine';
+
+                gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.08);
+
+                oscillator.start(ctx.currentTime);
+                oscillator.stop(ctx.currentTime + 0.08);
+            } catch (error) {
+                console.error('Error playing countdown click:', error);
+            }
         }
 
         window.TaskModule = {
@@ -535,9 +565,9 @@
                     });
 
                     // Set up metronome button handlers
-                    document.getElementById('metro65Btn').addEventListener('click', () => this.startMetronome(65));
-                    document.getElementById('metro85Btn').addEventListener('click', () => this.startMetronome(85));
-                    document.getElementById('metro95Btn').addEventListener('click', () => this.startMetronome(95));
+                    document.getElementById('metro65Btn').addEventListener('click', async () => await this.startMetronome(65));
+                    document.getElementById('metro85Btn').addEventListener('click', async () => await this.startMetronome(85));
+                    document.getElementById('metro95Btn').addEventListener('click', async () => await this.startMetronome(95));
                     document.getElementById('metroStopBtn').addEventListener('click', () => this.stopMetronome());
 
                 } catch (error) {
@@ -1065,11 +1095,19 @@
                 console.log(`Built beat box list: ${beatBoxes.length} beats`);
             },
 
-            startMetronome(bpm) {
+            async startMetronome(bpm) {
                 console.log(`Starting metronome at ${bpm} BPM`);
 
                 // Stop any existing metronome
                 this.stopMetronome();
+
+                // Initialize and resume audio context (browser autoplay policy requires user interaction)
+                const ctx = initAudioContext();
+                console.log(`AudioContext state before resume: ${ctx.state}`);
+                if (ctx.state === 'suspended') {
+                    await ctx.resume();
+                    console.log(`AudioContext resumed, new state: ${ctx.state}`);
+                }
 
                 // Build the beat list
                 this.buildBeatBoxList();
