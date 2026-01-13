@@ -459,6 +459,7 @@ class TeachingAssistantApp {
       'so_la_mi_trainer.html',
       'string.html',
       'student_notes.html',
+      'tuner.html',
       'video-player.html',
       'word-ending.html'
     ];

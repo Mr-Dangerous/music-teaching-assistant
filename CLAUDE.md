@@ -317,7 +317,7 @@ Version format: `MAJOR.MINOR.PATCH` (e.g., 0.3.0)
 4. Version displayed in bottom-right corner of app
 5. Forces cache refresh for users
 
-**Current version:** 2.1.0 (Next user request: 2.2.0, Next commit: 2.1.1)
+**Current version:** 2.1.1 (Next user request: 2.2.0, Next commit: 2.1.2)
 
 
 ## Fullscreen Mode

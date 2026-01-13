@@ -1,5 +1,5 @@
 {
-  "version": "2.1.0",
+  "version": "2.1.1",
   "lastUpdated": "2026-01-13",
-  "description": "Add tuner module with rotating laser visualization, note wheel, and real-time pitch detection"
+  "description": "Add tuner.html to fallback module list"
 }
