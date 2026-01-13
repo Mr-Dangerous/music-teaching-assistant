@@ -1,5 +1,5 @@
 {
-  "version": "2.0.4",
-  "lastUpdated": "2026-01-08",
-  "description": "Fix 404 error handling - properly trigger fallback when modules/ fetch fails"
+  "version": "2.1.0",
+  "lastUpdated": "2026-01-13",
+  "description": "Add tuner module with rotating laser visualization, note wheel, and real-time pitch detection"
 }
