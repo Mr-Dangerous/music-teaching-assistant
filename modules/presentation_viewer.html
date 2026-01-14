@@ -161,6 +161,45 @@
             position: relative;
         }
 
+        .nav-overlay {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: none;
+            gap: 12px;
+            z-index: 100;
+        }
+
+        .nav-overlay.active {
+            display: flex;
+        }
+
+        .nav-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(102, 126, 234, 0.9);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 24px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .nav-btn:hover {
+            background: rgba(102, 126, 234, 1);
+            transform: scale(1.1);
+        }
+
+        .nav-btn:active {
+            transform: scale(0.95);
+        }
+
         .placeholder {
             text-align: center;
             color: #999;
@@ -322,7 +361,7 @@
             <button id="loadBtn" class="btn load-btn">Load</button>
             <button id="saveBtn" class="btn save-btn">Save</button>
             <button id="clearBtn" class="btn clear-btn">Clear</button>
-
+            <button id="fullscreenBtn" class="btn load-btn" style="display: none;">⛶ Fullscreen</button>
         </div>
 
         <div id="savedPresentations" class="saved-presentations">
@@ -344,6 +383,12 @@
             </p>
         </div>
         <iframe id="presentationFrame" class="presentation-frame"></iframe>
+
+        <!-- Navigation overlay for slide navigation -->
+        <div id="navOverlay" class="nav-overlay">
+            <button id="prevBtn" class="nav-btn" title="Previous slide">◄</button>
+            <button id="nextBtn" class="nav-btn" title="Next slide">►</button>
+        </div>
     </div>
 
     <!-- Save Title Modal -->
@@ -387,11 +432,15 @@
         const loadBtn = document.getElementById('loadBtn');
         const saveBtn = document.getElementById('saveBtn');
         const clearBtn = document.getElementById('clearBtn');
+        const fullscreenBtn = document.getElementById('fullscreenBtn');
         const placeholder = document.getElementById('placeholder');
         const frame = document.getElementById('presentationFrame');
         const saveTitleModal = document.getElementById('saveTitleModal');
         const titleInput = document.getElementById('titleInput');
         const savedPresentationsContainer = document.getElementById('savedPresentations');
+        const navOverlay = document.getElementById('navOverlay');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
 
 
         // TaskModule interface for parent app
@@ -702,6 +751,12 @@
             frame.classList.add('active');
             placeholder.style.display = 'none';
 
+            // Show fullscreen button
+            fullscreenBtn.style.display = 'block';
+
+            // Show navigation overlay
+            navOverlay.classList.add('active');
+
             // Save settings to parent
             saveSettings();
 
@@ -718,6 +773,12 @@
             placeholder.style.display = 'flex';
             urlInput.value = '';
             currentUrl = '';
+
+            // Hide fullscreen button
+            fullscreenBtn.style.display = 'none';
+
+            // Hide navigation overlay
+            navOverlay.classList.remove('active');
 
             // Save cleared state (this will clear per-class tracking too)
             saveSettings();
@@ -816,7 +877,75 @@
             }
         });
 
+        // Fullscreen button
+        fullscreenBtn.addEventListener('click', toggleFullscreen);
 
+        // Navigation buttons
+        prevBtn.addEventListener('click', () => navigatePresentation('ArrowLeft'));
+        nextBtn.addEventListener('click', () => navigatePresentation('ArrowRight'));
+
+        // Fullscreen functionality
+        function toggleFullscreen() {
+            // Request parent app to toggle fullscreen
+            window.parent.postMessage({
+                type: 'module:requestFullscreen'
+            }, '*');
+        }
+
+        // Keyboard navigation for presentations
+        document.addEventListener('keydown', (e) => {
+            // Only handle arrow keys when a presentation is loaded
+            if (!currentUrl) return;
+
+            // Don't interfere with input fields
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            // Navigate slides with arrow keys
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                e.preventDefault();
+                navigatePresentation(e.key);
+            }
+
+            // ESC to exit fullscreen
+            if (e.key === 'Escape') {
+                if (document.fullscreenElement) {
+                    document.exitFullscreen();
+                }
+            }
+        });
+
+        // Navigate presentation based on key
+        function navigatePresentation(key) {
+            try {
+                // Try to focus the iframe first
+                frame.focus();
+
+                // For Google Slides, we can try keyboard simulation
+                // Send keydown event to the iframe
+                const keyEvent = new KeyboardEvent('keydown', {
+                    key: key,
+                    code: key === 'ArrowLeft' ? 'ArrowLeft' : key === 'ArrowRight' ? 'ArrowRight' : key === 'ArrowUp' ? 'ArrowUp' : 'ArrowDown',
+                    keyCode: key === 'ArrowLeft' ? 37 : key === 'ArrowRight' ? 39 : key === 'ArrowUp' ? 38 : 40,
+                    which: key === 'ArrowLeft' ? 37 : key === 'ArrowRight' ? 39 : key === 'ArrowUp' ? 38 : 40,
+                    bubbles: true,
+                    cancelable: true
+                });
+
+                // Try to send keyboard event to iframe
+                if (frame.contentWindow) {
+                    frame.contentWindow.postMessage({
+                        type: 'keypress',
+                        key: key
+                    }, '*');
+                    frame.contentWindow.document.dispatchEvent(keyEvent);
+                }
+
+                console.log('Navigation:', key);
+            } catch (error) {
+                console.error('Error navigating presentation:', error);
+                // Cross-origin iframes will block this, which is expected
+            }
+        }
 
 
 

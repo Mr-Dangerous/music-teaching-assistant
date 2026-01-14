@@ -129,6 +129,9 @@ class TeachingAssistantApp {
         // Module encountered an error
         console.error('Module error:', event.data.message);
         this.showNotification(`Module error: ${event.data.message}`, 'error');
+      } else if (event.data.type === 'module:requestFullscreen') {
+        // Module is requesting fullscreen
+        this.toggleFullscreen();
       } else if (event.data.type === 'taskmodule:request-students') {
         // Module is requesting the current class's student list
         this.handleStudentListRequest(event);

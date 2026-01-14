@@ -1,5 +1,5 @@
 {
-  "version": "2.1.1",
-  "lastUpdated": "2026-01-13",
-  "description": "Add tuner.html to fallback module list"
+  "version": "2.1.2",
+  "lastUpdated": "2026-01-14",
+  "description": "Add fullscreen support and navigation buttons to presentation viewer"
 }
