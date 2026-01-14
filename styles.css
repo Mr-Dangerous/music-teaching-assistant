@@ -1722,6 +1722,7 @@ body.snow-theme .app-header {
   background: #000;
   z-index: 99999;
   display: none;
+  outline: none; /* Remove focus outline */
 }
 
 #presentation-fullscreen-overlay.active {

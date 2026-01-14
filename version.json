@@ -1,5 +1,5 @@
 {
-  "version": "2.1.4",
+  "version": "2.1.5",
   "lastUpdated": "2026-01-14",
-  "description": "Fix keyboard navigation with Google Slides URL manipulation and click zones"
+  "description": "Fix a/b/c keyboard shortcuts with event capture and focus management"
 }

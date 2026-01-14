@@ -1722,6 +1722,12 @@ class TeachingAssistantApp {
     iframe.src = url;
     overlay.classList.add('active');
 
+    // Focus the overlay container to capture keyboard events
+    setTimeout(() => {
+      overlay.focus();
+      console.log('Overlay focused for keyboard events');
+    }, 100);
+
     // Show helper text
     if (helper) {
       helper.classList.remove('hidden');
@@ -1731,17 +1737,12 @@ class TeachingAssistantApp {
       }, 4000);
     }
 
-    // Focus iframe when it loads to enable keyboard navigation
+    // Keep overlay focused even after iframe loads
     iframe.onload = () => {
       setTimeout(() => {
-        iframe.focus();
-        // Try to click in the center to activate keyboard controls
-        try {
-          iframe.contentWindow.focus();
-        } catch (e) {
-          console.log('Could not focus iframe content (cross-origin)');
-        }
-      }, 500);
+        overlay.focus(); // Focus overlay instead of iframe
+        console.log('Iframe loaded, overlay refocused');
+      }, 200);
     };
 
     // Setup close button
@@ -1772,16 +1773,22 @@ class TeachingAssistantApp {
       };
     }
 
-    // Setup keyboard shortcuts
+    // Setup keyboard shortcuts with capture phase to intercept before iframe
     const keyHandler = (e) => {
+      console.log('Key pressed:', e.key); // Debug log
+
       if (e.key === 'Escape') {
+        e.preventDefault();
+        e.stopPropagation();
         this.closePresentationFullscreen();
       } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
         e.preventDefault();
+        e.stopPropagation();
         this.navigateFullscreenPresentation('prev');
         if (helper) helper.classList.add('hidden');
-      } else if (e.key === 'ArrowRight' || e.key === 'c' || e.key === 'C') {
+      } else if (e.key === 'ArrowRight' || e.key === 'b' || e.key === 'B' || e.key === 'c' || e.key === 'C') {
         e.preventDefault();
+        e.stopPropagation();
         this.navigateFullscreenPresentation('next');
         if (helper) helper.classList.add('hidden');
       }
@@ -1789,11 +1796,18 @@ class TeachingAssistantApp {
 
     // Store handler for cleanup
     this.fullscreenKeyHandler = keyHandler;
-    document.addEventListener('keydown', keyHandler);
 
-    // Also allow clicking on iframe to give it focus and hide helper
+    // Use capture phase (true) to intercept keys before iframe gets them
+    document.addEventListener('keydown', keyHandler, true);
+
+    // Prevent iframe from stealing focus
+    iframe.addEventListener('focus', () => {
+      console.log('Iframe tried to get focus, refocusing overlay');
+      overlay.focus();
+    });
+
+    // Allow clicking on iframe and hide helper
     iframe.addEventListener('click', () => {
-      iframe.focus();
       if (helper) helper.classList.add('hidden');
     });
   }
@@ -1813,9 +1827,9 @@ class TeachingAssistantApp {
       iframe.src = '';
     }
 
-    // Remove keyboard handler
+    // Remove keyboard handler (must match capture phase)
     if (this.fullscreenKeyHandler) {
-      document.removeEventListener('keydown', this.fullscreenKeyHandler);
+      document.removeEventListener('keydown', this.fullscreenKeyHandler, true);
       this.fullscreenKeyHandler = null;
     }
   }
