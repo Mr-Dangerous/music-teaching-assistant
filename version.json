@@ -1,5 +1,5 @@
 {
-  "version": "2.1.2",
+  "version": "2.1.3",
   "lastUpdated": "2026-01-14",
-  "description": "Add fullscreen support and navigation buttons to presentation viewer"
+  "description": "Add true fullscreen overlay and a/c keyboard shortcuts for presentations"
 }

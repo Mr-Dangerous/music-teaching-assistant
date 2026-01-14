@@ -886,9 +886,11 @@
 
         // Fullscreen functionality
         function toggleFullscreen() {
-            // Request parent app to toggle fullscreen
+            // Request parent app to show fullscreen overlay with current URL
+            const embedUrl = convertToEmbedUrl(currentUrl);
             window.parent.postMessage({
-                type: 'module:requestFullscreen'
+                type: 'module:requestFullscreen',
+                url: embedUrl
             }, '*');
         }
 
@@ -904,6 +906,16 @@
             if (e.key === 'ArrowLeft' || e.key === 'ArrowRight' || e.key === 'ArrowUp' || e.key === 'ArrowDown') {
                 e.preventDefault();
                 navigatePresentation(e.key);
+            }
+
+            // Navigate with 'a' (previous) and 'c' (next)
+            if (e.key === 'a' || e.key === 'A') {
+                e.preventDefault();
+                navigatePresentation('ArrowLeft');
+            }
+            if (e.key === 'c' || e.key === 'C') {
+                e.preventDefault();
+                navigatePresentation('ArrowRight');
             }
 
             // ESC to exit fullscreen

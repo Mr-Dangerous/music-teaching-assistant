@@ -130,8 +130,8 @@ class TeachingAssistantApp {
         console.error('Module error:', event.data.message);
         this.showNotification(`Module error: ${event.data.message}`, 'error');
       } else if (event.data.type === 'module:requestFullscreen') {
-        // Module is requesting fullscreen
-        this.toggleFullscreen();
+        // Module is requesting fullscreen overlay with presentation
+        this.showPresentationFullscreen(event.data.url);
       } else if (event.data.type === 'taskmodule:request-students') {
         // Module is requesting the current class's student list
         this.handleStudentListRequest(event);
@@ -1693,6 +1693,109 @@ class TeachingAssistantApp {
     } else {
       fullscreenIcon.textContent = '⛶';
       fullscreenBtn.title = 'Enter Fullscreen';
+    }
+  }
+
+  /**
+   * Show presentation in fullscreen overlay
+   */
+  showPresentationFullscreen(url) {
+    const overlay = document.getElementById('presentation-fullscreen-overlay');
+    const iframe = document.getElementById('fullscreen-presentation-iframe');
+    const closeBtn = document.getElementById('fullscreen-close-btn');
+    const prevBtn = document.getElementById('fullscreen-prev-btn');
+    const nextBtn = document.getElementById('fullscreen-next-btn');
+
+    if (!overlay || !iframe) {
+      console.error('Fullscreen overlay elements not found');
+      return;
+    }
+
+    // Load presentation in overlay iframe
+    iframe.src = url;
+    overlay.classList.add('active');
+
+    // Setup close button
+    const closeHandler = () => this.closePresentationFullscreen();
+    closeBtn.onclick = closeHandler;
+
+    // Setup navigation buttons
+    prevBtn.onclick = () => this.navigateFullscreenPresentation('prev');
+    nextBtn.onclick = () => this.navigateFullscreenPresentation('next');
+
+    // Setup keyboard shortcuts
+    const keyHandler = (e) => {
+      if (e.key === 'Escape') {
+        this.closePresentationFullscreen();
+      } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        e.preventDefault();
+        this.navigateFullscreenPresentation('prev');
+      } else if (e.key === 'ArrowRight' || e.key === 'c' || e.key === 'C') {
+        e.preventDefault();
+        this.navigateFullscreenPresentation('next');
+      }
+    };
+
+    // Store handler for cleanup
+    this.fullscreenKeyHandler = keyHandler;
+    document.addEventListener('keydown', keyHandler);
+  }
+
+  /**
+   * Close presentation fullscreen overlay
+   */
+  closePresentationFullscreen() {
+    const overlay = document.getElementById('presentation-fullscreen-overlay');
+    const iframe = document.getElementById('fullscreen-presentation-iframe');
+
+    if (overlay) {
+      overlay.classList.remove('active');
+    }
+
+    if (iframe) {
+      iframe.src = '';
+    }
+
+    // Remove keyboard handler
+    if (this.fullscreenKeyHandler) {
+      document.removeEventListener('keydown', this.fullscreenKeyHandler);
+      this.fullscreenKeyHandler = null;
+    }
+  }
+
+  /**
+   * Navigate presentation in fullscreen overlay
+   */
+  navigateFullscreenPresentation(direction) {
+    const iframe = document.getElementById('fullscreen-presentation-iframe');
+    if (!iframe || !iframe.contentWindow) return;
+
+    // Try to send navigation command to iframe
+    try {
+      const key = direction === 'prev' ? 'ArrowLeft' : 'ArrowRight';
+
+      // Focus the iframe
+      iframe.focus();
+
+      // Send keyboard event
+      const keyEvent = new KeyboardEvent('keydown', {
+        key: key,
+        code: key,
+        keyCode: key === 'ArrowLeft' ? 37 : 39,
+        which: key === 'ArrowLeft' ? 37 : 39,
+        bubbles: true,
+        cancelable: true
+      });
+
+      iframe.contentWindow.postMessage({
+        type: 'keypress',
+        key: key
+      }, '*');
+
+      iframe.contentWindow.document.dispatchEvent(keyEvent);
+      console.log('Navigation:', direction);
+    } catch (error) {
+      console.log('Cross-origin iframe - keyboard navigation blocked');
     }
   }
 
