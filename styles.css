@@ -1802,3 +1802,48 @@ body.snow-theme .app-header {
   height: 100%;
   border: none;
 }
+
+/* Click zones for navigation */
+.fullscreen-click-zone {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 15%;
+  cursor: pointer;
+  z-index: 50;
+  transition: background 0.2s;
+}
+
+.fullscreen-click-zone:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.fullscreen-click-zone-left {
+  left: 0;
+}
+
+.fullscreen-click-zone-right {
+  right: 0;
+}
+
+/* Helper text */
+.fullscreen-helper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 20px 30px;
+  border-radius: 12px;
+  font-size: 16px;
+  text-align: center;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.3s;
+}
+
+.fullscreen-helper.hidden {
+  opacity: 0;
+}

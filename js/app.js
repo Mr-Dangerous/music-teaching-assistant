@@ -1705,23 +1705,72 @@ class TeachingAssistantApp {
     const closeBtn = document.getElementById('fullscreen-close-btn');
     const prevBtn = document.getElementById('fullscreen-prev-btn');
     const nextBtn = document.getElementById('fullscreen-next-btn');
+    const clickLeft = document.getElementById('fullscreen-click-left');
+    const clickRight = document.getElementById('fullscreen-click-right');
+    const helper = document.getElementById('fullscreen-helper');
 
     if (!overlay || !iframe) {
       console.error('Fullscreen overlay elements not found');
       return;
     }
 
+    // Detect starting slide from URL or reset to 0
+    const slideMatch = url.match(/slide=(\d+)/);
+    this.currentSlideIndex = slideMatch ? parseInt(slideMatch[1]) : 0;
+
     // Load presentation in overlay iframe
     iframe.src = url;
     overlay.classList.add('active');
+
+    // Show helper text
+    if (helper) {
+      helper.classList.remove('hidden');
+      // Hide helper after 4 seconds
+      setTimeout(() => {
+        helper.classList.add('hidden');
+      }, 4000);
+    }
+
+    // Focus iframe when it loads to enable keyboard navigation
+    iframe.onload = () => {
+      setTimeout(() => {
+        iframe.focus();
+        // Try to click in the center to activate keyboard controls
+        try {
+          iframe.contentWindow.focus();
+        } catch (e) {
+          console.log('Could not focus iframe content (cross-origin)');
+        }
+      }, 500);
+    };
 
     // Setup close button
     const closeHandler = () => this.closePresentationFullscreen();
     closeBtn.onclick = closeHandler;
 
     // Setup navigation buttons
-    prevBtn.onclick = () => this.navigateFullscreenPresentation('prev');
-    nextBtn.onclick = () => this.navigateFullscreenPresentation('next');
+    prevBtn.onclick = () => {
+      this.navigateFullscreenPresentation('prev');
+      if (helper) helper.classList.add('hidden');
+    };
+    nextBtn.onclick = () => {
+      this.navigateFullscreenPresentation('next');
+      if (helper) helper.classList.add('hidden');
+    };
+
+    // Setup click zones
+    if (clickLeft) {
+      clickLeft.onclick = () => {
+        this.navigateFullscreenPresentation('prev');
+        if (helper) helper.classList.add('hidden');
+      };
+    }
+    if (clickRight) {
+      clickRight.onclick = () => {
+        this.navigateFullscreenPresentation('next');
+        if (helper) helper.classList.add('hidden');
+      };
+    }
 
     // Setup keyboard shortcuts
     const keyHandler = (e) => {
@@ -1730,15 +1779,23 @@ class TeachingAssistantApp {
       } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
         e.preventDefault();
         this.navigateFullscreenPresentation('prev');
+        if (helper) helper.classList.add('hidden');
       } else if (e.key === 'ArrowRight' || e.key === 'c' || e.key === 'C') {
         e.preventDefault();
         this.navigateFullscreenPresentation('next');
+        if (helper) helper.classList.add('hidden');
       }
     };
 
     // Store handler for cleanup
     this.fullscreenKeyHandler = keyHandler;
     document.addEventListener('keydown', keyHandler);
+
+    // Also allow clicking on iframe to give it focus and hide helper
+    iframe.addEventListener('click', () => {
+      iframe.focus();
+      if (helper) helper.classList.add('hidden');
+    });
   }
 
   /**
@@ -1770,33 +1827,79 @@ class TeachingAssistantApp {
     const iframe = document.getElementById('fullscreen-presentation-iframe');
     if (!iframe || !iframe.contentWindow) return;
 
-    // Try to send navigation command to iframe
+    const currentUrl = iframe.src;
+
+    // Check if it's a Google Slides URL
+    if (currentUrl.includes('docs.google.com/presentation')) {
+      this.navigateGoogleSlides(iframe, direction);
+      return;
+    }
+
+    // For non-Google Slides, try generic navigation
+    iframe.focus();
+
     try {
       const key = direction === 'prev' ? 'ArrowLeft' : 'ArrowRight';
 
-      // Focus the iframe
-      iframe.focus();
+      // Try to focus and send keyboard event
+      try {
+        iframe.contentWindow.focus();
+        const keyEvent = new KeyboardEvent('keydown', {
+          key: key,
+          code: key,
+          keyCode: key === 'ArrowLeft' ? 37 : 39,
+          which: key === 'ArrowLeft' ? 37 : 39,
+          bubbles: true,
+          cancelable: true
+        });
+        iframe.contentWindow.document.dispatchEvent(keyEvent);
+      } catch (e) {
+        console.log('Keyboard event blocked (cross-origin)');
+      }
 
-      // Send keyboard event
-      const keyEvent = new KeyboardEvent('keydown', {
-        key: key,
-        code: key,
-        keyCode: key === 'ArrowLeft' ? 37 : 39,
-        which: key === 'ArrowLeft' ? 37 : 39,
-        bubbles: true,
-        cancelable: true
-      });
-
+      // Send postMessage
       iframe.contentWindow.postMessage({
-        type: 'keypress',
+        type: 'navigate',
+        direction: direction,
         key: key
       }, '*');
 
-      iframe.contentWindow.document.dispatchEvent(keyEvent);
-      console.log('Navigation:', direction);
     } catch (error) {
-      console.log('Cross-origin iframe - keyboard navigation blocked');
+      console.log('Navigation error:', error);
     }
+  }
+
+  /**
+   * Navigate Google Slides by manipulating URL
+   */
+  navigateGoogleSlides(iframe, direction) {
+    if (!this.currentSlideIndex) {
+      this.currentSlideIndex = 0;
+    }
+
+    // Adjust slide index
+    if (direction === 'prev') {
+      this.currentSlideIndex = Math.max(0, this.currentSlideIndex - 1);
+    } else {
+      this.currentSlideIndex++;
+    }
+
+    const currentUrl = iframe.src;
+    let newUrl;
+
+    // Check if URL already has slide parameter
+    if (currentUrl.includes('slide=')) {
+      // Replace existing slide parameter
+      newUrl = currentUrl.replace(/slide=\d+/, `slide=${this.currentSlideIndex}`);
+    } else {
+      // Add slide parameter
+      const separator = currentUrl.includes('?') ? '&' : '?';
+      newUrl = `${currentUrl}${separator}slide=${this.currentSlideIndex}`;
+    }
+
+    // Update iframe URL
+    iframe.src = newUrl;
+    console.log(`Navigate Google Slides: ${direction}, slide ${this.currentSlideIndex}`);
   }
 
   /**

@@ -1,5 +1,5 @@
 {
-  "version": "2.1.3",
+  "version": "2.1.4",
   "lastUpdated": "2026-01-14",
-  "description": "Add true fullscreen overlay and a/c keyboard shortcuts for presentations"
+  "description": "Fix keyboard navigation with Google Slides URL manipulation and click zones"
 }
