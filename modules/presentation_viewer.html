@@ -91,6 +91,26 @@
             box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
         }
 
+        .jump-select {
+            padding: 12px 16px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+            cursor: pointer;
+            transition: border-color 0.2s;
+            display: none;
+        }
+
+        .jump-select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .jump-select.visible {
+            display: block;
+        }
+
         .saved-presentations {
             max-height: 120px;
             overflow-y: auto;
@@ -362,6 +382,9 @@
             <button id="saveBtn" class="btn save-btn">Save</button>
             <button id="clearBtn" class="btn clear-btn">Clear</button>
             <button id="fullscreenBtn" class="btn load-btn" style="display: none;">⛶ Fullscreen</button>
+            <select id="jumpSelect" class="jump-select">
+                <option value="">Jump to slide...</option>
+            </select>
         </div>
 
         <div id="savedPresentations" class="saved-presentations">
@@ -433,6 +456,7 @@
         const saveBtn = document.getElementById('saveBtn');
         const clearBtn = document.getElementById('clearBtn');
         const fullscreenBtn = document.getElementById('fullscreenBtn');
+        const jumpSelect = document.getElementById('jumpSelect');
         const placeholder = document.getElementById('placeholder');
         const frame = document.getElementById('presentationFrame');
         const saveTitleModal = document.getElementById('saveTitleModal');
@@ -441,6 +465,14 @@
         const navOverlay = document.getElementById('navOverlay');
         const prevBtn = document.getElementById('prevBtn');
         const nextBtn = document.getElementById('nextBtn');
+
+        // Populate jump select with slide options
+        for (let i = 1; i <= 80; i += (i === 1 ? 4 : 5)) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = `Slide ${i}`;
+            jumpSelect.appendChild(option);
+        }
 
 
         // TaskModule interface for parent app
@@ -754,6 +786,9 @@
             // Show fullscreen button
             fullscreenBtn.style.display = 'block';
 
+            // Show jump select
+            jumpSelect.classList.add('visible');
+
             // Show navigation overlay
             navOverlay.classList.add('active');
 
@@ -766,6 +801,27 @@
             console.log('Loaded presentation:', embedUrl);
         }
 
+        // Jump to specific slide
+        function jumpToSlide(slideNumber) {
+            if (!currentUrl) return;
+
+            const embedUrl = convertToEmbedUrl(currentUrl);
+
+            // Build URL with slide parameter
+            let newUrl;
+            if (embedUrl.includes('slide=')) {
+                // Replace existing slide parameter
+                newUrl = embedUrl.replace(/slide=\d+/, `slide=${slideNumber}`);
+            } else {
+                // Add slide parameter
+                const separator = embedUrl.includes('?') ? '&' : '?';
+                newUrl = `${embedUrl}${separator}slide=${slideNumber}`;
+            }
+
+            frame.src = newUrl;
+            console.log('Jumped to slide:', slideNumber);
+        }
+
         // Clear presentation
         function clearPresentation() {
             frame.src = '';
@@ -776,6 +832,10 @@
 
             // Hide fullscreen button
             fullscreenBtn.style.display = 'none';
+
+            // Hide jump select
+            jumpSelect.classList.remove('visible');
+            jumpSelect.value = ''; // Reset to default
 
             // Hide navigation overlay
             navOverlay.classList.remove('active');
@@ -864,6 +924,18 @@
         saveBtn.addEventListener('click', showSaveModal);
 
         clearBtn.addEventListener('click', clearPresentation);
+
+        // Jump to slide handler
+        jumpSelect.addEventListener('change', (e) => {
+            const slideNumber = parseInt(e.target.value);
+            if (slideNumber && currentUrl) {
+                jumpToSlide(slideNumber);
+            }
+            // Reset dropdown to default
+            setTimeout(() => {
+                jumpSelect.value = '';
+            }, 100);
+        });
 
         urlInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter') {

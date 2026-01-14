@@ -1,5 +1,5 @@
 {
-  "version": "2.1.5",
+  "version": "2.1.6",
   "lastUpdated": "2026-01-14",
-  "description": "Fix a/b/c keyboard shortcuts with event capture and focus management"
+  "description": "Add jump to slide dropdown for rapid navigation (1, 5, 10... 80)"
 }
