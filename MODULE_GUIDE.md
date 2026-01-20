@@ -8,14 +8,12 @@ The teaching assistant uses a **module-based architecture** where every task loa
 
 ### Understanding the System
 
-Every task in `tasks.csv` points to a module file:
+The app automatically discovers all modules in the `modules/` folder. Each `.html` file (except those starting with `_`) becomes an available task.
 
-```csv
-task_id,question,grade,module_path
-task_1_a,Identify the note,1,modules/picture.html
-task_1_c,What is 2+2?,1,modules/string.html
-word_end,Choose the word ending,1,modules/word-ending.html
-```
+**Module filename → Task name:**
+- `rhythm-trainer.html` → "Rhythm Trainer"
+- `so_la_mi_trainer.html` → "So La Mi Trainer"
+- `interval_trainer.html` → "Interval Trainer"
 
 **Built-in modules:**
 - `modules/picture.html` - Displays an image from `tasks/Grade X/task_id.png`, keyboard input
@@ -24,16 +22,11 @@ word_end,Choose the word ending,1,modules/word-ending.html
 
 ### Adding a New Task
 
-1. **Open `tasks.csv`** and add a row:
-   ```csv
-   my_task,Pick your favorite color,1,modules/simple-button-test.html
-   ```
+1. **Create your module** (e.g., `my-module.html`) in the `modules/` folder
 
-2. **Make sure the module file exists** in the `modules/` folder
+2. **Reload the app** - your module automatically appears in the task dropdown
 
-3. **Reload the app** and select your task from the dropdown
-
-That's it! The module handles everything else.
+That's it! No CSV editing needed - the module handles everything else.
 
 ### Getting New Modules
 
@@ -73,8 +66,8 @@ interface with init, getResponse, isComplete, and reset methods.
 
 #### 3. Test Your Module
 - Save as `modules/my-module.html`
-- Add to `tasks.csv`: `my_task,My Task,1,modules/my-module.html`
-- Load the app and test!
+- Reload the app - it appears automatically in the task dropdown
+- Load and test!
 
 ---
 
@@ -160,12 +153,9 @@ Your module receives this context when initialized:
 - Student types response on keyboard
 - Shows typed text in large purple display
 
-**How to use:**
-```csv
-task_1_a,Identify the note,1,modules/picture.html
-```
-
-Make sure `tasks/Grade 1/task_1_a.png` exists.
+**File naming:**
+The module uses the task_id (filename without .html) to find images.
+For example, the module `note_identification.html` looks for `tasks/Grade 1/note_identification.png`.
 
 ---
 
@@ -176,12 +166,8 @@ Make sure `tasks/Grade 1/task_1_a.png` exists.
 - Keyboard input for response
 - Perfect for math problems or simple questions
 
-**How to use:**
-```csv
-math_1,What is 2+2?,1,modules/string.html
-```
-
-The question text appears in the module automatically.
+The question text comes from the module's task_id (converted to readable format).
+For example, `addition_practice.html` displays "Addition Practice" as the question.
 
 ---
 
@@ -217,9 +203,9 @@ The question text appears in the module automatically.
 
 **Configuration:**
 Words and endings are hardcoded in the module. To customize:
-1. Copy `word-ending.html` to a new file
+1. Copy `word-ending.html` to a new file (e.g., `spanish-verbs.html`)
 2. Edit the `words`, `tenses`, and `endings` arrays in the JavaScript
-3. Save and reference in tasks.csv
+3. Save to `modules/` folder - it automatically appears in the app
 
 ---
 
@@ -363,9 +349,10 @@ The `isComplete` flag in your postMessage tells the parent app whether to enable
 
 ### Module Not Loading
 **Check:**
-- File path in tasks.csv is correct (relative to index.html)
 - HTML file exists in `modules/` folder
+- Filename doesn't start with `_` (underscore files are ignored)
 - Browser console (F12) for error messages
+- Reload the app to refresh the module list
 
 ### Response Not Saving
 **Check:**
@@ -399,21 +386,21 @@ The `isComplete` flag in your postMessage tells the parent app whether to enable
 ```
 music_teaching_assistant/
 ├── index.html
-├── tasks.csv                    # Task definitions
 ├── students.csv                 # Student roster
 ├── results.csv                  # Response data
 ├── modules/
-│   ├── _template.html          # Starting template
+│   ├── _template.html          # Starting template (ignored by loader)
 │   ├── picture.html            # Built-in: image display
 │   ├── string.html             # Built-in: text display
 │   ├── word-ending.html        # Example: drag & drop
 │   ├── simple-button-test.html # Example: button selection
-│   └── (your custom modules)
+│   ├── rhythm-trainer.html     # Your custom module
+│   └── (more custom modules)   # Auto-loaded when app starts
 └── tasks/
     ├── Grade K/
     ├── Grade 1/
-    │   ├── task_1_a.png
-    │   └── task_1_b.png
+    │   ├── note_identification.png
+    │   └── rhythm_reading.png
     └── ...
 ```
 
@@ -423,14 +410,13 @@ music_teaching_assistant/
 
 ### To Share a Module:
 1. Copy the HTML file from `modules/`
-2. Include example tasks.csv entry
-3. Include any required images/assets
-4. Document any special requirements
+2. Include any required images/assets
+3. Document any special requirements
 
 ### To Use a Shared Module:
 1. Save HTML to your `modules/` folder
-2. Add row to your `tasks.csv`
-3. Add any required images to appropriate `tasks/Grade X/` folder
+2. Add any required images to appropriate `tasks/Grade X/` folder
+3. Reload the app - the module appears automatically
 4. Test with a student
 
 ---

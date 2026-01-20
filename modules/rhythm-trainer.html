@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rhythm Trainer</title>
+  <style>
+    body {
+      font-family: 'Comic Sans MS', 'Segoe UI', sans-serif;
+      padding: 20px;
+      margin: 0;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    h2 {
+      font-size: 48px;
+      margin: 20px 0;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+    }
+
+    /* Rhythm display area */
+    #rhythm-display {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      margin: 20px 0;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.2);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 30px;
+      min-height: 200px;
+    }
+
+    .beat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .rhythm-symbol {
+      font-size: 80px;
+      color: #333;
+      font-weight: bold;
+    }
+
+    .rhythm-label {
+      font-size: 28px;
+      color: #667eea;
+      font-weight: bold;
+    }
+
+    .rhythm-label.hidden {
+      visibility: hidden;
+    }
+
+    /* Control buttons */
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: 100%;
+      max-width: 800px;
+    }
+
+    .button-row {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      font-size: 24px;
+      padding: 20px 30px;
+      border: none;
+      border-radius: 15px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.3s;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .generate-btn {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      font-size: 32px;
+      padding: 25px 50px;
+    }
+
+    .toggle-btn {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      color: white;
+    }
+
+    .filter-btn {
+      background: #e0e0e0;
+      color: #333;
+      font-size: 20px;
+      padding: 15px 25px;
+    }
+
+    .filter-btn.active {
+      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      color: white;
+    }
+
+    .section-title {
+      font-size: 28px;
+      margin: 10px 0;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <h2>Rhythm Trainer</h2>
+
+  <!-- Rhythm Display -->
+  <div id="rhythm-display">
+    <div class="beat" id="beat-1">
+      <div class="rhythm-symbol">♩</div>
+      <div class="rhythm-label">ta</div>
+    </div>
+    <div class="beat" id="beat-2">
+      <div class="rhythm-symbol">♩</div>
+      <div class="rhythm-label">ta</div>
+    </div>
+    <div class="beat" id="beat-3">
+      <div class="rhythm-symbol">♩</div>
+      <div class="rhythm-label">ta</div>
+    </div>
+    <div class="beat" id="beat-4">
+      <div class="rhythm-symbol">♩</div>
+      <div class="rhythm-label">ta</div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <button class="generate-btn" onclick="generatePattern()">Generate New Pattern</button>
+
+    <button class="toggle-btn" onclick="toggleLabels()">Toggle Labels</button>
+
+    <div class="section-title">Available Rhythms (Click to Enable/Disable)</div>
+    <div class="button-row">
+      <button class="filter-btn active" data-rhythm="ta" onclick="toggleFilter(this)">ta (♩)</button>
+      <button class="filter-btn active" data-rhythm="ti-ti" onclick="toggleFilter(this)">ti-ti (♫)</button>
+      <button class="filter-btn active" data-rhythm="ti-ki-ti-ki" onclick="toggleFilter(this)">ti-ki-ti-ki (♬)</button>
+      <button class="filter-btn active" data-rhythm="shh" onclick="toggleFilter(this)">shh (𝄽)</button>
+    </div>
+    <div class="button-row">
+      <button class="filter-btn active" data-rhythm="to-e" onclick="toggleFilter(this)">to-e (𝅗𝅥 𝅘𝅥)</button>
+      <button class="filter-btn active" data-rhythm="ti ti-ki" onclick="toggleFilter(this)">ti ti-ki (♪ ♬)</button>
+      <button class="filter-btn active" data-rhythm="ti-ki ti" onclick="toggleFilter(this)">ti-ki ti (♬ ♪)</button>
+    </div>
+  </div>
+
+  <script>
+    // Rhythm definitions
+    const rhythms = {
+      'ta': { symbol: '♩', label: 'ta' },
+      'ti-ti': { symbol: '♫', label: 'ti-ti' },
+      'ti-ki-ti-ki': { symbol: '♬', label: 'ti-ki-ti-ki' },
+      'shh': { symbol: '𝄽', label: 'shh' },
+      'to-e': { symbol: '𝅗𝅥 𝅘𝅥', label: 'to-e' },
+      'ti ti-ki': { symbol: '♪ ♬', label: 'ti ti-ki' },
+      'ti-ki ti': { symbol: '♬ ♪', label: 'ti-ki ti' }
+    };
+
+    let labelsVisible = true;
+    let activeFilters = new Set(Object.keys(rhythms)); // All enabled by default
+
+    // Generate random rhythm pattern
+    function generatePattern() {
+      const availableRhythms = Array.from(activeFilters);
+
+      if (availableRhythms.length === 0) {
+        alert('Please enable at least one rhythm!');
+        return;
+      }
+
+      for (let i = 1; i <= 4; i++) {
+        const randomRhythm = availableRhythms[Math.floor(Math.random() * availableRhythms.length)];
+        const beat = document.getElementById(`beat-${i}`);
+        const symbol = beat.querySelector('.rhythm-symbol');
+        const label = beat.querySelector('.rhythm-label');
+
+        symbol.textContent = rhythms[randomRhythm].symbol;
+        label.textContent = rhythms[randomRhythm].label;
+      }
+    }
+
+    // Toggle label visibility
+    function toggleLabels() {
+      labelsVisible = !labelsVisible;
+      const labels = document.querySelectorAll('.rhythm-label');
+      labels.forEach(label => {
+        if (labelsVisible) {
+          label.classList.remove('hidden');
+        } else {
+          label.classList.add('hidden');
+        }
+      });
+    }
+
+    // Toggle filter button
+    function toggleFilter(button) {
+      const rhythm = button.getAttribute('data-rhythm');
+
+      if (activeFilters.has(rhythm)) {
+        activeFilters.delete(rhythm);
+        button.classList.remove('active');
+      } else {
+        activeFilters.add(rhythm);
+        button.classList.add('active');
+      }
+    }
+
+    // Required: TaskModule interface
+    window.TaskModule = {
+      init: function(context) {
+        console.log('Rhythm Trainer initialized:', context);
+        // Initialize with default pattern
+        generatePattern();
+      },
+
+      getResponse: function() {
+        // Not saving responses yet - return empty string
+        return '';
+      },
+
+      isComplete: function() {
+        // Always considered complete since we're not collecting responses
+        return false;
+      },
+
+      reset: function() {
+        // Reset to all filters enabled
+        activeFilters = new Set(Object.keys(rhythms));
+        document.querySelectorAll('.filter-btn').forEach(btn => {
+          btn.classList.add('active');
+        });
+        labelsVisible = true;
+        document.querySelectorAll('.rhythm-label').forEach(label => {
+          label.classList.remove('hidden');
+        });
+        generatePattern();
+      }
+    };
+
+    // Listen for init message from parent
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'taskmodule:init') {
+        window.TaskModule.init(event.data.context);
+      }
+    });
+  </script>
+</body>
+</html>

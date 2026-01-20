@@ -453,6 +453,7 @@ class TeachingAssistantApp {
       'picture.html',
       'presentation_viewer.html',
       'results-viewer.html',
+      'rhythm-trainer.html',
       'simple-button-test.html',
       's_l_m_composer.html',
       's_l_m_composer_modular.html',
