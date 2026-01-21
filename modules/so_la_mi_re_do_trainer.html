@@ -201,6 +201,48 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
 
+        .color-toggle-btn {
+            font-size: calc(14px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #16a085;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .color-toggle-btn:hover {
+            background-color: #138d75;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .undo-btn {
+            font-size: calc(14px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #e67e22;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .undo-btn:hover {
+            background-color: #d35400;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .undo-btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         /* Modal Styles */
         .modal {
             display: none;
@@ -394,9 +436,11 @@
             <button class="first-note-btn" onclick="openFirstNoteSelection()">First Note</button>
             <button class="note-count-btn" id="noteCountBtn" onclick="toggleNoteCount()">3 Notes</button>
             <button class="custom-pattern-btn" onclick="openCustomPattern()">Custom Pattern</button>
+            <button class="color-toggle-btn" id="colorToggleBtn" onclick="toggleColors()">Colors On</button>
+            <button class="undo-btn" id="undoBtn" onclick="undoLastPlacement()" disabled>Undo</button>
         </div>
 
-        <canvas id="staffCanvas" width="900" height="300"></canvas>
+        <canvas id="staffCanvas" width="900" height="250"></canvas>
 
         <div class="label-container" id="labelContainer">
             <div class="draggable-label" data-note="so">So</div>
@@ -469,9 +513,34 @@
         window.TaskModule = {
             context: null,
 
-            init(context) {
+            init(context, savedSettings) {
                 this.context = context;
                 console.log('So La Mi Re Do Trainer initialized with context:', context);
+
+                // Restore saved settings if provided (and not in practice mode)
+                if (savedSettings && context.studentId !== 'practice') {
+                    if (savedSettings.firstNote !== undefined) {
+                        firstNote = savedSettings.firstNote;
+                    }
+                    if (savedSettings.numberOfNotes !== undefined) {
+                        numberOfNotes = savedSettings.numberOfNotes;
+                    }
+                    if (savedSettings.customPattern !== undefined) {
+                        customPattern = savedSettings.customPattern;
+                        // If there's a custom pattern, apply it
+                        if (customPattern) {
+                            const parsed = parseCustomPattern(customPattern);
+                            if (parsed) {
+                                currentPattern = parsed;
+                                numberOfNotes = parsed.length;
+                            }
+                        }
+                    }
+                    console.log('Restored settings:', savedSettings);
+                }
+
+                // Now initialize the UI with restored settings
+                init();
 
                 // Check if there's an existing response to restore
                 if (context.existingResponse) {
@@ -500,6 +569,36 @@
             }
         };
 
+        // Handle messages from parent frame
+        function handleMessage(event) {
+            // Ensure the message is from a trusted origin if possible
+            // For this example, we'll trust all messages, but in production,
+            // you might want to check event.origin
+            if (event.data && event.data.type === 'taskmodule:save-settings') {
+                saveSettings();
+            }
+        }
+
+        // Save current settings to parent app
+        function saveSettings() {
+            const settings = {
+                firstNote: firstNote,
+                numberOfNotes: numberOfNotes,
+                customPattern: customPattern
+            };
+
+            // Get module path from window location
+            const modulePath = window.location.pathname.split('/').pop();
+
+            window.parent.postMessage({
+                type: 'taskmodule:settings',
+                modulePath: modulePath,
+                settings: settings
+            }, '*');
+
+            console.log('Saved settings to parent:', settings);
+        }
+
         // Configuration
         const noteColors = {
             'so': '#27ae60',  // Green
@@ -518,8 +617,11 @@
         let labelOriginalPositions = {};
         let staffLabelsState = 'off'; // 'off', 'so', 'all'
         let placedLabels = []; // Track cloned labels that were placed on notes
-        let firstNote = null; // Which note should always be first (or null for random)
+        let firstNote = 'so'; // Default to 'so' as first note
         let numberOfNotes = 3; // Number of notes to generate (3-6)
+        let customPattern = null; // Store custom pattern if set
+        let colorsEnabled = true; // Track whether colors are enabled
+        let placementHistory = []; // Track order of placements for undo functionality
 
         // Initialize
         function init() {
@@ -527,6 +629,7 @@
             drawStaff();
             setupDragAndDrop();
             updateNoteCountButton();
+            updateUndoButton();
         }
 
         // Generate random pattern of notes
@@ -534,17 +637,37 @@
             const notes = ['so', 'la', 'mi', 're', 'do'];
             currentPattern = [];
 
+            // Helper function to pick a random note that's not the same as the last two
+            function getNextNote() {
+                const patternLength = currentPattern.length;
+
+                // If we have at least 2 notes, check if they're the same
+                if (patternLength >= 2) {
+                    const lastNote = currentPattern[patternLength - 1];
+                    const secondLastNote = currentPattern[patternLength - 2];
+
+                    // If last two notes are the same, don't allow that note again
+                    if (lastNote === secondLastNote) {
+                        const availableNotes = notes.filter(n => n !== lastNote);
+                        return availableNotes[Math.floor(Math.random() * availableNotes.length)];
+                    }
+                }
+
+                // Otherwise, any random note is fine
+                return notes[Math.floor(Math.random() * notes.length)];
+            }
+
             // If first note is set, start with it
             if (firstNote) {
                 currentPattern.push(firstNote);
                 // Fill remaining slots
                 for (let i = 1; i < numberOfNotes; i++) {
-                    currentPattern.push(notes[Math.floor(Math.random() * notes.length)]);
+                    currentPattern.push(getNextNote());
                 }
             } else {
                 // Randomly select notes
                 for (let i = 0; i < numberOfNotes; i++) {
-                    currentPattern.push(notes[Math.floor(Math.random() * notes.length)]);
+                    currentPattern.push(getNextNote());
                 }
             }
 
@@ -555,16 +678,50 @@
         function restorePattern(pattern, placements) {
             currentPattern = pattern;
             labelPlacements = placements || {};
-            drawStaff();
 
-            // Move labels to their saved positions
-            Object.entries(labelPlacements).forEach(([noteIndex, labelNote]) => {
-                const label = document.querySelector(`[data-note="${labelNote}"]`);
-                const notePos = notePositions[noteIndex];
-                if (label && notePos) {
-                    positionLabelOnNote(label, notePos);
+            // Clear any existing placed labels first
+            placedLabels.forEach(label => {
+                if (label && label.parentNode) {
+                    label.remove();
                 }
             });
+            placedLabels = [];
+            placementHistory = []; // Clear placement history on restore
+
+            drawStaff();
+
+            // Recreate and position the placed labels
+            Object.entries(labelPlacements).forEach(([noteIndex, labelNote]) => {
+                const notePos = notePositions[noteIndex];
+                if (notePos) {
+                    // Create a clone of the original label from the palette
+                    const originalLabel = document.querySelector(`#labelContainer [data-note="${labelNote}"]`);
+                    if (originalLabel) {
+                        const clone = originalLabel.cloneNode(true);
+                        clone.classList.remove('dragging');
+                        clone.classList.add('placed');
+                        clone.style.position = 'fixed';
+                        document.body.appendChild(clone);
+
+                        // Position it on the note
+                        positionLabelOnNote(clone, notePos);
+
+                        // Track this placed label
+                        placedLabels.push(clone);
+
+                        // Add to placement history
+                        placementHistory.push({
+                            noteIndex: parseInt(noteIndex),
+                            labelNote: labelNote,
+                            labelElement: clone
+                        });
+                    }
+                }
+            });
+
+            // Update completion indicator and undo button
+            updateCompletionIndicator();
+            updateUndoButton();
         }
 
         // Get current scale factor based on resolution mode
@@ -656,7 +813,7 @@
             currentPattern.forEach((note, i) => {
                 const xPos = staffLeft + noteSpacing * (i + 1);
                 const yPos = noteYPositions[note];
-                const color = noteColors[note];
+                const color = colorsEnabled ? noteColors[note] : '#95a5a6'; // Use grey if colors disabled
 
                 // Draw note circle
                 ctx.fillStyle = color;
@@ -809,6 +966,16 @@
                 // Record new placement
                 labelPlacements[closestNote.index] = draggedLabel.dataset.note;
 
+                // Add to placement history for undo functionality
+                placementHistory.push({
+                    noteIndex: closestNote.index,
+                    labelNote: draggedLabel.dataset.note,
+                    labelElement: draggedLabel
+                });
+
+                // Update undo button state
+                updateUndoButton();
+
                 console.log('Label placements:', labelPlacements);
 
                 // Check if complete and notify parent
@@ -889,9 +1056,51 @@
 
             placedLabels = [];
             labelPlacements = {};
+            placementHistory = [];
             generateRandomPattern();
             drawStaff();
             updateCompletionIndicator();
+            updateUndoButton();
+        }
+
+        function toggleColors() {
+            colorsEnabled = !colorsEnabled;
+            const btn = document.getElementById('colorToggleBtn');
+            if (btn) {
+                btn.textContent = colorsEnabled ? 'Colors On' : 'Colors Off';
+            }
+            drawStaff();
+        }
+
+        function undoLastPlacement() {
+            if (placementHistory.length === 0) return;
+
+            // Get the last placement
+            const lastPlacement = placementHistory.pop();
+
+            // Remove the label element from the DOM
+            if (lastPlacement.labelElement && lastPlacement.labelElement.parentNode) {
+                lastPlacement.labelElement.remove();
+            }
+
+            // Remove from placedLabels array
+            placedLabels = placedLabels.filter(l => l !== lastPlacement.labelElement);
+
+            // Remove from labelPlacements object
+            delete labelPlacements[lastPlacement.noteIndex];
+
+            // Update UI
+            updateCompletionIndicator();
+            updateUndoButton();
+
+            console.log('Undone placement. Remaining placements:', labelPlacements);
+        }
+
+        function updateUndoButton() {
+            const btn = document.getElementById('undoBtn');
+            if (btn) {
+                btn.disabled = placementHistory.length === 0;
+            }
         }
 
         function toggleStaffLabels() {
@@ -920,6 +1129,7 @@
                 numberOfNotes = 3;
             }
             updateNoteCountButton();
+            saveSettings(); // Save settings to parent
             resetModule();
         }
 
@@ -966,6 +1176,7 @@
             if (selected) {
                 firstNote = selected.value === 'none' ? null : selected.value;
             }
+            saveSettings(); // Save settings to parent
             closeModal('firstNoteModal');
             resetModule();
         }
@@ -1033,6 +1244,7 @@
             // Apply the pattern
             currentPattern = parsed;
             numberOfNotes = parsed.length;
+            customPattern = input; // Save the custom pattern
             updateNoteCountButton();
 
             // Reset placements
@@ -1044,6 +1256,7 @@
             placedLabels = [];
             labelPlacements = {};
 
+            saveSettings(); // Save settings including custom pattern
             closeModal('customPatternModal');
             drawStaff();
         }
@@ -1065,8 +1278,13 @@
             document.getElementById(modalId).classList.remove('show');
         }
 
-        // Initialize when page loads
-        init();
+        // Listen for init message from parent
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'taskmodule:init') {
+                // Call TaskModule.init with context and savedSettings
+                window.TaskModule.init(event.data.context, event.data.savedSettings);
+            }
+        });
     </script>
 </body>
 
