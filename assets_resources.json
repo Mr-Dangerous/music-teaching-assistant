@@ -1,0 +1,1070 @@
+{
+  "version": "1.0",
+  "description": "Music teaching assistant asset library",
+  "base_path": "assets",
+  "categories": [
+    {
+      "type": "folder",
+      "name": "body_percussion",
+      "path": "body_percussion",
+      "children": [
+        {
+          "type": "file",
+          "name": "body_percussion_clap.png",
+          "path": "body_percussion/body_percussion_clap.png"
+        },
+        {
+          "type": "file",
+          "name": "body_percussion_left_foot.png",
+          "path": "body_percussion/body_percussion_left_foot.png"
+        },
+        {
+          "type": "file",
+          "name": "body_percussion_left_leg_slap_02.png",
+          "path": "body_percussion/body_percussion_left_leg_slap_02.png"
+        },
+        {
+          "type": "file",
+          "name": "body_percussion_left_shoulder.png",
+          "path": "body_percussion/body_percussion_left_shoulder.png"
+        },
+        {
+          "type": "file",
+          "name": "body_percussion_right_foot.png",
+          "path": "body_percussion/body_percussion_right_foot.png"
+        },
+        {
+          "type": "file",
+          "name": "body_percussion_right_leg_slap.png",
+          "path": "body_percussion/body_percussion_right_leg_slap.png"
+        },
+        {
+          "type": "file",
+          "name": "body_percussion_right_shoulder.png",
+          "path": "body_percussion/body_percussion_right_shoulder.png"
+        },
+        {
+          "type": "file",
+          "name": "body_percussion_snap_02.png",
+          "path": "body_percussion/body_percussion_snap_02.png"
+        }
+      ],
+      "count": 8
+    },
+    {
+      "type": "folder",
+      "name": "boomwhackers",
+      "path": "boomwhackers",
+      "children": [
+        {
+          "type": "file",
+          "name": "boomwhacker_black_rectangle.png",
+          "path": "boomwhackers/boomwhacker_black_rectangle.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_blue_rectangle.png",
+          "path": "boomwhackers/boomwhacker_blue_rectangle.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_blue_short.png",
+          "path": "boomwhackers/boomwhacker_blue_short.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_blue_square.png",
+          "path": "boomwhackers/boomwhacker_blue_square.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_cyan_rectangle.png",
+          "path": "boomwhackers/boomwhacker_cyan_rectangle.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_cyan_square.png",
+          "path": "boomwhackers/boomwhacker_cyan_square.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_cyan_square_02.png",
+          "path": "boomwhackers/boomwhacker_cyan_square_02.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_green_rectangle.png",
+          "path": "boomwhackers/boomwhacker_green_rectangle.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_green_square.png",
+          "path": "boomwhackers/boomwhacker_green_square.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_green_square_02.png",
+          "path": "boomwhackers/boomwhacker_green_square_02.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_orange_rectangle.png",
+          "path": "boomwhackers/boomwhacker_orange_rectangle.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_orange_short.png",
+          "path": "boomwhackers/boomwhacker_orange_short.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_orange_tall.png",
+          "path": "boomwhackers/boomwhacker_orange_tall.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_pink_rectangle.png",
+          "path": "boomwhackers/boomwhacker_pink_rectangle.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_purple_short.png",
+          "path": "boomwhackers/boomwhacker_purple_short.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_purple_tall.png",
+          "path": "boomwhackers/boomwhacker_purple_tall.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_red_rectangle.png",
+          "path": "boomwhackers/boomwhacker_red_rectangle.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_red_short.png",
+          "path": "boomwhackers/boomwhacker_red_short.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_red_tall.png",
+          "path": "boomwhackers/boomwhacker_red_tall.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_red_tall_02.png",
+          "path": "boomwhackers/boomwhacker_red_tall_02.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_white_rectangle.png",
+          "path": "boomwhackers/boomwhacker_white_rectangle.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_yellow_rectangle.png",
+          "path": "boomwhackers/boomwhacker_yellow_rectangle.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_yellow_short.png",
+          "path": "boomwhackers/boomwhacker_yellow_short.png"
+        },
+        {
+          "type": "file",
+          "name": "boomwhacker_yellow_tall.png",
+          "path": "boomwhackers/boomwhacker_yellow_tall.png"
+        }
+      ],
+      "count": 24
+    },
+    {
+      "type": "folder",
+      "name": "cards",
+      "path": "cards",
+      "children": [
+        {
+          "type": "file",
+          "name": "card_white_beamed_sixteenth_note_pair_right.png",
+          "path": "cards/card_white_beamed_sixteenth_note_pair_right.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_beamed_sixteenth_notes_ti_ki_left.png",
+          "path": "cards/card_white_beamed_sixteenth_notes_ti_ki_left.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_dotted_half_note_sustain_line.png",
+          "path": "cards/card_white_dotted_half_note_sustain_line.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_dotted_half_note_to-o-e_sustain_line.png",
+          "path": "cards/card_white_dotted_half_note_to-o-e_sustain_line.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_dotted_quarter_note_left.png",
+          "path": "cards/card_white_dotted_quarter_note_left.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_dotted_quarter_note_offbeat.png",
+          "path": "cards/card_white_dotted_quarter_note_offbeat.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_eighth_note_left.png",
+          "path": "cards/card_white_eighth_note_left.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_eighth_note_ti_right.png",
+          "path": "cards/card_white_eighth_note_ti_right.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_eighth_notes.png",
+          "path": "cards/card_white_eighth_notes.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_eighth_notes_ti_ti.png",
+          "path": "cards/card_white_eighth_notes_ti_ti.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_eighth_rest_left.png",
+          "path": "cards/card_white_eighth_rest_left.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_eighth_rest_right.png",
+          "path": "cards/card_white_eighth_rest_right.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_eighth_rest_sh_left.png",
+          "path": "cards/card_white_eighth_rest_sh_left.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_eighth_rest_sh_right.png",
+          "path": "cards/card_white_eighth_rest_sh_right.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_eighth_two_sixteenths.png",
+          "path": "cards/card_white_eighth_two_sixteenths.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_eighth_two_sixteenths_ti_ti_ki.png",
+          "path": "cards/card_white_eighth_two_sixteenths_ti_ti_ki.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_eigth_note_right.png",
+          "path": "cards/card_white_eigth_note_right.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_eigth_note_ti_left.png",
+          "path": "cards/card_white_eigth_note_ti_left.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_four_sixteenth_notes.png",
+          "path": "cards/card_white_four_sixteenth_notes.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_four_sixteenth_notes_ti-ki-ti-ki.png",
+          "path": "cards/card_white_four_sixteenth_notes_ti-ki-ti-ki.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_half_note_sustain_line.png",
+          "path": "cards/card_white_half_note_sustain_line.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_half_note_to_e_sustain_line.png",
+          "path": "cards/card_white_half_note_to_e_sustain_line.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_half_rest.png",
+          "path": "cards/card_white_half_rest.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_half_rest_shh.png",
+          "path": "cards/card_white_half_rest_shh.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_quarter_note.png",
+          "path": "cards/card_white_quarter_note.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_quarter_note_ta.png",
+          "path": "cards/card_white_quarter_note_ta.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_quarter_rest.png",
+          "path": "cards/card_white_quarter_rest.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_sixteenth_eighth_sixteenth.png",
+          "path": "cards/card_white_sixteenth_eighth_sixteenth.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_sixteenth_eighth_sixteenth_ti_ki_ki.png",
+          "path": "cards/card_white_sixteenth_eighth_sixteenth_ti_ki_ki.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_sixteenth_notes_left.png",
+          "path": "cards/card_white_sixteenth_notes_left.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_sixteenth_notes_ti_ki_right.png",
+          "path": "cards/card_white_sixteenth_notes_ti_ki_right.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_tied_sixteenth_notes_ti_ki_right.png",
+          "path": "cards/card_white_tied_sixteenth_notes_ti_ki_right.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_triplet_eighth_notes.png",
+          "path": "cards/card_white_triplet_eighth_notes.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_triplet_eighth_notes_ti_ti_ti.png",
+          "path": "cards/card_white_triplet_eighth_notes_ti_ti_ti.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_two_sixteenth_eighth_notes_ti_ki_ti.png",
+          "path": "cards/card_white_two_sixteenth_eighth_notes_ti_ki_ti.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_two_sixteenths_eighths_ti_ki_ti.png",
+          "path": "cards/card_white_two_sixteenths_eighths_ti_ki_ti.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_whole_note_sustain_line.png",
+          "path": "cards/card_white_whole_note_sustain_line.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_whole_note_sustain_line_toe-oe-oe-oe.png",
+          "path": "cards/card_white_whole_note_sustain_line_toe-oe-oe-oe.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_whole_rest.png",
+          "path": "cards/card_white_whole_rest.png"
+        },
+        {
+          "type": "file",
+          "name": "card_white_whole_rest_shh.png",
+          "path": "cards/card_white_whole_rest_shh.png"
+        }
+      ],
+      "count": 40
+    },
+    {
+      "type": "folder",
+      "name": "clefs",
+      "path": "clefs",
+      "children": [
+        {
+          "type": "file",
+          "name": "bass_clef_with_repeat_dots.png",
+          "path": "clefs/bass_clef_with_repeat_dots.png"
+        },
+        {
+          "type": "file",
+          "name": "symbol_treble_clef.png",
+          "path": "clefs/symbol_treble_clef.png"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "type": "folder",
+      "name": "dynamics",
+      "path": "dynamics",
+      "children": [
+        {
+          "type": "file",
+          "name": "dynamic_fortissimo_ff.png",
+          "path": "dynamics/dynamic_fortissimo_ff.png"
+        },
+        {
+          "type": "file",
+          "name": "dynamic_piano_p.png",
+          "path": "dynamics/dynamic_piano_p.png"
+        }
+      ],
+      "count": 2
+    },
+    {
+      "type": "folder",
+      "name": "hands",
+      "path": "hands",
+      "children": [
+        {
+          "type": "file",
+          "name": "solfege_hand_sign_do.png",
+          "path": "hands/solfege_hand_sign_do.png"
+        },
+        {
+          "type": "file",
+          "name": "solfege_hand_sign_do_labeled.png",
+          "path": "hands/solfege_hand_sign_do_labeled.png"
+        },
+        {
+          "type": "file",
+          "name": "solfege_hand_sign_fa.png",
+          "path": "hands/solfege_hand_sign_fa.png"
+        },
+        {
+          "type": "file",
+          "name": "solfege_hand_sign_fa_labeled.png",
+          "path": "hands/solfege_hand_sign_fa_labeled.png"
+        },
+        {
+          "type": "file",
+          "name": "solfege_hand_sign_la.png",
+          "path": "hands/solfege_hand_sign_la.png"
+        },
+        {
+          "type": "file",
+          "name": "solfege_hand_sign_la_labeled.png",
+          "path": "hands/solfege_hand_sign_la_labeled.png"
+        },
+        {
+          "type": "file",
+          "name": "solfege_hand_sign_mi.png",
+          "path": "hands/solfege_hand_sign_mi.png"
+        },
+        {
+          "type": "file",
+          "name": "solfege_hand_sign_mi_labeled.png",
+          "path": "hands/solfege_hand_sign_mi_labeled.png"
+        },
+        {
+          "type": "file",
+          "name": "solfege_hand_sign_re.png",
+          "path": "hands/solfege_hand_sign_re.png"
+        },
+        {
+          "type": "file",
+          "name": "solfege_hand_sign_re_labeled.png",
+          "path": "hands/solfege_hand_sign_re_labeled.png"
+        },
+        {
+          "type": "file",
+          "name": "solfege_hand_sign_so.png",
+          "path": "hands/solfege_hand_sign_so.png"
+        },
+        {
+          "type": "file",
+          "name": "solfege_hand_sign_so_label.png",
+          "path": "hands/solfege_hand_sign_so_label.png"
+        },
+        {
+          "type": "file",
+          "name": "solfege_hand_sign_ti.png",
+          "path": "hands/solfege_hand_sign_ti.png"
+        },
+        {
+          "type": "file",
+          "name": "solfege_hand_sign_ti_labeled.png",
+          "path": "hands/solfege_hand_sign_ti_labeled.png"
+        }
+      ],
+      "count": 14
+    },
+    {
+      "type": "folder",
+      "name": "key_signatures",
+      "path": "key_signatures",
+      "children": [
+        {
+          "type": "file",
+          "name": "key_signature_D.png",
+          "path": "key_signatures/key_signature_D.png"
+        },
+        {
+          "type": "file",
+          "name": "key_signature_E.png",
+          "path": "key_signatures/key_signature_E.png"
+        },
+        {
+          "type": "file",
+          "name": "key_signature_b-flat.png",
+          "path": "key_signatures/key_signature_b-flat.png"
+        }
+      ],
+      "count": 3
+    },
+    {
+      "type": "folder",
+      "name": "misc",
+      "path": "misc",
+      "children": [
+        {
+          "type": "file",
+          "name": "1000000100000530000000D76FFEECC4.png",
+          "path": "misc/1000000100000530000000D76FFEECC4.png"
+        },
+        {
+          "type": "file",
+          "name": "1000000100000530000001F07304A199.png",
+          "path": "misc/1000000100000530000001F07304A199.png"
+        },
+        {
+          "type": "file",
+          "name": "10000001000006BF000000D08C844FA6.png",
+          "path": "misc/10000001000006BF000000D08C844FA6.png"
+        },
+        {
+          "type": "file",
+          "name": "10000001000006BF000000D0A17C6D03.png",
+          "path": "misc/10000001000006BF000000D0A17C6D03.png"
+        },
+        {
+          "type": "file",
+          "name": "10000001000006BF000000D0D7B35556.png",
+          "path": "misc/10000001000006BF000000D0D7B35556.png"
+        },
+        {
+          "type": "file",
+          "name": "thumbnail.png",
+          "path": "misc/thumbnail.png"
+        }
+      ],
+      "count": 6
+    },
+    {
+      "type": "folder",
+      "name": "notes",
+      "path": "notes",
+      "children": [
+        {
+          "type": "file",
+          "name": "dotted_half_note_black_with_ledger_line.png",
+          "path": "notes/dotted_half_note_black_with_ledger_line.png"
+        },
+        {
+          "type": "file",
+          "name": "dotted_quarter_note_black.png",
+          "path": "notes/dotted_quarter_note_black.png"
+        },
+        {
+          "type": "file",
+          "name": "dotted_quarter_note_black_with_fermata.png",
+          "path": "notes/dotted_quarter_note_black_with_fermata.png"
+        },
+        {
+          "type": "file",
+          "name": "eighth_note.png",
+          "path": "notes/eighth_note.png"
+        },
+        {
+          "type": "file",
+          "name": "eighth_notes_pair.png",
+          "path": "notes/eighth_notes_pair.png"
+        },
+        {
+          "type": "file",
+          "name": "eighth_two_sixteenth_notes.png",
+          "path": "notes/eighth_two_sixteenth_notes.png"
+        },
+        {
+          "type": "file",
+          "name": "half_note_black.png",
+          "path": "notes/half_note_black.png"
+        },
+        {
+          "type": "file",
+          "name": "quarter_note_black.png",
+          "path": "notes/quarter_note_black.png"
+        },
+        {
+          "type": "file",
+          "name": "sixteenth_eighth_sixteenth.png",
+          "path": "notes/sixteenth_eighth_sixteenth.png"
+        },
+        {
+          "type": "file",
+          "name": "sixteenth_notes.png",
+          "path": "notes/sixteenth_notes.png"
+        },
+        {
+          "type": "file",
+          "name": "triplet_eighth_notes.png",
+          "path": "notes/triplet_eighth_notes.png"
+        },
+        {
+          "type": "file",
+          "name": "two_beamed_sixteenth_notes_black.png",
+          "path": "notes/two_beamed_sixteenth_notes_black.png"
+        },
+        {
+          "type": "file",
+          "name": "two_sixteenth_eighth_notes.png",
+          "path": "notes/two_sixteenth_eighth_notes.png"
+        },
+        {
+          "type": "file",
+          "name": "whole_note_black.png",
+          "path": "notes/whole_note_black.png"
+        }
+      ],
+      "count": 14
+    },
+    {
+      "type": "folder",
+      "name": "recorder",
+      "path": "recorder",
+      "children": [
+        {
+          "type": "file",
+          "name": "recorder_fingering_A.png",
+          "path": "recorder/recorder_fingering_A.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_fingering_B.png",
+          "path": "recorder/recorder_fingering_B.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_fingering_D_orange.png",
+          "path": "recorder/recorder_fingering_D_orange.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_fingering_E.png",
+          "path": "recorder/recorder_fingering_E.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_fingering_E_02.png",
+          "path": "recorder/recorder_fingering_E_02.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_fingering_F.png",
+          "path": "recorder/recorder_fingering_F.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_fingering_F_sharp.png",
+          "path": "recorder/recorder_fingering_F_sharp.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_fingering_G.png",
+          "path": "recorder/recorder_fingering_G.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_fingering_High_C.png",
+          "path": "recorder/recorder_fingering_High_C.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_fingering_High_D.png",
+          "path": "recorder/recorder_fingering_High_D.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_fingering_Low_C.png",
+          "path": "recorder/recorder_fingering_Low_C.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_full_diagram_A.png",
+          "path": "recorder/recorder_full_diagram_A.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_full_diagram_B.png",
+          "path": "recorder/recorder_full_diagram_B.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_full_diagram_C_low.png",
+          "path": "recorder/recorder_full_diagram_C_low.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_full_diagram_C_red.png",
+          "path": "recorder/recorder_full_diagram_C_red.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_full_diagram_D.png",
+          "path": "recorder/recorder_full_diagram_D.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_full_diagram_D_high.png",
+          "path": "recorder/recorder_full_diagram_D_high.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_full_diagram_D_orange.png",
+          "path": "recorder/recorder_full_diagram_D_orange.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_full_diagram_D_sharp.png",
+          "path": "recorder/recorder_full_diagram_D_sharp.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_full_diagram_E.png",
+          "path": "recorder/recorder_full_diagram_E.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_full_diagram_F.png",
+          "path": "recorder/recorder_full_diagram_F.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_full_diagram_G.png",
+          "path": "recorder/recorder_full_diagram_G.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_full_diagram_high_C.png",
+          "path": "recorder/recorder_full_diagram_high_C.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_full_diagram_open_all.png",
+          "path": "recorder/recorder_full_diagram_open_all.png"
+        },
+        {
+          "type": "file",
+          "name": "recorder_thumb_open.png",
+          "path": "recorder/recorder_thumb_open.png"
+        }
+      ],
+      "count": 25
+    },
+    {
+      "type": "folder",
+      "name": "rests",
+      "path": "rests",
+      "children": [
+        {
+          "type": "file",
+          "name": "eighth_rest.png",
+          "path": "rests/eighth_rest.png"
+        },
+        {
+          "type": "file",
+          "name": "half_rest.png",
+          "path": "rests/half_rest.png"
+        },
+        {
+          "type": "file",
+          "name": "whole_rest.png",
+          "path": "rests/whole_rest.png"
+        }
+      ],
+      "count": 3
+    },
+    {
+      "type": "folder",
+      "name": "staff_lines",
+      "path": "staff_lines",
+      "children": [
+        {
+          "type": "file",
+          "name": "staff_lines_5_line.png",
+          "path": "staff_lines/staff_lines_5_line.png"
+        },
+        {
+          "type": "file",
+          "name": "staff_lines_5_line_3.png",
+          "path": "staff_lines/staff_lines_5_line_3.png"
+        },
+        {
+          "type": "file",
+          "name": "staff_lines_5_line_narrow.png",
+          "path": "staff_lines/staff_lines_5_line_narrow.png"
+        },
+        {
+          "type": "file",
+          "name": "staff_lines_5_line_very_wide.png",
+          "path": "staff_lines/staff_lines_5_line_very_wide.png"
+        },
+        {
+          "type": "file",
+          "name": "staff_lines_5_line_wide_labeled_colored.png",
+          "path": "staff_lines/staff_lines_5_line_wide_labeled_colored.png"
+        },
+        {
+          "type": "file",
+          "name": "staff_lines_5_line_with_treble_clef.png",
+          "path": "staff_lines/staff_lines_5_line_with_treble_clef.png"
+        },
+        {
+          "type": "file",
+          "name": "staff_lines_single_line.png",
+          "path": "staff_lines/staff_lines_single_line.png"
+        }
+      ],
+      "count": 7
+    },
+    {
+      "type": "folder",
+      "name": "symbols",
+      "path": "symbols",
+      "children": [
+        {
+          "type": "file",
+          "name": "double_bar_line.png",
+          "path": "symbols/double_bar_line.png"
+        },
+        {
+          "type": "file",
+          "name": "key_signature_D-flat.png",
+          "path": "symbols/key_signature_D-flat.png"
+        },
+        {
+          "type": "file",
+          "name": "key_signature_e-flat.png",
+          "path": "symbols/key_signature_e-flat.png"
+        },
+        {
+          "type": "file",
+          "name": "repeat_sign_begin_left.png",
+          "path": "symbols/repeat_sign_begin_left.png"
+        },
+        {
+          "type": "file",
+          "name": "repeat_sign_end_right.png",
+          "path": "symbols/repeat_sign_end_right.png"
+        },
+        {
+          "type": "file",
+          "name": "symbol_accidental_flat.png",
+          "path": "symbols/symbol_accidental_flat.png"
+        },
+        {
+          "type": "file",
+          "name": "symbol_accidental_sharp.png",
+          "path": "symbols/symbol_accidental_sharp.png"
+        },
+        {
+          "type": "file",
+          "name": "symbol_barline.png",
+          "path": "symbols/symbol_barline.png"
+        },
+        {
+          "type": "file",
+          "name": "symbol_coda_sign.png",
+          "path": "symbols/symbol_coda_sign.png"
+        },
+        {
+          "type": "file",
+          "name": "symbol_double_vamp.png",
+          "path": "symbols/symbol_double_vamp.png"
+        },
+        {
+          "type": "file",
+          "name": "symbol_ending_barline.png",
+          "path": "symbols/symbol_ending_barline.png"
+        },
+        {
+          "type": "file",
+          "name": "symbol_forte.png",
+          "path": "symbols/symbol_forte.png"
+        },
+        {
+          "type": "file",
+          "name": "symbol_mezzo_forte.png",
+          "path": "symbols/symbol_mezzo_forte.png"
+        },
+        {
+          "type": "file",
+          "name": "symbol_mezzo_piano.png",
+          "path": "symbols/symbol_mezzo_piano.png"
+        },
+        {
+          "type": "file",
+          "name": "symbol_sign(coda).png",
+          "path": "symbols/symbol_sign(coda).png"
+        },
+        {
+          "type": "file",
+          "name": "symbol_vamp.png",
+          "path": "symbols/symbol_vamp.png"
+        }
+      ],
+      "count": 16
+    },
+    {
+      "type": "folder",
+      "name": "text",
+      "path": "text",
+      "children": [
+        {
+          "type": "file",
+          "name": "text_adagio.png",
+          "path": "text/text_adagio.png"
+        },
+        {
+          "type": "file",
+          "name": "text_d_c_al_coda.png",
+          "path": "text/text_d_c_al_coda.png"
+        },
+        {
+          "type": "file",
+          "name": "text_dc.png",
+          "path": "text/text_dc.png"
+        },
+        {
+          "type": "file",
+          "name": "text_fine.png",
+          "path": "text/text_fine.png"
+        },
+        {
+          "type": "file",
+          "name": "text_forte.png",
+          "path": "text/text_forte.png"
+        },
+        {
+          "type": "file",
+          "name": "text_mezzo.png",
+          "path": "text/text_mezzo.png"
+        },
+        {
+          "type": "file",
+          "name": "text_presto.png",
+          "path": "text/text_presto.png"
+        }
+      ],
+      "count": 7
+    },
+    {
+      "type": "folder",
+      "name": "time_signatures",
+      "path": "time_signatures",
+      "children": [
+        {
+          "type": "file",
+          "name": "time_signature_12_8.png",
+          "path": "time_signatures/time_signature_12_8.png"
+        },
+        {
+          "type": "file",
+          "name": "time_signature_2_2.png",
+          "path": "time_signatures/time_signature_2_2.png"
+        },
+        {
+          "type": "file",
+          "name": "time_signature_2_4.png",
+          "path": "time_signatures/time_signature_2_4.png"
+        },
+        {
+          "type": "file",
+          "name": "time_signature_3_4.png",
+          "path": "time_signatures/time_signature_3_4.png"
+        },
+        {
+          "type": "file",
+          "name": "time_signature_4_4.png",
+          "path": "time_signatures/time_signature_4_4.png"
+        },
+        {
+          "type": "file",
+          "name": "time_signature_6_8.png",
+          "path": "time_signatures/time_signature_6_8.png"
+        }
+      ],
+      "count": 6
+    },
+    {
+      "type": "folder",
+      "name": "trombone",
+      "path": "trombone",
+      "children": [
+        {
+          "type": "file",
+          "name": "trombone_slide_position_1.png",
+          "path": "trombone/trombone_slide_position_1.png"
+        },
+        {
+          "type": "file",
+          "name": "trombone_slide_position_3.png",
+          "path": "trombone/trombone_slide_position_3.png"
+        },
+        {
+          "type": "file",
+          "name": "trombone_slide_position_4.png",
+          "path": "trombone/trombone_slide_position_4.png"
+        },
+        {
+          "type": "file",
+          "name": "trombone_slide_position_6.png",
+          "path": "trombone/trombone_slide_position_6.png"
+        }
+      ],
+      "count": 4
+    },
+    {
+      "type": "folder",
+      "name": "trumpet",
+      "path": "trumpet",
+      "children": [
+        {
+          "type": "file",
+          "name": "trumpet_1_2_fingering.png",
+          "path": "trumpet/trumpet_1_2_fingering.png"
+        },
+        {
+          "type": "file",
+          "name": "trumpet_1_3_fingering.png",
+          "path": "trumpet/trumpet_1_3_fingering.png"
+        },
+        {
+          "type": "file",
+          "name": "trumpet_1_fingering.png",
+          "path": "trumpet/trumpet_1_fingering.png"
+        },
+        {
+          "type": "file",
+          "name": "trumpet_open_finger.png",
+          "path": "trumpet/trumpet_open_finger.png"
+        }
+      ],
+      "count": 4
+    }
+  ],
+  "total_folders": 17,
+  "total_files": 185
+}

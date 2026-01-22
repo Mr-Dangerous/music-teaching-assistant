@@ -332,7 +332,7 @@ The app supports fullscreen mode for immersive student task display:
 
 **IMPORTANT:** The project includes a comprehensive asset library that serves as the baseline for all future projects and modules.
 
-**Location:** `data_to_not_upload/assets/`
+**Location:** `assets/`
 
 **Organization:** Assets are organized into 18 categories:
 - `body_percussion/` - Body percussion icons (12 files)

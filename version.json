@@ -1,5 +1,5 @@
 {
-  "version": "2.2.1",
+  "version": "2.2.2",
   "lastUpdated": "2026-01-22",
-  "description": "Fix rhythm dictation trainer not appearing in dropdown - add to knownModules list and update MODULE_GUIDE with registration requirement"
+  "description": "Update asset paths from data_to_not_upload/assets/ to root-level assets/ folder"
 }
