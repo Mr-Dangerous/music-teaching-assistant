@@ -24,9 +24,11 @@ The app automatically discovers all modules in the `modules/` folder. Each `.htm
 
 1. **Create your module** (e.g., `my-module.html`) in the `modules/` folder
 
-2. **Reload the app** - your module automatically appears in the task dropdown
+2. **Add to the module list** - Edit `js/app.js` and add your module filename to the `knownModules` array in the `loadKnownModules()` function (around line 443)
 
-That's it! No CSV editing needed - the module handles everything else.
+3. **Reload the app** - your module now appears in the task dropdown
+
+**Why this step is needed:** The app attempts to auto-discover modules by scanning the `modules/` folder, but this requires directory listing to be enabled on your web server. If directory listing isn't available, the app falls back to the hardcoded list in `knownModules`. Adding your module to this list ensures it works in all environments.
 
 ### Getting New Modules
 
@@ -64,10 +66,11 @@ Use bright colors suitable for a smartboard. Implement the TaskModule
 interface with init, getResponse, isComplete, and reset methods.
 ```
 
-#### 3. Test Your Module
+#### 3. Register and Test Your Module
 - Save as `modules/my-module.html`
-- Reload the app - it appears automatically in the task dropdown
-- Load and test!
+- Add `'my-module.html'` to the `knownModules` array in `js/app.js` (line 443)
+- Reload the app - your module appears in the task dropdown
+- Select it and test!
 
 ---
 
@@ -347,12 +350,13 @@ The `isComplete` flag in your postMessage tells the parent app whether to enable
 
 ## Troubleshooting
 
-### Module Not Loading
+### Module Not Appearing in Dropdown
 **Check:**
 - HTML file exists in `modules/` folder
 - Filename doesn't start with `_` (underscore files are ignored)
-- Browser console (F12) for error messages
+- **Module is registered** in the `knownModules` array in `js/app.js` (line 443)
 - Reload the app to refresh the module list
+- Browser console (F12) for error messages
 
 ### Response Not Saving
 **Check:**
@@ -415,9 +419,10 @@ music_teaching_assistant/
 
 ### To Use a Shared Module:
 1. Save HTML to your `modules/` folder
-2. Add any required images to appropriate `tasks/Grade X/` folder
-3. Reload the app - the module appears automatically
-4. Test with a student
+2. Add any required images to appropriate `tasks/Grade X/` folder (if applicable)
+3. Register the module in `js/app.js` by adding the filename to the `knownModules` array (line 443)
+4. Reload the app - the module appears in the task dropdown
+5. Test with a student
 
 ---
 
