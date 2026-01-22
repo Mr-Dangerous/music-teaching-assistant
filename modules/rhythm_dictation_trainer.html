@@ -1,0 +1,1950 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rhythm Dictation Trainer</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Comic Sans MS', 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+      padding: 15px;
+      overflow-y: auto;
+      max-height: 100vh;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* Top Controls */
+    .controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 12px 20px;
+      font-size: 18px;
+      font-weight: bold;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 50px;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #74b9ff, #0984e3);
+      color: white;
+    }
+
+    .btn-meter {
+      background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+      color: #2d3436;
+      min-width: 80px;
+    }
+
+    .btn-meter.active {
+      background: linear-gradient(135deg, #fd79a8, #e84393);
+      color: white;
+      transform: scale(1.05);
+    }
+
+    .btn-filter {
+      background: linear-gradient(135deg, #a29bfe, #6c5ce7);
+      color: white;
+    }
+
+    .btn-options {
+      background: linear-gradient(135deg, #b2bec3, #636e72);
+      color: white;
+    }
+
+    /* BPM Control */
+    .bpm-control {
+      background: linear-gradient(135deg, #55efc4, #00b894);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 20px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 50px;
+    }
+
+    .bpm-label {
+      font-size: 18px;
+      font-weight: bold;
+    }
+
+    .bpm-input-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .bpm-input {
+      width: 70px;
+      padding: 8px;
+      font-size: 18px;
+      font-weight: bold;
+      border: 2px solid white;
+      border-radius: 10px;
+      text-align: center;
+      background: white;
+      color: #2d3436;
+    }
+
+    .bpm-slider {
+      width: 150px;
+      height: 8px;
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255,255,255,0.3);
+      border-radius: 5px;
+      outline: none;
+    }
+
+    .bpm-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 24px;
+      height: 24px;
+      background: white;
+      border-radius: 50%;
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    .bpm-slider::-moz-range-thumb {
+      width: 24px;
+      height: 24px;
+      background: white;
+      border-radius: 50%;
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+
+    /* Staff Area */
+    .staff-container {
+      background: white;
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+      20%, 40%, 60%, 80% { transform: translateX(10px); }
+    }
+
+    @keyframes fallOut {
+      0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(100px) rotate(20deg);
+        opacity: 0;
+      }
+    }
+
+    .beat-cell.wrong {
+      animation: shake 0.5s ease-in-out;
+    }
+
+    .beat-cell.wrong img {
+      animation: fallOut 0.6s ease-in forwards;
+    }
+
+    .staff {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      margin: 20px 0;
+      min-height: 150px;
+    }
+
+    .beat-cell {
+      flex: 1;
+      max-width: 200px;
+      border: 4px dashed #dfe6e9;
+      border-radius: 15px;
+      padding: 15px;
+      text-align: center;
+      position: relative;
+      background: #f8f9fa;
+      transition: all 0.3s;
+    }
+
+    .beat-cell.drag-over {
+      background: #dfe6e9;
+      border-color: #0984e3;
+      transform: scale(1.05);
+    }
+
+    .beat-cell.playing {
+      background: #ffeaa7;
+      border-color: #fdcb6e;
+      animation: pulse 0.3s ease;
+    }
+
+    .beat-cell.playing-left::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 50%;
+      height: 100%;
+      background: rgba(255, 234, 167, 0.8);
+      border-radius: 15px 0 0 15px;
+      z-index: 1;
+      pointer-events: none;
+      animation: pulse 0.3s ease;
+    }
+
+    .beat-cell.playing-right::after {
+      content: '';
+      position: absolute;
+      right: 0;
+      top: 0;
+      width: 50%;
+      height: 100%;
+      background: rgba(255, 234, 167, 0.8);
+      border-radius: 0 15px 15px 0;
+      z-index: 1;
+      pointer-events: none;
+      animation: pulse 0.3s ease;
+    }
+
+    .beat-cell.clickable {
+      cursor: pointer;
+      border-color: #0984e3;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+    }
+
+    .beat-label {
+      font-size: 14px;
+      font-weight: bold;
+      color: #636e72;
+      margin-bottom: 10px;
+    }
+
+    .beat-content {
+      min-height: 100px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      flex-wrap: wrap;
+    }
+
+    .rhythm-card-in-cell {
+      max-width: 100%;
+      max-height: 100px;
+      cursor: pointer;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    }
+
+    /* Merged cell styling for half notes */
+    .beat-cell.has-sustained {
+      border-right: none;
+      border-top-right-radius: 0;
+      border-bottom-right-radius: 0;
+      margin-right: -5px;
+      z-index: 2;
+    }
+
+    .beat-cell.sustained {
+      border-left: none;
+      border-top-left-radius: 0;
+      border-bottom-left-radius: 0;
+      border-color: #dfe6e9;
+      margin-left: -5px;
+      z-index: 1;
+    }
+
+    .beat-cell.sustained .beat-label {
+      opacity: 0.3;
+      font-size: 12px;
+    }
+
+    .beat-cell.sustained .beat-content {
+      visibility: hidden;
+    }
+
+    .beat-cell.has-sustained .beat-content {
+      position: relative;
+      width: calc(200% + 20px);
+      margin-right: calc(-100% - 10px);
+      z-index: 5;
+    }
+
+    .beat-cell.has-sustained .rhythm-card-in-cell {
+      max-width: 45%;
+      max-height: 100px;
+    }
+
+    .beat-cell.has-sustained .beat-label::after {
+      content: ' & ' attr(data-next-beat);
+      color: #636e72;
+    }
+
+    .sustain-indicator {
+      display: none;
+    }
+
+    .beat-cell.sustained .remove-btn {
+      display: none !important;
+    }
+
+    .remove-btn {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      background: #ff7675;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 25px;
+      height: 25px;
+      cursor: pointer;
+      font-size: 16px;
+      line-height: 1;
+      display: none;
+    }
+
+    .beat-cell:hover .remove-btn {
+      display: block;
+    }
+
+    /* Play Button */
+    .play-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 20px 0;
+      gap: 20px;
+    }
+
+    .btn-play {
+      background: linear-gradient(135deg, #55efc4, #00b894);
+      color: white;
+      font-size: 24px;
+      padding: 20px 50px;
+      min-width: 300px;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .btn-play:disabled {
+      background: #b2bec3;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .btn-reveal {
+      background: linear-gradient(135deg, #fd79a8, #e84393);
+      color: white;
+      font-size: 24px;
+      padding: 20px 50px;
+      min-width: 300px;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .btn-reveal:disabled {
+      background: #b2bec3;
+      cursor: not-allowed;
+      opacity: 0.4;
+    }
+
+    /* Rhythm Palette */
+    .palette-container {
+      background: white;
+      border-radius: 20px;
+      padding: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .palette-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #2d3436;
+      text-align: center;
+      margin-bottom: 15px;
+    }
+
+    .palette {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+      min-height: 120px;
+    }
+
+    .rhythm-card {
+      background: #ffeaa7;
+      border: 3px solid #fdcb6e;
+      border-radius: 15px;
+      padding: 10px;
+      cursor: grab;
+      transition: all 0.2s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      min-width: 100px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      touch-action: none;
+      user-select: none;
+    }
+
+    .rhythm-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    }
+
+    .rhythm-card.dragging {
+      opacity: 0.5;
+      cursor: grabbing;
+    }
+
+    .rhythm-card.selected {
+      border: 4px solid #0984e3;
+      transform: scale(1.1);
+      box-shadow: 0 6px 16px rgba(9, 132, 227, 0.5);
+    }
+
+    .rhythm-card img {
+      max-width: 80px;
+      max-height: 80px;
+      filter: drop-shadow(0 1px 2px rgba(0,0,0,0.2));
+    }
+
+    .rhythm-card-label {
+      font-size: 12px;
+      font-weight: bold;
+      color: #2d3436;
+      text-align: center;
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 600px;
+      width: 90%;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+
+    .modal-header {
+      font-size: 24px;
+      font-weight: bold;
+      color: #2d3436;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .modal-section {
+      margin-bottom: 20px;
+    }
+
+    .modal-section-title {
+      font-size: 18px;
+      font-weight: bold;
+      color: #636e72;
+      margin-bottom: 10px;
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 10px;
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+    }
+
+    .checkbox-item label {
+      cursor: pointer;
+      font-size: 16px;
+      flex: 1;
+    }
+
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .radio-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 10px;
+    }
+
+    .radio-item input[type="radio"] {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+    }
+
+    .radio-item label {
+      cursor: pointer;
+      font-size: 16px;
+      flex: 1;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .btn-close {
+      background: linear-gradient(135deg, #74b9ff, #0984e3);
+      color: white;
+      flex: 1;
+    }
+
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 60px;
+      height: 30px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: 0.4s;
+      border-radius: 30px;
+    }
+
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 22px;
+      width: 22px;
+      left: 4px;
+      bottom: 4px;
+      background-color: white;
+      transition: 0.4s;
+      border-radius: 50%;
+    }
+
+    input:checked + .toggle-slider {
+      background-color: #00b894;
+    }
+
+    input:checked + .toggle-slider:before {
+      transform: translateX(30px);
+    }
+
+    .toggle-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 10px;
+      margin-bottom: 10px;
+    }
+
+    .toggle-label {
+      font-size: 16px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Top Controls -->
+    <div class="controls">
+      <button class="btn btn-primary" id="newPatternBtn">
+        📄 New Pattern
+      </button>
+
+      <button class="btn btn-meter" data-meter="4/4">4/4</button>
+      <button class="btn btn-meter" data-meter="3/4">3/4</button>
+      <button class="btn btn-meter" data-meter="2/4">2/4</button>
+
+      <div class="bpm-control">
+        <span class="bpm-label">🎼 BPM:</span>
+        <div class="bpm-input-group">
+          <input type="number" id="bpmInput" class="bpm-input" min="40" max="240" step="1" value="80">
+          <input type="range" id="bpmSlider" class="bpm-slider" min="40" max="240" step="1" value="80">
+        </div>
+      </div>
+
+      <div class="bpm-control" style="background: linear-gradient(135deg, #a29bfe, #6c5ce7);">
+        <span class="bpm-label">👁️ Visual Aids:</span>
+        <label class="toggle-switch">
+          <input type="checkbox" id="visualAidsToggleHeader" checked>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <button class="btn btn-filter" id="filterBtn">
+        🎵 Filter Rhythms
+      </button>
+
+      <button class="btn btn-options" id="customRulesBtn">
+        📏 Custom Rules
+      </button>
+
+      <button class="btn btn-options" id="optionsBtn">
+        ⚙️ Options
+      </button>
+    </div>
+
+    <!-- Staff Area -->
+    <div class="staff-container">
+      <div class="play-container">
+        <button class="btn btn-play" id="playBtn">
+          ▶️ Play Rhythm 🎵
+        </button>
+        <button class="btn btn-reveal" id="revealBtn" disabled>
+          🔍 Reveal Answer
+        </button>
+      </div>
+
+      <div class="staff" id="staff">
+        <!-- Beat cells will be generated here -->
+      </div>
+    </div>
+
+    <!-- Rhythm Palette -->
+    <div class="palette-container">
+      <div class="palette-title">Rhythm Palette</div>
+      <div class="palette" id="palette">
+        <!-- Rhythm cards will be generated here -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Filter Modal -->
+  <div class="modal" id="filterModal">
+    <div class="modal-content">
+      <div class="modal-header">Filter Rhythms</div>
+      <div class="modal-section">
+        <div class="modal-section-title">Select Rhythm Types</div>
+        <p style="font-size: 14px; color: #636e72; margin-bottom: 15px;">
+          Manually selecting rhythms here will override the current preset. Selected rhythms will appear in the palette and random generation.
+        </p>
+        <div class="checkbox-group" id="rhythmFilters">
+          <!-- Checkboxes will be generated here -->
+        </div>
+      </div>
+      <div class="modal-buttons">
+        <button class="btn btn-close" onclick="closeFilterModal()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Options Modal -->
+  <div class="modal" id="optionsModal">
+    <div class="modal-content">
+      <div class="modal-header">Options</div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Preset Difficulty</div>
+        <div class="radio-group">
+          <div class="radio-item">
+            <input type="radio" name="preset" value="simple" id="presetSimple">
+            <label for="presetSimple"><strong>Simple:</strong> Ta, Ti-Ti</label>
+          </div>
+          <div class="radio-item">
+            <input type="radio" name="preset" value="basic" id="presetBasic">
+            <label for="presetBasic"><strong>Basic:</strong> Simple + Rests</label>
+          </div>
+          <div class="radio-item">
+            <input type="radio" name="preset" value="intermediate" id="presetIntermediate">
+            <label for="presetIntermediate"><strong>Intermediate:</strong> Basic + Half notes, Sixteenths</label>
+          </div>
+          <div class="radio-item">
+            <input type="radio" name="preset" value="advanced" id="presetAdvanced">
+            <label for="presetAdvanced"><strong>Advanced:</strong> All rhythms including syncopation</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="modal-section-title">Pattern Mode</div>
+        <div class="radio-group">
+          <div class="radio-item">
+            <input type="radio" name="mode" value="random" id="modeRandom">
+            <label for="modeRandom"><strong>Random:</strong> Automatically generate patterns</label>
+          </div>
+          <div class="radio-item">
+            <input type="radio" name="mode" value="manual" id="modeManual">
+            <label for="modeManual"><strong>Manual:</strong> Create patterns yourself</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-section">
+        <div class="toggle-item">
+          <span class="toggle-label">Visual Aids (Highlight beats during playback)</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="visualAidsToggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="modal-buttons">
+        <button class="btn btn-close" onclick="closeOptionsModal()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Custom Rules Modal -->
+  <div class="modal" id="customRulesModal">
+    <div class="modal-content">
+      <div class="modal-header">Custom Rules</div>
+      <div class="modal-section">
+        <div class="modal-section-title">Random Generation Rules</div>
+        <div class="toggle-item">
+          <span class="toggle-label">Never start pattern on a rest</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="noRestStartToggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+        <div class="toggle-item">
+          <span class="toggle-label">Last beat must not be Ti-Ti</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="noTiTiEndToggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-buttons">
+        <button class="btn btn-close" onclick="closeCustomRulesModal()">Done</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Rhythm definitions with asset paths
+    const RHYTHMS = {
+      // Simple rhythms
+      'quarter': {
+        name: 'Ta',
+        duration: 1,
+        asset: '../data_to_not_upload/assets/cards/card_white_quarter_note_ta.png',
+        clicks: [0],
+        sustains: [1], // Sustain for full beat
+        preset: 'simple'
+      },
+      'eighth-pair': {
+        name: 'Ti-Ti',
+        duration: 1,
+        asset: '../data_to_not_upload/assets/cards/card_white_eighth_notes_ti_ti.png',
+        clicks: [0, 0.5],
+        sustains: [0.5, 0.5], // Each eighth sustains half a beat
+        preset: 'simple'
+      },
+
+      // Basic rhythms (adds rests)
+      'quarter-rest': {
+        name: 'Shh',
+        duration: 1,
+        asset: '../data_to_not_upload/assets/cards/card_white_quarter_rest_shh.png',
+        clicks: [],
+        sustains: [],
+        preset: 'basic'
+      },
+      'eighth-rest-left': {
+        name: 'Ti Sh',
+        duration: 1,
+        assets: [
+          '../data_to_not_upload/assets/cards/card_white_eighth_note_left.png',
+          '../data_to_not_upload/assets/cards/card_white_eighth_rest_sh_right.png'
+        ],
+        clicks: [0],
+        sustains: [0.5],
+        preset: 'advanced'
+      },
+      'eighth-rest-right': {
+        name: 'Sh Ti',
+        duration: 1,
+        assets: [
+          '../data_to_not_upload/assets/cards/card_white_eighth_rest_sh_left.png',
+          '../data_to_not_upload/assets/cards/card_white_eighth_note_ti_right.png'
+        ],
+        clicks: [0.5],
+        sustains: [0.5],
+        preset: 'advanced'
+      },
+
+      // Intermediate rhythms
+      'half': {
+        name: 'To-e',
+        duration: 2,
+        asset: '../data_to_not_upload/assets/cards/card_white_half_note_to_e_sustain_line.png',
+        clicks: [0],
+        sustains: [2], // Sustain for two full beats
+        sustained: true,
+        preset: 'intermediate'
+      },
+      'half-rest': {
+        name: 'Shh',
+        duration: 2,
+        asset: '../data_to_not_upload/assets/cards/card_white_half_rest_shh.png',
+        clicks: [],
+        sustains: [],
+        sustained: true,
+        preset: 'intermediate'
+      },
+      'sixteenth-four': {
+        name: 'Ti-ki-ti-ki',
+        duration: 1,
+        asset: '../data_to_not_upload/assets/cards/card_white_four_sixteenth_notes_ti-ki-ti-ki.png',
+        clicks: [0, 0.25, 0.5, 0.75],
+        sustains: [0.25, 0.25, 0.25, 0.25], // Each sixteenth sustains quarter beat
+        preset: 'intermediate'
+      },
+
+      // Advanced rhythms
+      'eighth-two-sixteenths': {
+        name: 'Ti ti-ki',
+        duration: 1,
+        asset: '../data_to_not_upload/assets/cards/card_white_eighth_two_sixteenths_ti_ti_ki.png',
+        clicks: [0, 0.5, 0.75],
+        sustains: [0.5, 0.25, 0.25],
+        preset: 'advanced'
+      },
+      'two-sixteenths-eighth': {
+        name: 'Ti-ki ti',
+        duration: 1,
+        asset: '../data_to_not_upload/assets/cards/card_white_two_sixteenth_eighth_notes_ti_ki_ti.png',
+        clicks: [0, 0.25, 0.5],
+        sustains: [0.25, 0.25, 0.5],
+        preset: 'advanced'
+      },
+      'syncopation': {
+        name: 'Syn-co-pa',
+        duration: 1,
+        asset: '../data_to_not_upload/assets/cards/card_white_sixteenth_eighth_sixteenth_ti_ki_ki.png',
+        clicks: [0, 0.25, 0.75],
+        sustains: [0.25, 0.5, 0.25],
+        preset: 'advanced'
+      }
+    };
+
+    // State management
+    const state = {
+      meter: '4/4',
+      numBeats: 4,
+      preset: 'simple',
+      mode: 'random',
+      visualAids: true,
+      bpm: 80, // Beats per minute
+      customRules: {
+        noRestStart: true,
+        noTiTiEnd: true
+      },
+      enabledRhythms: Object.keys(RHYTHMS), // All rhythms enabled by default
+      pattern: [], // Correct pattern (array of rhythm IDs)
+      studentAnswer: [], // Student's answer (array of rhythm IDs or null)
+      isPlaying: false
+    };
+
+    // Audio context for playing sustained tones
+    let audioContext = null;
+
+    // Initialize audio context
+    function initAudio() {
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    // Play a sustained tone with specified duration
+    function playSustainedTone(startTime, duration) {
+      initAudio();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      // Use a pleasant frequency (middle C)
+      oscillator.frequency.value = 523.25; // C5
+      oscillator.type = 'triangle'; // Warmer tone than sine
+
+      const now = audioContext.currentTime;
+      const start = now + startTime;
+      const end = start + duration;
+
+      // Quick attack
+      gainNode.gain.setValueAtTime(0, start);
+      gainNode.gain.linearRampToValueAtTime(0.2, start + 0.01);
+
+      // Sustain
+      gainNode.gain.setValueAtTime(0.2, end - 0.05);
+
+      // Quick release
+      gainNode.gain.linearRampToValueAtTime(0, end);
+
+      oscillator.start(start);
+      oscillator.stop(end);
+    }
+
+    // Play a short click sound (for rests/silence indicators)
+    function playClick(time = 0) {
+      initAudio();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+
+      oscillator.frequency.value = 800;
+      oscillator.type = 'sine';
+
+      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime + time);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + time + 0.05);
+
+      oscillator.start(audioContext.currentTime + time);
+      oscillator.stop(audioContext.currentTime + time + 0.05);
+    }
+
+    // Initialize UI
+    function init() {
+      loadPreferences();
+      updateMeterButtons();
+      generateStaff();
+      generateFilterOptions();
+
+      // Sync filters to preset if enabledRhythms wasn't customized
+      // (This happens on first load or when preset was last selected action)
+      const presetsMatch = checkIfFiltersMatchPreset();
+      if (presetsMatch || state.enabledRhythms.length === Object.keys(RHYTHMS).length) {
+        syncFiltersToPreset(state.preset);
+      }
+
+      updatePalette();
+      updateOptionsModal();
+      setupEventListeners();
+
+      // Generate initial pattern if in random mode
+      if (state.mode === 'random') {
+        generateRandomPattern();
+      }
+    }
+
+    // Check if current filters match the preset
+    function checkIfFiltersMatchPreset() {
+      const presetOrder = ['simple', 'basic', 'intermediate', 'advanced'];
+      const maxPresetIndex = presetOrder.indexOf(state.preset);
+
+      const presetRhythms = Object.keys(RHYTHMS).filter(rhythmId => {
+        const rhythm = RHYTHMS[rhythmId];
+        const rhythmPresetIndex = presetOrder.indexOf(rhythm.preset);
+        return rhythmPresetIndex <= maxPresetIndex;
+      });
+
+      // Check if enabled rhythms exactly match preset rhythms
+      if (presetRhythms.length !== state.enabledRhythms.length) return false;
+      return presetRhythms.every(id => state.enabledRhythms.includes(id));
+    }
+
+    // Load preferences from sessionStorage
+    function loadPreferences() {
+      const saved = sessionStorage.getItem('rhythmDictationPrefs');
+      if (saved) {
+        const prefs = JSON.parse(saved);
+        state.meter = prefs.meter || '4/4';
+        state.preset = prefs.preset || 'simple';
+        state.mode = prefs.mode || 'random';
+        state.visualAids = prefs.visualAids !== false;
+        state.bpm = prefs.bpm || 80;
+        state.customRules = prefs.customRules || { noRestStart: true, noTiTiEnd: true };
+        state.enabledRhythms = prefs.enabledRhythms || Object.keys(RHYTHMS);
+        state.numBeats = parseInt(state.meter.split('/')[0]);
+      }
+
+      // Update BPM UI
+      document.getElementById('bpmInput').value = state.bpm;
+      document.getElementById('bpmSlider').value = state.bpm;
+
+      // Update visual aids UI
+      document.getElementById('visualAidsToggleHeader').checked = state.visualAids;
+
+      // Update custom rules UI
+      document.getElementById('noRestStartToggle').checked = state.customRules.noRestStart;
+      document.getElementById('noTiTiEndToggle').checked = state.customRules.noTiTiEnd;
+    }
+
+    // Save preferences to sessionStorage
+    function savePreferences() {
+      sessionStorage.setItem('rhythmDictationPrefs', JSON.stringify({
+        meter: state.meter,
+        preset: state.preset,
+        mode: state.mode,
+        visualAids: state.visualAids,
+        bpm: state.bpm,
+        customRules: state.customRules,
+        enabledRhythms: state.enabledRhythms
+      }));
+    }
+
+    // Update meter buttons
+    function updateMeterButtons() {
+      document.querySelectorAll('.btn-meter').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.meter === state.meter);
+      });
+    }
+
+    // Generate staff with beat cells
+    function generateStaff() {
+      const staff = document.getElementById('staff');
+      staff.innerHTML = '';
+
+      state.studentAnswer = new Array(state.numBeats).fill(null);
+
+      for (let i = 0; i < state.numBeats; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'beat-cell';
+        cell.dataset.beat = i;
+
+        cell.innerHTML = `
+          <div class="beat-label">Beat ${i + 1}</div>
+          <div class="beat-content" id="beat-${i}">
+            ${state.studentAnswer[i] ? renderRhythmInCell(state.studentAnswer[i], i) : ''}
+          </div>
+          <button class="remove-btn" onclick="removeFromCell(${i})">×</button>
+        `;
+
+        // Drag and drop events
+        cell.addEventListener('dragover', handleDragOver);
+        cell.addEventListener('drop', handleDrop);
+        cell.addEventListener('dragleave', handleDragLeave);
+
+        // Click-to-place (alternative to drag-and-drop)
+        cell.addEventListener('click', handleBeatCellClick);
+
+        staff.appendChild(cell);
+      }
+
+      updateSustainedCells();
+      updateRevealButton();
+    }
+
+    // Render rhythm card in beat cell
+    function renderRhythmInCell(rhythmId, beatIndex) {
+      const rhythm = RHYTHMS[rhythmId];
+      if (!rhythm) return '';
+
+      let html = '';
+
+      // Handle multiple assets (for combined rhythms like Ti-Sh)
+      if (rhythm.assets) {
+        html = '<div style="display: flex; gap: 0px; align-items: center; justify-content: center;">';
+        rhythm.assets.forEach(assetPath => {
+          html += `<img src="${assetPath}" class="rhythm-card-in-cell" style="max-width: 50%; max-height: 100px;" alt="${rhythm.name}">`;
+        });
+        html += '</div>';
+      } else {
+        // Single asset
+        html = `<img src="${rhythm.asset}" class="rhythm-card-in-cell" alt="${rhythm.name}">`;
+      }
+
+      // Add sustain indicator for sustained notes
+      if (rhythm.sustained && beatIndex < state.numBeats - 1) {
+        html += '<div class="sustain-indicator"></div>';
+      }
+
+      return html;
+    }
+
+    // Update rhythm palette based on preset and filters
+    function updatePalette() {
+      const palette = document.getElementById('palette');
+      palette.innerHTML = '';
+
+      // Get available rhythms based on preset
+      const availableRhythms = getAvailableRhythms();
+
+      availableRhythms.forEach(rhythmId => {
+        const rhythm = RHYTHMS[rhythmId];
+        const card = document.createElement('div');
+        card.className = 'rhythm-card';
+        card.draggable = true;
+        card.dataset.rhythm = rhythmId;
+
+        let imageHtml = '';
+        if (rhythm.assets) {
+          // Multiple assets side by side (Ti-Sh, Sh-Ti)
+          imageHtml = '<div style="display: flex; gap: 0px; align-items: center; justify-content: center;">';
+          rhythm.assets.forEach(assetPath => {
+            imageHtml += `<img src="${assetPath}" alt="${rhythm.name}" style="max-width: 40px; max-height: 80px;">`;
+          });
+          imageHtml += '</div>';
+        } else if (rhythm.sustained) {
+          // Half note - make it bigger to represent 2 beats
+          imageHtml = `<img src="${rhythm.asset}" alt="${rhythm.name}" style="max-width: 140px; max-height: 80px;">`;
+        } else {
+          // Single asset - standard size
+          imageHtml = `<img src="${rhythm.asset}" alt="${rhythm.name}" style="max-width: 80px; max-height: 80px;">`;
+        }
+
+        card.innerHTML = `
+          ${imageHtml}
+          <div class="rhythm-card-label">${rhythm.name}</div>
+        `;
+
+        // Mouse drag events
+        card.addEventListener('dragstart', handleDragStart);
+        card.addEventListener('dragend', handleDragEnd);
+
+        // Touch events for smartboard/tablet
+        card.addEventListener('touchstart', handleTouchStart, { passive: false });
+        card.addEventListener('touchmove', handleTouchMove, { passive: false });
+        card.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+        // Click-to-select (alternative to drag-and-drop)
+        card.addEventListener('click', handleRhythmCardClick);
+
+        palette.appendChild(card);
+      });
+    }
+
+    // Get available rhythms based on enabled filters
+    function getAvailableRhythms() {
+      // Simply return the enabled rhythms - no preset filtering
+      return state.enabledRhythms;
+    }
+
+    // Sync enabled rhythms to match a preset
+    function syncFiltersToPreset(preset) {
+      const presetOrder = ['simple', 'basic', 'intermediate', 'advanced'];
+      const maxPresetIndex = presetOrder.indexOf(preset);
+
+      state.enabledRhythms = Object.keys(RHYTHMS).filter(rhythmId => {
+        const rhythm = RHYTHMS[rhythmId];
+        const rhythmPresetIndex = presetOrder.indexOf(rhythm.preset);
+        return rhythmPresetIndex <= maxPresetIndex;
+      });
+
+      // Update filter checkboxes
+      Object.keys(RHYTHMS).forEach(rhythmId => {
+        const checkbox = document.getElementById(`filter-${rhythmId}`);
+        if (checkbox) {
+          checkbox.checked = state.enabledRhythms.includes(rhythmId);
+        }
+      });
+
+      savePreferences();
+    }
+
+    // Generate filter options
+    function generateFilterOptions() {
+      const container = document.getElementById('rhythmFilters');
+      container.innerHTML = '';
+
+      Object.keys(RHYTHMS).forEach(rhythmId => {
+        const rhythm = RHYTHMS[rhythmId];
+        const item = document.createElement('div');
+        item.className = 'checkbox-item';
+
+        const checked = state.enabledRhythms.includes(rhythmId) ? 'checked' : '';
+
+        item.innerHTML = `
+          <input type="checkbox" id="filter-${rhythmId}" value="${rhythmId}" ${checked} onchange="toggleRhythmFilter('${rhythmId}')">
+          <label for="filter-${rhythmId}">${rhythm.name} (${rhythm.preset})</label>
+        `;
+
+        container.appendChild(item);
+      });
+    }
+
+    // Toggle rhythm filter
+    function toggleRhythmFilter(rhythmId) {
+      const index = state.enabledRhythms.indexOf(rhythmId);
+      if (index > -1) {
+        state.enabledRhythms.splice(index, 1);
+      } else {
+        state.enabledRhythms.push(rhythmId);
+      }
+      updatePalette();
+      savePreferences();
+    }
+
+    // Update options modal with current state
+    function updateOptionsModal() {
+      document.getElementById(`preset${state.preset.charAt(0).toUpperCase() + state.preset.slice(1)}`).checked = true;
+      document.getElementById(`mode${state.mode.charAt(0).toUpperCase() + state.mode.slice(1)}`).checked = true;
+      document.getElementById('visualAidsToggle').checked = state.visualAids;
+    }
+
+    // Generate random pattern
+    function generateRandomPattern() {
+      state.pattern = [];
+      state.studentAnswer = new Array(state.numBeats).fill(null);
+
+      const availableRhythms = getAvailableRhythms();
+      if (availableRhythms.length === 0) return;
+
+      let beatsRemaining = state.numBeats;
+      const isFirstBeat = () => state.pattern.length === 0;
+      const isLastBeat = () => beatsRemaining === 1;
+
+      while (beatsRemaining > 0) {
+        // Filter rhythms that fit remaining beats
+        let fitting = availableRhythms.filter(id =>
+          RHYTHMS[id].duration <= beatsRemaining
+        );
+
+        // Apply custom rules
+        if (isFirstBeat() && state.customRules.noRestStart) {
+          // Filter out rests (anything with no clicks)
+          fitting = fitting.filter(id => RHYTHMS[id].clicks.length > 0);
+        }
+
+        if (isLastBeat() && state.customRules.noTiTiEnd) {
+          // Filter out Ti-Ti (eighth-pair)
+          fitting = fitting.filter(id => id !== 'eighth-pair');
+        }
+
+        if (fitting.length === 0) {
+          // Fill remaining with quarter notes if no fitting rhythms
+          state.pattern.push('quarter');
+          beatsRemaining -= 1;
+        } else {
+          const randomId = fitting[Math.floor(Math.random() * fitting.length)];
+          state.pattern.push(randomId);
+          beatsRemaining -= RHYTHMS[randomId].duration;
+        }
+      }
+
+      // Log correct answer to console
+      console.log('🎵 CORRECT ANSWER:', state.pattern.map(id => RHYTHMS[id].name).join(' | '));
+      console.log('Pattern IDs:', state.pattern);
+
+      generateStaff();
+      updateRevealButton();
+    }
+
+    // Play rhythm pattern
+    async function playPattern() {
+      if (state.isPlaying) return;
+
+      const pattern = state.mode === 'manual' ? state.studentAnswer.filter(x => x !== null) : state.pattern;
+      if (pattern.length === 0) return;
+
+      // Log what's being played
+      if (state.mode === 'random') {
+        console.log('🎵 PLAYING CORRECT ANSWER:', pattern.map(id => RHYTHMS[id].name).join(' | '));
+      } else {
+        console.log('🎵 PLAYING YOUR PATTERN:', pattern.map(id => RHYTHMS[id].name).join(' | '));
+      }
+
+      state.isPlaying = true;
+      document.getElementById('playBtn').disabled = true;
+
+      initAudio();
+
+      const beatDuration = 60 / state.bpm; // Calculate beat duration from BPM
+      let currentTime = 0;
+      let cellIndex = 0; // Track which visual cell we're on
+
+      for (const rhythmId of pattern) {
+        const rhythm = RHYTHMS[rhythmId];
+
+        // Highlight beat cells if visual aids enabled
+        if (state.visualAids) {
+          const startCell = cellIndex;
+          const numCells = Math.floor(rhythm.duration);
+
+          if (rhythm.sustained && numCells === 2) {
+            // For sustained notes (like half notes), highlight left then right side
+            const mergedCell = startCell;
+
+            // Highlight left half on first beat
+            setTimeout(() => highlightBeatSide(mergedCell, 'left'), currentTime * 1000);
+            setTimeout(() => unhighlightBeatSide(mergedCell, 'left'), (currentTime + beatDuration) * 1000);
+
+            // Highlight right half on second beat
+            setTimeout(() => highlightBeatSide(mergedCell, 'right'), (currentTime + beatDuration) * 1000);
+            setTimeout(() => unhighlightBeatSide(mergedCell, 'right'), (currentTime + 2 * beatDuration) * 1000);
+          } else {
+            // For regular notes, highlight each beat cell individually
+            for (let i = 0; i < numCells; i++) {
+              const cellToHighlight = startCell + i;
+              if (cellToHighlight < state.numBeats) {
+                const highlightTime = currentTime + (i * beatDuration);
+                const unhighlightTime = highlightTime + beatDuration;
+
+                setTimeout(() => highlightBeat(cellToHighlight), highlightTime * 1000);
+                setTimeout(() => unhighlightBeat(cellToHighlight), unhighlightTime * 1000);
+              }
+            }
+          }
+        }
+
+        // Play sustained tones
+        rhythm.clicks.forEach((offset, index) => {
+          const sustainDuration = rhythm.sustains[index] * beatDuration;
+          playSustainedTone(currentTime + offset * beatDuration, sustainDuration);
+        });
+
+        currentTime += rhythm.duration * beatDuration;
+        cellIndex += rhythm.duration;
+      }
+
+      // Re-enable play button after playback
+      setTimeout(() => {
+        state.isPlaying = false;
+        document.getElementById('playBtn').disabled = false;
+      }, currentTime * 1000 + 100);
+    }
+
+    // Highlight beat cell
+    function highlightBeat(beatIndex) {
+      const cells = document.querySelectorAll('.beat-cell');
+      if (cells[beatIndex]) {
+        cells[beatIndex].classList.add('playing');
+      }
+    }
+
+    // Remove highlight from beat cell
+    function unhighlightBeat(beatIndex) {
+      const cells = document.querySelectorAll('.beat-cell');
+      if (cells[beatIndex]) {
+        cells[beatIndex].classList.remove('playing');
+      }
+    }
+
+    // Highlight left or right side of a merged cell
+    function highlightBeatSide(beatIndex, side) {
+      const cells = document.querySelectorAll('.beat-cell');
+      if (cells[beatIndex]) {
+        cells[beatIndex].classList.add(`playing-${side}`);
+      }
+    }
+
+    // Remove highlight from left or right side of a merged cell
+    function unhighlightBeatSide(beatIndex, side) {
+      const cells = document.querySelectorAll('.beat-cell');
+      if (cells[beatIndex]) {
+        cells[beatIndex].classList.remove(`playing-${side}`);
+      }
+    }
+
+    // Drag and drop handlers
+    let draggedRhythm = null;
+    let touchDragElement = null;
+    let selectedRhythm = null; // For click-to-select mode
+
+    function handleDragStart(e) {
+      draggedRhythm = e.target.dataset.rhythm;
+      if (!draggedRhythm) {
+        // Try parent element (in case img was clicked)
+        draggedRhythm = e.target.closest('.rhythm-card')?.dataset.rhythm;
+      }
+      e.target.classList.add('dragging');
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'copy';
+      }
+    }
+
+    function handleDragEnd(e) {
+      e.target.classList.remove('dragging');
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.currentTarget.classList.add('drag-over');
+      if (e.dataTransfer) {
+        e.dataTransfer.dropEffect = 'copy';
+      }
+    }
+
+    function handleDragLeave(e) {
+      e.currentTarget.classList.remove('drag-over');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      e.currentTarget.classList.remove('drag-over');
+
+      const beatIndex = parseInt(e.currentTarget.dataset.beat);
+
+      if (draggedRhythm) {
+        placeRhythmInCell(draggedRhythm, beatIndex);
+        draggedRhythm = null;
+      }
+    }
+
+    // Touch handlers for smartboard/tablet support
+    function handleTouchStart(e) {
+      const card = e.target.closest('.rhythm-card');
+      if (!card) return;
+
+      touchDragElement = card;
+      draggedRhythm = card.dataset.rhythm;
+      card.classList.add('dragging');
+    }
+
+    function handleTouchMove(e) {
+      if (!touchDragElement) return;
+      e.preventDefault();
+
+      const touch = e.touches[0];
+      const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+      const beatCell = elementBelow?.closest('.beat-cell');
+
+      // Remove drag-over from all cells
+      document.querySelectorAll('.beat-cell').forEach(cell => {
+        cell.classList.remove('drag-over');
+      });
+
+      // Add drag-over to current cell
+      if (beatCell) {
+        beatCell.classList.add('drag-over');
+      }
+    }
+
+    function handleTouchEnd(e) {
+      if (!touchDragElement) return;
+
+      touchDragElement.classList.remove('dragging');
+
+      const touch = e.changedTouches[0];
+      const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+      const beatCell = elementBelow?.closest('.beat-cell');
+
+      // Remove drag-over from all cells
+      document.querySelectorAll('.beat-cell').forEach(cell => {
+        cell.classList.remove('drag-over');
+      });
+
+      if (beatCell && draggedRhythm) {
+        const beatIndex = parseInt(beatCell.dataset.beat);
+        placeRhythmInCell(draggedRhythm, beatIndex);
+      }
+
+      touchDragElement = null;
+      draggedRhythm = null;
+    }
+
+    // Click-to-select handlers (easier for some users)
+    function handleRhythmCardClick(e) {
+      const card = e.currentTarget;
+      const rhythmId = card.dataset.rhythm;
+
+      // Toggle selection
+      if (selectedRhythm === rhythmId) {
+        selectedRhythm = null;
+        card.classList.remove('selected');
+        document.querySelectorAll('.beat-cell').forEach(c => c.classList.remove('clickable'));
+      } else {
+        // Remove previous selection
+        document.querySelectorAll('.rhythm-card').forEach(c => c.classList.remove('selected'));
+        selectedRhythm = rhythmId;
+        card.classList.add('selected');
+        // Make beat cells visually clickable
+        document.querySelectorAll('.beat-cell').forEach(c => c.classList.add('clickable'));
+      }
+    }
+
+    function handleBeatCellClick(e) {
+      // Don't trigger if clicking remove button
+      if (e.target.classList.contains('remove-btn')) return;
+
+      if (!selectedRhythm) return;
+
+      const beatCell = e.currentTarget;
+      const beatIndex = parseInt(beatCell.dataset.beat);
+
+      placeRhythmInCell(selectedRhythm, beatIndex);
+
+      // Deselect after placing
+      document.querySelectorAll('.rhythm-card').forEach(c => c.classList.remove('selected'));
+      document.querySelectorAll('.beat-cell').forEach(c => c.classList.remove('clickable'));
+      selectedRhythm = null;
+    }
+
+    // Place rhythm in beat cell
+    function placeRhythmInCell(rhythmId, beatIndex) {
+      const rhythm = RHYTHMS[rhythmId];
+
+      // Check if rhythm fits
+      const beatsNeeded = rhythm.duration;
+      if (beatIndex + beatsNeeded > state.numBeats) {
+        alert(`This rhythm needs ${beatsNeeded} beat(s) but only ${state.numBeats - beatIndex} remaining!`);
+        return;
+      }
+
+      // Place rhythm
+      state.studentAnswer[beatIndex] = rhythmId;
+
+      // Clear subsequent cells if sustained
+      if (rhythm.sustained) {
+        for (let i = 1; i < beatsNeeded; i++) {
+          state.studentAnswer[beatIndex + i] = null;
+        }
+      }
+
+      updateBeatCell(beatIndex);
+      notifyParent();
+    }
+
+    // Remove rhythm from cell
+    function removeFromCell(beatIndex) {
+      state.studentAnswer[beatIndex] = null;
+      updateBeatCell(beatIndex);
+      updateRevealButton();
+      notifyParent();
+    }
+
+    // Update single beat cell
+    function updateBeatCell(beatIndex) {
+      const content = document.getElementById(`beat-${beatIndex}`);
+      content.innerHTML = state.studentAnswer[beatIndex]
+        ? renderRhythmInCell(state.studentAnswer[beatIndex], beatIndex)
+        : '';
+
+      // Update sustained cell styling
+      updateSustainedCells();
+
+      // Update reveal button state
+      updateRevealButton();
+    }
+
+    // Update sustained cell visual styling across the staff
+    function updateSustainedCells() {
+      // First, remove all sustained/has-sustained classes
+      document.querySelectorAll('.beat-cell').forEach(cell => {
+        cell.classList.remove('sustained', 'has-sustained');
+      });
+
+      // Then, apply classes to appropriate cells
+      for (let i = 0; i < state.numBeats; i++) {
+        const rhythmId = state.studentAnswer[i];
+        if (rhythmId && RHYTHMS[rhythmId].sustained) {
+          const beatsNeeded = RHYTHMS[rhythmId].duration;
+
+          // Mark the cell with the sustained note
+          const primaryCell = document.querySelector(`.beat-cell[data-beat="${i}"]`);
+          if (primaryCell) {
+            primaryCell.classList.add('has-sustained');
+            const label = primaryCell.querySelector('.beat-label');
+            if (label && i + 1 < state.numBeats) {
+              label.setAttribute('data-next-beat', i + 2);
+            }
+          }
+
+          // Mark subsequent cells as sustained
+          for (let j = 1; j < beatsNeeded; j++) {
+            const cell = document.querySelector(`.beat-cell[data-beat="${i + j}"]`);
+            if (cell) {
+              cell.classList.add('sustained');
+            }
+          }
+        }
+      }
+    }
+
+    // Update reveal button enabled/disabled state
+    function updateRevealButton() {
+      const allFilled = state.studentAnswer.every(cell => cell !== null);
+      const hasPattern = state.pattern.length > 0;
+      const revealBtn = document.getElementById('revealBtn');
+
+      if (revealBtn) {
+        revealBtn.disabled = !(allFilled && hasPattern && state.mode === 'random');
+      }
+    }
+
+    // Reveal answer - shake out wrong answers and replace with correct ones
+    async function revealAnswer() {
+      if (state.mode !== 'random' || state.pattern.length === 0) return;
+
+      console.log('🔍 REVEALING ANSWER...');
+      console.log('Correct pattern:', state.pattern.map(id => RHYTHMS[id].name).join(' | '));
+      console.log('Student answer:', state.studentAnswer.map(id => id ? RHYTHMS[id].name : 'empty').join(' | '));
+
+      // Build correct answer array considering sustained notes
+      const correctAnswer = [];
+      let patternIndex = 0;
+
+      for (let i = 0; i < state.numBeats; i++) {
+        if (patternIndex < state.pattern.length) {
+          const rhythmId = state.pattern[patternIndex];
+          const rhythm = RHYTHMS[rhythmId];
+
+          correctAnswer[i] = rhythmId;
+
+          // Skip next cells for sustained notes
+          if (rhythm.sustained) {
+            for (let j = 1; j < rhythm.duration; j++) {
+              if (i + j < state.numBeats) {
+                correctAnswer[i + j] = null;
+              }
+            }
+            i += rhythm.duration - 1;
+          }
+
+          patternIndex++;
+        } else {
+          correctAnswer[i] = null;
+        }
+      }
+
+      // Compare and animate wrong answers
+      const wrongCells = [];
+      for (let i = 0; i < state.numBeats; i++) {
+        if (state.studentAnswer[i] !== correctAnswer[i]) {
+          wrongCells.push(i);
+        }
+      }
+
+      console.log('Wrong cells:', wrongCells);
+
+      if (wrongCells.length === 0) {
+        console.log('✅ All correct!');
+        return;
+      }
+
+      // Shake and remove wrong answers
+      wrongCells.forEach(cellIndex => {
+        const cell = document.querySelector(`.beat-cell[data-beat="${cellIndex}"]`);
+        if (cell) {
+          cell.classList.add('wrong');
+        }
+      });
+
+      // Wait for animations to complete
+      await new Promise(resolve => setTimeout(resolve, 600));
+
+      // Replace with correct answers
+      wrongCells.forEach(cellIndex => {
+        state.studentAnswer[cellIndex] = correctAnswer[cellIndex];
+        const content = document.getElementById(`beat-${cellIndex}`);
+        content.innerHTML = state.studentAnswer[cellIndex]
+          ? renderRhythmInCell(state.studentAnswer[cellIndex], cellIndex)
+          : '';
+
+        const cell = document.querySelector(`.beat-cell[data-beat="${cellIndex}"]`);
+        if (cell) {
+          cell.classList.remove('wrong');
+        }
+      });
+
+      // Update sustained cells styling
+      updateSustainedCells();
+
+      console.log('✅ Correct answer revealed!');
+      notifyParent();
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+      // New Pattern button
+      document.getElementById('newPatternBtn').addEventListener('click', () => {
+        if (state.mode === 'random') {
+          generateRandomPattern();
+        } else {
+          state.studentAnswer = new Array(state.numBeats).fill(null);
+          generateStaff();
+        }
+        notifyParent();
+      });
+
+      // Meter buttons
+      document.querySelectorAll('.btn-meter').forEach(btn => {
+        btn.addEventListener('click', () => {
+          state.meter = btn.dataset.meter;
+          state.numBeats = parseInt(state.meter.split('/')[0]);
+          updateMeterButtons();
+          savePreferences();
+
+          if (state.mode === 'random') {
+            generateRandomPattern();
+          } else {
+            generateStaff();
+          }
+          notifyParent();
+        });
+      });
+
+      // BPM input and slider (sync them)
+      document.getElementById('bpmInput').addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        if (value >= 40 && value <= 240) {
+          state.bpm = value;
+          document.getElementById('bpmSlider').value = value;
+          savePreferences();
+        }
+      });
+
+      document.getElementById('bpmSlider').addEventListener('input', (e) => {
+        const value = parseInt(e.target.value);
+        state.bpm = value;
+        document.getElementById('bpmInput').value = value;
+        savePreferences();
+      });
+
+      // Filter button
+      document.getElementById('filterBtn').addEventListener('click', () => {
+        document.getElementById('filterModal').classList.add('active');
+      });
+
+      // Custom Rules button
+      document.getElementById('customRulesBtn').addEventListener('click', () => {
+        document.getElementById('customRulesModal').classList.add('active');
+      });
+
+      // Options button
+      document.getElementById('optionsBtn').addEventListener('click', () => {
+        updateOptionsModal();
+        document.getElementById('optionsModal').classList.add('active');
+      });
+
+      // Play button
+      document.getElementById('playBtn').addEventListener('click', playPattern);
+
+      // Reveal button
+      document.getElementById('revealBtn').addEventListener('click', revealAnswer);
+
+      // Preset radio buttons
+      document.querySelectorAll('input[name="preset"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          state.preset = e.target.value;
+          syncFiltersToPreset(state.preset);
+          updatePalette();
+          savePreferences();
+        });
+      });
+
+      // Mode radio buttons
+      document.querySelectorAll('input[name="mode"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          state.mode = e.target.value;
+          savePreferences();
+
+          if (state.mode === 'random') {
+            generateRandomPattern();
+          }
+        });
+      });
+
+      // Visual aids toggle (header)
+      document.getElementById('visualAidsToggleHeader').addEventListener('change', (e) => {
+        state.visualAids = e.target.checked;
+        // Sync with options modal toggle if it exists
+        const optionsToggle = document.getElementById('visualAidsToggle');
+        if (optionsToggle) {
+          optionsToggle.checked = e.target.checked;
+        }
+        savePreferences();
+      });
+
+      // Visual aids toggle (options modal - keep in sync)
+      document.getElementById('visualAidsToggle').addEventListener('change', (e) => {
+        state.visualAids = e.target.checked;
+        // Sync with header toggle
+        document.getElementById('visualAidsToggleHeader').checked = e.target.checked;
+        savePreferences();
+      });
+
+      // Custom rules toggles
+      document.getElementById('noRestStartToggle').addEventListener('change', (e) => {
+        state.customRules.noRestStart = e.target.checked;
+        savePreferences();
+      });
+
+      document.getElementById('noTiTiEndToggle').addEventListener('change', (e) => {
+        state.customRules.noTiTiEnd = e.target.checked;
+        savePreferences();
+      });
+    }
+
+    // Close modals
+    function closeFilterModal() {
+      document.getElementById('filterModal').classList.remove('active');
+    }
+
+    function closeCustomRulesModal() {
+      document.getElementById('customRulesModal').classList.remove('active');
+    }
+
+    function closeOptionsModal() {
+      document.getElementById('optionsModal').classList.remove('active');
+    }
+
+    // Notify parent app of response change
+    function notifyParent() {
+      window.parent.postMessage({
+        type: 'taskmodule:response',
+        value: getResponse(),
+        isComplete: isComplete()
+      }, '*');
+    }
+
+    // Get response for saving
+    function getResponse() {
+      return JSON.stringify({
+        pattern: state.pattern,
+        studentAnswer: state.studentAnswer,
+        meter: state.meter,
+        preset: state.preset,
+        mode: state.mode,
+        bpm: state.bpm,
+        visualAids: state.visualAids,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    // Check if response is complete
+    function isComplete() {
+      // At least one rhythm must be placed
+      return state.studentAnswer.some(x => x !== null);
+    }
+
+    // TaskModule interface
+    window.TaskModule = {
+      init: function(context) {
+        console.log('Rhythm Dictation Trainer initialized:', context);
+
+        // Restore existing response if any
+        if (context.existingResponse) {
+          try {
+            const saved = JSON.parse(context.existingResponse);
+            state.pattern = saved.pattern || [];
+            state.studentAnswer = saved.studentAnswer || new Array(state.numBeats).fill(null);
+            state.meter = saved.meter || '4/4';
+            state.preset = saved.preset || 'simple';
+            state.mode = saved.mode || 'random';
+            state.bpm = saved.bpm || 80;
+            state.numBeats = parseInt(state.meter.split('/')[0]);
+
+            // Update BPM UI
+            document.getElementById('bpmInput').value = state.bpm;
+            document.getElementById('bpmSlider').value = state.bpm;
+
+            // Update visual aids header toggle
+            if (saved.visualAids !== undefined) {
+              state.visualAids = saved.visualAids;
+              document.getElementById('visualAidsToggleHeader').checked = state.visualAids;
+            }
+
+            generateStaff();
+            updateMeterButtons();
+            updatePalette();
+          } catch (e) {
+            console.error('Failed to restore response:', e);
+          }
+        }
+      },
+
+      getResponse: function() {
+        return getResponse();
+      },
+
+      isComplete: function() {
+        return isComplete();
+      },
+
+      reset: function() {
+        state.pattern = [];
+        state.studentAnswer = new Array(state.numBeats).fill(null);
+        generateStaff();
+      }
+    };
+
+    // Listen for init message from parent
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'taskmodule:init') {
+        window.TaskModule.init(event.data.context);
+      }
+    });
+
+    // Initialize on load
+    init();
+  </script>
+</body>
+</html>

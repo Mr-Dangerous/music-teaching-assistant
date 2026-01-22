@@ -1,5 +1,5 @@
 {
-  "version": "2.1.6",
-  "lastUpdated": "2026-01-14",
-  "description": "Add jump to slide dropdown for rapid navigation (1, 5, 10... 80)"
+  "version": "2.2.0",
+  "lastUpdated": "2026-01-22",
+  "description": "Add Rhythm Dictation Trainer module with sustained tones, merged half note cells, visual beat highlighting, BPM control, custom rules, and reveal answer feature"
 }

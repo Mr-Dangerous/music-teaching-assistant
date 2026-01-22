@@ -328,6 +328,46 @@ The app supports fullscreen mode for immersive student task display:
 - Header becomes more compact in fullscreen
 - Press ESC to exit fullscreen
 
+## Asset Library
+
+**IMPORTANT:** The project includes a comprehensive asset library that serves as the baseline for all future projects and modules.
+
+**Location:** `data_to_not_upload/assets/`
+
+**Organization:** Assets are organized into 18 categories:
+- `body_percussion/` - Body percussion icons (12 files)
+- `boomwhackers/` - Boomwhacker graphics (24 files)
+- `cards/` - Music notation cards for activities (43 files)
+- `clefs/` - Treble and bass clefs (2 files)
+- `dynamics/` - Dynamic markings (2 files)
+- `fermatas/` - Fermata symbols (various colors)
+- `hands/` - Hand signs and solfege gestures (14 files)
+- `key_signatures/` - Key signature graphics (3 files)
+- `misc/` - Uncategorized assets (6 files)
+- `notes/` - Individual note graphics (15 files)
+- `recorder/` - Recorder fingering charts (34 files)
+- `rests/` - Rest symbols (3 files)
+- `staff_lines/` - Musical staff lines (7 files)
+- `symbols/` - Musical symbols (16 files)
+- `text/` - Text-based musical notation (7 files)
+- `time_signatures/` - Time signature graphics (6 files)
+- `trombone/` - Trombone slide positions (4 files)
+- `trumpet/` - Trumpet fingering charts (4 files)
+
+**Total:** 202 organized assets
+
+**Resource Index:** `assets_resources.json` (at project root)
+- Machine-readable JSON catalog of all assets
+- Includes file paths, categories, and metadata
+- Use this file to programmatically discover and reference assets
+- AI assistants should consult this file when creating new modules or features
+
+**Usage Guidelines:**
+- **Always use existing assets** from this library when creating new modules
+- Assets use descriptive naming conventions (e.g., `card_white_quarter_note_ta.png`)
+- Reference assets using relative paths from module location
+- Add new assets to appropriate category folders and update `assets_resources.json`
+
 ## Notes for Future Changes
 
 - README.md is outdated (describes old single-file system). THREE_FILE_SYSTEM.md is current.
