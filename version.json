@@ -1,5 +1,5 @@
 {
-  "version": "2.2.4",
+  "version": "2.2.5",
   "lastUpdated": "2026-01-22",
-  "description": "Increase work area sizes (beat boxes +25%, palette +25%) and reduce control button sizes for better smartboard experience"
+  "description": "Fix visual highlighting bug for half notes in rhythm dictation trainer when playing pattern before student answers"
 }

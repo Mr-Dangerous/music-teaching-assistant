@@ -1359,8 +1359,12 @@
           const startCell = cellIndex;
           const numCells = Math.floor(rhythm.duration);
 
-          if (rhythm.sustained && numCells === 2) {
-            // For sustained notes (like half notes), highlight left then right side
+          // Check if this sustained note is actually placed (has merged cell styling)
+          const cells = document.querySelectorAll('.beat-cell');
+          const cellHasSustainedClass = cells[startCell]?.classList.contains('has-sustained');
+
+          if (rhythm.sustained && numCells === 2 && cellHasSustainedClass) {
+            // For sustained notes that are PLACED (merged cell exists), highlight left then right side
             const mergedCell = startCell;
 
             // Highlight left half on first beat
@@ -1371,7 +1375,7 @@
             setTimeout(() => highlightBeatSide(mergedCell, 'right'), (currentTime + beatDuration) * 1000);
             setTimeout(() => unhighlightBeatSide(mergedCell, 'right'), (currentTime + 2 * beatDuration) * 1000);
           } else {
-            // For regular notes, highlight each beat cell individually
+            // For regular notes OR sustained notes not yet placed, highlight each beat cell individually
             for (let i = 0; i < numCells; i++) {
               const cellToHighlight = startCell + i;
               if (cellToHighlight < state.numBeats) {
