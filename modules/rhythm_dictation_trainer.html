@@ -948,7 +948,8 @@
       enabledRhythms: Object.keys(RHYTHMS), // All rhythms enabled by default
       pattern: [], // Correct pattern (array of rhythm IDs)
       studentAnswer: [], // Student's answer (array of rhythm IDs or null)
-      isPlaying: false
+      isPlaying: false,
+      revealed: false // Track if answer was revealed
     };
 
     // Audio context for playing sustained tones
@@ -1284,6 +1285,7 @@
     function generateRandomPattern() {
       state.pattern = [];
       state.studentAnswer = new Array(state.numBeats).fill(null);
+      state.revealed = false; // Reset revealed flag for new pattern
 
       const availableRhythms = getAvailableRhythms();
       if (availableRhythms.length === 0) return;
@@ -1713,11 +1715,59 @@
       }
     }
 
+    // Calculate score: compare student answer to correct pattern
+    function calculateScore() {
+      if (state.mode !== 'random' || state.pattern.length === 0) {
+        return null; // No score for manual mode or if no pattern exists
+      }
+
+      // Build correct answer array considering sustained notes
+      const correctAnswer = [];
+      let patternIndex = 0;
+
+      for (let i = 0; i < state.numBeats; i++) {
+        if (patternIndex < state.pattern.length) {
+          const rhythmId = state.pattern[patternIndex];
+          const rhythm = RHYTHMS[rhythmId];
+
+          correctAnswer[i] = rhythmId;
+
+          // Skip next cells for sustained notes
+          if (rhythm.sustained) {
+            for (let j = 1; j < rhythm.duration; j++) {
+              if (i + j < state.numBeats) {
+                correctAnswer[i + j] = null;
+              }
+            }
+            i += rhythm.duration - 1;
+          }
+
+          patternIndex++;
+        } else {
+          correctAnswer[i] = null;
+        }
+      }
+
+      // Count correct answers
+      let correct = 0;
+      for (let i = 0; i < state.numBeats; i++) {
+        if (state.studentAnswer[i] === correctAnswer[i]) {
+          correct++;
+        }
+      }
+
+      return `${correct}/${state.numBeats}`;
+    }
+
     // Reveal answer - shake out wrong answers and replace with correct ones
     async function revealAnswer() {
       if (state.mode !== 'random' || state.pattern.length === 0) return;
 
+      // Mark as revealed (this captures the score before correction)
+      state.revealed = true;
+
       console.log('🔍 REVEALING ANSWER...');
+      console.log('Score before reveal:', calculateScore());
       console.log('Correct pattern:', state.pattern.map(id => RHYTHMS[id].name).join(' | '));
       console.log('Student answer:', state.studentAnswer.map(id => id ? RHYTHMS[id].name : 'empty').join(' | '));
 
@@ -1932,6 +1982,11 @@
 
     // Notify parent app of response change
     function notifyParent() {
+      const score = calculateScore();
+      if (score && state.mode === 'random') {
+        console.log('📊 Current score:', score, state.revealed ? '(revealed)' : '');
+      }
+
       window.parent.postMessage({
         type: 'taskmodule:response',
         value: getResponse(),
@@ -1941,6 +1996,7 @@
 
     // Get response for saving
     function getResponse() {
+      const score = calculateScore();
       return JSON.stringify({
         pattern: state.pattern,
         studentAnswer: state.studentAnswer,
@@ -1949,6 +2005,8 @@
         mode: state.mode,
         bpm: state.bpm,
         visualAids: state.visualAids,
+        score: score, // e.g. "3/4" or "2/3"
+        revealed: state.revealed,
         timestamp: new Date().toISOString()
       });
     }
@@ -1974,6 +2032,7 @@
             state.preset = saved.preset || 'simple';
             state.mode = saved.mode || 'random';
             state.bpm = saved.bpm || 80;
+            state.revealed = saved.revealed || false; // Restore revealed flag
             state.numBeats = parseInt(state.meter.split('/')[0]);
 
             // Update BPM UI

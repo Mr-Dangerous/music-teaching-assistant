@@ -1,5 +1,5 @@
 {
-  "version": "2.2.5",
+  "version": "2.3.0",
   "lastUpdated": "2026-01-22",
-  "description": "Fix visual highlighting bug for half notes in rhythm dictation trainer when playing pattern before student answers"
+  "description": "Add scoring system to rhythm dictation trainer - tracks correct answers out of total beats (e.g., 3/4, 2/3) and revealed status"
 }
