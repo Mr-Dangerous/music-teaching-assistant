@@ -1,5 +1,5 @@
 {
-  "version": "2.2.2",
+  "version": "2.2.3",
   "lastUpdated": "2026-01-22",
-  "description": "Update asset paths from data_to_not_upload/assets/ to root-level assets/ folder"
+  "description": "Add drag ghost visual feedback to rhythm dictation trainer for touch screen support"
 }

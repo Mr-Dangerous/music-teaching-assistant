@@ -460,6 +460,27 @@
       text-align: center;
     }
 
+    /* Drag ghost - follows cursor/touch during drag */
+    .drag-ghost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 10000;
+      opacity: 0.6;
+      background: #ffeaa7;
+      border: 3px solid #fdcb6e;
+      border-radius: 15px;
+      padding: 10px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+      transform: translate(-50%, -50%) scale(1.1);
+      transition: none;
+    }
+
+    .drag-ghost img {
+      max-width: 80px;
+      max-height: 80px;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    }
+
     /* Modal */
     .modal {
       display: none;
@@ -1417,6 +1438,42 @@
     let draggedRhythm = null;
     let touchDragElement = null;
     let selectedRhythm = null; // For click-to-select mode
+    let dragGhost = null; // Ghost element for visual feedback
+
+    function createDragGhost(rhythmId, x, y) {
+      const rhythm = RHYTHMS[rhythmId];
+      if (!rhythm) return null;
+
+      const ghost = document.createElement('div');
+      ghost.className = 'drag-ghost';
+      ghost.style.left = x + 'px';
+      ghost.style.top = y + 'px';
+
+      // Build the ghost content (matching the rhythm card)
+      let imageHtml = '';
+      if (rhythm.assets) {
+        imageHtml = '<div style="display: flex; gap: 0px; align-items: center; justify-content: center;">';
+        rhythm.assets.forEach(assetPath => {
+          imageHtml += `<img src="${assetPath}" alt="${rhythm.name}" style="max-width: 40px; max-height: 80px;">`;
+        });
+        imageHtml += '</div>';
+      } else if (rhythm.sustained) {
+        imageHtml = `<img src="${rhythm.asset}" alt="${rhythm.name}" style="max-width: 70px; max-height: 80px;">`;
+      } else {
+        imageHtml = `<img src="${rhythm.asset}" alt="${rhythm.name}" style="max-width: 80px; max-height: 80px;">`;
+      }
+
+      ghost.innerHTML = imageHtml;
+      document.body.appendChild(ghost);
+      return ghost;
+    }
+
+    function removeDragGhost() {
+      if (dragGhost) {
+        dragGhost.remove();
+        dragGhost = null;
+      }
+    }
 
     function handleDragStart(e) {
       draggedRhythm = e.target.dataset.rhythm;
@@ -1432,6 +1489,7 @@
 
     function handleDragEnd(e) {
       e.target.classList.remove('dragging');
+      removeDragGhost();
     }
 
     function handleDragOver(e) {
@@ -1466,6 +1524,10 @@
       touchDragElement = card;
       draggedRhythm = card.dataset.rhythm;
       card.classList.add('dragging');
+
+      // Create ghost at touch position
+      const touch = e.touches[0];
+      dragGhost = createDragGhost(draggedRhythm, touch.clientX, touch.clientY);
     }
 
     function handleTouchMove(e) {
@@ -1473,6 +1535,13 @@
       e.preventDefault();
 
       const touch = e.touches[0];
+
+      // Update ghost position
+      if (dragGhost) {
+        dragGhost.style.left = touch.clientX + 'px';
+        dragGhost.style.top = touch.clientY + 'px';
+      }
+
       const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
       const beatCell = elementBelow?.closest('.beat-cell');
 
@@ -1508,6 +1577,7 @@
 
       touchDragElement = null;
       draggedRhythm = null;
+      removeDragGhost();
     }
 
     // Click-to-select handlers (easier for some users)
