@@ -1,5 +1,5 @@
 {
-  "version": "2.2.3",
+  "version": "2.2.4",
   "lastUpdated": "2026-01-22",
-  "description": "Add drag ghost visual feedback to rhythm dictation trainer for touch screen support"
+  "description": "Increase work area sizes (beat boxes +25%, palette +25%) and reduce control button sizes for better smartboard experience"
 }
