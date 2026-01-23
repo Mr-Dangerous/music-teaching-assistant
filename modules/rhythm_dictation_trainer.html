@@ -1645,7 +1645,7 @@
       }
 
       updateBeatCell(beatIndex);
-      notifyParent();
+      // Don't save - only save when reveal is clicked
     }
 
     // Remove rhythm from cell
@@ -1653,7 +1653,7 @@
       state.studentAnswer[beatIndex] = null;
       updateBeatCell(beatIndex);
       updateRevealButton();
-      notifyParent();
+      // Don't save - only save when reveal is clicked
     }
 
     // Update single beat cell
@@ -1759,7 +1759,7 @@
       return `${correct}/${state.numBeats}`;
     }
 
-    // Reveal answer - shake out wrong answers and replace with correct ones
+    // Reveal answer - shake out wrong answers and leave blank to try again
     async function revealAnswer() {
       if (state.mode !== 'random' || state.pattern.length === 0) return;
 
@@ -1798,7 +1798,7 @@
         }
       }
 
-      // Compare and animate wrong answers
+      // Compare and find wrong answers
       const wrongCells = [];
       for (let i = 0; i < state.numBeats; i++) {
         if (state.studentAnswer[i] !== correctAnswer[i]) {
@@ -1810,6 +1810,7 @@
 
       if (wrongCells.length === 0) {
         console.log('✅ All correct!');
+        notifyParent(); // Save the result
         return;
       }
 
@@ -1824,13 +1825,11 @@
       // Wait for animations to complete
       await new Promise(resolve => setTimeout(resolve, 600));
 
-      // Replace with correct answers
+      // Clear wrong answers (leave blank to try again)
       wrongCells.forEach(cellIndex => {
-        state.studentAnswer[cellIndex] = correctAnswer[cellIndex];
+        state.studentAnswer[cellIndex] = null;
         const content = document.getElementById(`beat-${cellIndex}`);
-        content.innerHTML = state.studentAnswer[cellIndex]
-          ? renderRhythmInCell(state.studentAnswer[cellIndex], cellIndex)
-          : '';
+        content.innerHTML = '';
 
         const cell = document.querySelector(`.beat-cell[data-beat="${cellIndex}"]`);
         if (cell) {
@@ -1841,8 +1840,8 @@
       // Update sustained cells styling
       updateSustainedCells();
 
-      console.log('✅ Correct answer revealed!');
-      notifyParent();
+      console.log('❌ Wrong answers cleared - try again!');
+      notifyParent(); // Save the result
     }
 
     // Setup event listeners
@@ -1855,7 +1854,7 @@
           state.studentAnswer = new Array(state.numBeats).fill(null);
           generateStaff();
         }
-        notifyParent();
+        // Don't save - only save when reveal is clicked
       });
 
       // Meter buttons
@@ -1871,7 +1870,7 @@
           } else {
             generateStaff();
           }
-          notifyParent();
+          // Don't save - only save when reveal is clicked
         });
       });
 
