@@ -818,6 +818,13 @@
             <span class="toggle-slider"></span>
           </label>
         </div>
+        <div class="toggle-item">
+          <span class="toggle-label">Never end pattern on a rest</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="noRestEndToggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
       </div>
       <div class="modal-buttons">
         <button class="btn btn-close" onclick="closeCustomRulesModal()">Done</button>
@@ -943,7 +950,8 @@
       bpm: 80, // Beats per minute
       customRules: {
         noRestStart: true,
-        noTiTiEnd: true
+        noTiTiEnd: true,
+        noRestEnd: true
       },
       enabledRhythms: Object.keys(RHYTHMS), // All rhythms enabled by default
       pattern: [], // Correct pattern (array of rhythm IDs)
@@ -1062,7 +1070,7 @@
         state.mode = prefs.mode || 'random';
         state.visualAids = prefs.visualAids !== false;
         state.bpm = prefs.bpm || 80;
-        state.customRules = prefs.customRules || { noRestStart: true, noTiTiEnd: true };
+        state.customRules = prefs.customRules || { noRestStart: true, noTiTiEnd: true, noRestEnd: true };
         state.enabledRhythms = prefs.enabledRhythms || Object.keys(RHYTHMS);
         state.numBeats = parseInt(state.meter.split('/')[0]);
       }
@@ -1077,6 +1085,7 @@
       // Update custom rules UI
       document.getElementById('noRestStartToggle').checked = state.customRules.noRestStart;
       document.getElementById('noTiTiEndToggle').checked = state.customRules.noTiTiEnd;
+      document.getElementById('noRestEndToggle').checked = state.customRules.noRestEnd;
     }
 
     // Save preferences to sessionStorage
@@ -1309,6 +1318,11 @@
         if (isLastBeat() && state.customRules.noTiTiEnd) {
           // Filter out Ti-Ti (eighth-pair)
           fitting = fitting.filter(id => id !== 'eighth-pair');
+        }
+
+        if (isLastBeat() && state.customRules.noRestEnd) {
+          // Filter out rests (anything with no clicks)
+          fitting = fitting.filter(id => RHYTHMS[id].clicks.length > 0);
         }
 
         if (fitting.length === 0) {
@@ -1962,6 +1976,11 @@
 
       document.getElementById('noTiTiEndToggle').addEventListener('change', (e) => {
         state.customRules.noTiTiEnd = e.target.checked;
+        savePreferences();
+      });
+
+      document.getElementById('noRestEndToggle').addEventListener('change', (e) => {
+        state.customRules.noRestEnd = e.target.checked;
         savePreferences();
       });
     }
