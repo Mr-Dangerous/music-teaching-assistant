@@ -165,6 +165,12 @@
       20%, 40%, 60%, 80% { transform: translateX(10px); }
     }
 
+    @keyframes shakeSuccess {
+      0%, 100% { transform: translateX(0) rotate(0deg); }
+      15%, 45%, 75% { transform: translateX(-5px) rotate(-2deg); }
+      30%, 60%, 90% { transform: translateX(5px) rotate(2deg); }
+    }
+
     @keyframes fallOut {
       0% {
         transform: translateY(0) rotate(0deg);
@@ -176,12 +182,80 @@
       }
     }
 
+    @keyframes drawCheck {
+      0% {
+        stroke-dashoffset: 50;
+        opacity: 0;
+      }
+      20% {
+        opacity: 1;
+      }
+      100% {
+        stroke-dashoffset: 0;
+        opacity: 1;
+      }
+    }
+
+    @keyframes checkPulse {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.15); }
+    }
+
+    @keyframes checkFadeOut {
+      0% { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
     .beat-cell.wrong {
       animation: shake 0.5s ease-in-out;
     }
 
     .beat-cell.wrong img {
       animation: fallOut 0.6s ease-in forwards;
+    }
+
+    .beat-cell.correct {
+      animation: shakeSuccess 0.5s ease-in-out;
+      border-color: #00b894 !important;
+      background: linear-gradient(135deg, #d4fcd4 0%, #a8f0a8 100%) !important;
+    }
+
+    .beat-cell .check-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 80px;
+      height: 80px;
+      z-index: 100;
+      pointer-events: none;
+      animation: checkPulse 0.4s ease-in-out 0.3s;
+    }
+
+    .beat-cell .check-overlay svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .beat-cell .check-overlay .check-circle {
+      fill: rgba(0, 184, 148, 0.2);
+      stroke: #00b894;
+      stroke-width: 3;
+    }
+
+    .beat-cell .check-overlay .check-mark {
+      fill: none;
+      stroke: #00b894;
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 50;
+      stroke-dashoffset: 50;
+      animation: drawCheck 0.4s ease-out forwards;
+    }
+
+    .beat-cell .check-overlay.fade-out {
+      animation: checkFadeOut 0.3s ease-out forwards;
     }
 
     .staff {
@@ -826,6 +900,16 @@
           </label>
         </div>
       </div>
+      <div class="modal-section">
+        <div class="modal-section-title">Feedback Options</div>
+        <div class="toggle-item">
+          <span class="toggle-label">Don't acknowledge correct</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="dontAcknowledgeCorrectToggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
       <div class="modal-buttons">
         <button class="btn btn-close" onclick="closeCustomRulesModal()">Done</button>
       </div>
@@ -951,7 +1035,8 @@
       customRules: {
         noRestStart: true,
         noTiTiEnd: true,
-        noRestEnd: true
+        noRestEnd: true,
+        dontAcknowledgeCorrect: false
       },
       enabledRhythms: Object.keys(RHYTHMS), // All rhythms enabled by default
       pattern: [], // Correct pattern (array of rhythm IDs)
@@ -1070,7 +1155,7 @@
         state.mode = prefs.mode || 'random';
         state.visualAids = prefs.visualAids !== false;
         state.bpm = prefs.bpm || 80;
-        state.customRules = prefs.customRules || { noRestStart: true, noTiTiEnd: true, noRestEnd: true };
+        state.customRules = prefs.customRules || { noRestStart: true, noTiTiEnd: true, noRestEnd: true, dontAcknowledgeCorrect: false };
         state.enabledRhythms = prefs.enabledRhythms || Object.keys(RHYTHMS);
         state.numBeats = parseInt(state.meter.split('/')[0]);
       }
@@ -1086,6 +1171,7 @@
       document.getElementById('noRestStartToggle').checked = state.customRules.noRestStart;
       document.getElementById('noTiTiEndToggle').checked = state.customRules.noTiTiEnd;
       document.getElementById('noRestEndToggle').checked = state.customRules.noRestEnd;
+      document.getElementById('dontAcknowledgeCorrectToggle').checked = state.customRules.dontAcknowledgeCorrect;
     }
 
     // Save preferences to sessionStorage
@@ -1812,18 +1898,73 @@
         }
       }
 
-      // Compare and find wrong answers
+      // Compare and find wrong/correct answers
       const wrongCells = [];
+      const correctCells = [];
       for (let i = 0; i < state.numBeats; i++) {
         if (state.studentAnswer[i] !== correctAnswer[i]) {
           wrongCells.push(i);
+        } else if (state.studentAnswer[i] !== null) {
+          // Only mark as correct if there's actually an answer (not a sustained continuation)
+          correctCells.push(i);
         }
       }
 
       console.log('Wrong cells:', wrongCells);
+      console.log('Correct cells:', correctCells);
+
+      // Animate correct answers if not disabled by custom rule
+      if (!state.customRules.dontAcknowledgeCorrect && correctCells.length > 0) {
+        correctCells.forEach(cellIndex => {
+          const cell = document.querySelector(`.beat-cell[data-beat="${cellIndex}"]`);
+          if (cell) {
+            cell.classList.add('correct');
+            
+            // Add checkmark overlay
+            const checkOverlay = document.createElement('div');
+            checkOverlay.className = 'check-overlay';
+            checkOverlay.innerHTML = `
+              <svg viewBox="0 0 60 60">
+                <circle class="check-circle" cx="30" cy="30" r="28"/>
+                <path class="check-mark" d="M17 30 L26 39 L43 22"/>
+              </svg>
+            `;
+            cell.appendChild(checkOverlay);
+          }
+        });
+      }
 
       if (wrongCells.length === 0) {
         console.log('✅ All correct!');
+        
+        // Wait for success animation, then clean up
+        if (!state.customRules.dontAcknowledgeCorrect && correctCells.length > 0) {
+          await new Promise(resolve => setTimeout(resolve, 800));
+          
+          // Fade out checkmarks
+          correctCells.forEach(cellIndex => {
+            const cell = document.querySelector(`.beat-cell[data-beat="${cellIndex}"]`);
+            if (cell) {
+              const overlay = cell.querySelector('.check-overlay');
+              if (overlay) {
+                overlay.classList.add('fade-out');
+              }
+            }
+          });
+          
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Remove classes and overlays
+          correctCells.forEach(cellIndex => {
+            const cell = document.querySelector(`.beat-cell[data-beat="${cellIndex}"]`);
+            if (cell) {
+              cell.classList.remove('correct');
+              const overlay = cell.querySelector('.check-overlay');
+              if (overlay) overlay.remove();
+            }
+          });
+        }
+        
         notifyParent(); // Save the result
         return;
       }
@@ -1837,7 +1978,22 @@
       });
 
       // Wait for animations to complete
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await new Promise(resolve => setTimeout(resolve, 800));
+
+      // Fade out checkmarks on correct cells
+      if (!state.customRules.dontAcknowledgeCorrect && correctCells.length > 0) {
+        correctCells.forEach(cellIndex => {
+          const cell = document.querySelector(`.beat-cell[data-beat="${cellIndex}"]`);
+          if (cell) {
+            const overlay = cell.querySelector('.check-overlay');
+            if (overlay) {
+              overlay.classList.add('fade-out');
+            }
+          }
+        });
+        
+        await new Promise(resolve => setTimeout(resolve, 300));
+      }
 
       // Clear wrong answers (leave blank to try again)
       wrongCells.forEach(cellIndex => {
@@ -1848,6 +2004,16 @@
         const cell = document.querySelector(`.beat-cell[data-beat="${cellIndex}"]`);
         if (cell) {
           cell.classList.remove('wrong');
+        }
+      });
+
+      // Clean up correct cell styling
+      correctCells.forEach(cellIndex => {
+        const cell = document.querySelector(`.beat-cell[data-beat="${cellIndex}"]`);
+        if (cell) {
+          cell.classList.remove('correct');
+          const overlay = cell.querySelector('.check-overlay');
+          if (overlay) overlay.remove();
         }
       });
 
@@ -1981,6 +2147,11 @@
 
       document.getElementById('noRestEndToggle').addEventListener('change', (e) => {
         state.customRules.noRestEnd = e.target.checked;
+        savePreferences();
+      });
+
+      document.getElementById('dontAcknowledgeCorrectToggle').addEventListener('change', (e) => {
+        state.customRules.dontAcknowledgeCorrect = e.target.checked;
         savePreferences();
       });
     }
