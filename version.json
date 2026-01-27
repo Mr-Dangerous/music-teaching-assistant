@@ -1,5 +1,5 @@
 {
-  "version": "2.7.0",
+  "version": "2.7.1",
   "lastUpdated": "2026-01-27",
-  "description": "Added Class Seating Chart module with visual rug layout"
+  "description": "Fix seating chart iframe not filling container (added height: 100% to .task-image-container)"
 }

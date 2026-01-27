@@ -674,6 +674,7 @@ body {
   padding: 0;
   flex: 1;
   min-width: 0;
+  height: 100%;
 }
 
 .task-image {
