@@ -1,5 +1,5 @@
 {
-  "version": "2.4.2",
+  "version": "2.5.0",
   "lastUpdated": "2026-01-27",
-  "description": "Added correct answer celebration animation with green checkmark (toggleable via 'Don't acknowledge correct' rule)"
+  "description": "Removed Snow and HQ Camera buttons from header"
 }
