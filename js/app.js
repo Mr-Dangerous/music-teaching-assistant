@@ -201,6 +201,12 @@ class TeachingAssistantApp {
       clearSeatsBtn.addEventListener('click', () => this.clearSeatAssignments());
     }
 
+    // Seat palette toggle button
+    const seatPaletteToggle = document.getElementById('seat-palette-toggle');
+    if (seatPaletteToggle) {
+      seatPaletteToggle.addEventListener('click', () => this.toggleSeatPalette());
+    }
+
     // Initialize seat palette drag handlers
     this.initializeSeatPalette();
 
@@ -3105,6 +3111,20 @@ class TeachingAssistantApp {
     const palette = document.getElementById('seat-palette');
     if (palette) {
       palette.style.display = 'none';
+    }
+  }
+
+  /**
+   * Toggle seat palette collapsed/expanded state
+   */
+  toggleSeatPalette() {
+    const palette = document.getElementById('seat-palette');
+    const toggle = document.getElementById('seat-palette-toggle');
+    
+    if (palette && toggle) {
+      const isCollapsed = palette.classList.toggle('collapsed');
+      toggle.textContent = isCollapsed ? '▶' : '◀';
+      toggle.title = isCollapsed ? 'Expand' : 'Collapse';
     }
   }
 

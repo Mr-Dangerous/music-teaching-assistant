@@ -1859,6 +1859,46 @@ body.snow-theme .app-header {
   background: rgba(255, 255, 255, 0.15);
   border-radius: 12px;
   border: 2px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.seat-palette-toggle {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  border-radius: 8px;
+  width: 28px;
+  height: 36px;
+  cursor: pointer;
+  color: white;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.seat-palette-toggle:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.seat-palette-content {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.seat-palette.collapsed .seat-palette-content {
+  width: 0;
+  opacity: 0;
+  gap: 0;
+  padding: 0;
+}
+
+.seat-palette.collapsed {
+  padding: var(--spacing-xs);
 }
 
 .seat-palette-colors {
