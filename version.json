@@ -1,5 +1,5 @@
 {
-  "version": "2.7.6",
+  "version": "2.7.5",
   "lastUpdated": "2026-01-27",
-  "description": "Force 1.5x scale on seating chart via CSS transform"
+  "description": "Enlarge seating chart ~50% with bigger fonts for visibility"
 }
