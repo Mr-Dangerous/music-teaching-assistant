@@ -2960,7 +2960,6 @@ class TeachingAssistantApp {
       throw error; // Re-throw instead of returning empty array
     }
   }
-}
 
   /**
    * Initialize seat palette drag and drop handlers
