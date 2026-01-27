@@ -1958,7 +1958,7 @@ body.snow-theme .app-header {
   height: 12px;
   border-radius: 50%;
   display: inline-block;
-  margin-right: 6px;
+  margin-right: 2px;
   flex-shrink: 0;
   border: 1px solid rgba(255, 255, 255, 0.5);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
@@ -1989,6 +1989,7 @@ body.snow-theme .app-header {
   display: flex;
   align-items: center;
   justify-content: flex-start;
+  padding-left: 4px;
 }
 
 .student-roster-button .student-name-text {
