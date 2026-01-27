@@ -145,6 +145,9 @@ class TeachingAssistantApp {
       } else if (event.data.type === 'taskmodule:request-students') {
         // Module is requesting the current class's student list
         this.handleStudentListRequest(event);
+      } else if (event.data.type === 'seatingchart:request') {
+        // Seating chart module is requesting current seating data
+        this.handleSeatingChartRequest(event);
       } else if (event.data.type === 'saveBoomwhackerSong') {
         // Save boomwhacker song configuration
         this.saveBoomwhackerSong(event.data.songName, event.data.configJson);
@@ -2581,6 +2584,44 @@ class TeachingAssistantApp {
       console.log('Sent student list to module:', classStudents.length, 'students');
     } else {
       console.warn('Could not find module iframe to send student data');
+    }
+  }
+
+  /**
+   * Handle seating chart module data request
+   * @param {MessageEvent} event - Message event from module
+   */
+  handleSeatingChartRequest(event) {
+    // Get students from current class(es)
+    let classStudents;
+    let className = this.selectedClass;
+    
+    if (this.selectedClasses.size > 0) {
+      classStudents = this.students.filter(s => this.selectedClasses.has(s.class));
+      className = Array.from(this.selectedClasses).join(' + ');
+    } else if (this.selectedClass) {
+      classStudents = this.students.filter(s => s.class === this.selectedClass);
+    } else {
+      classStudents = [];
+    }
+
+    // Filter out absent students
+    const availableStudents = classStudents.filter(s => !this.isStudentAbsent(s.student_id));
+
+    // Send data to the seating chart module
+    const moduleIframe = document.querySelector('#task-image-container iframe');
+    if (moduleIframe && moduleIframe.contentWindow) {
+      moduleIframe.contentWindow.postMessage({
+        type: 'seatingchart:data',
+        students: availableStudents,
+        seatAssignments: Array.from(this.seatAssignments.entries()),
+        furnitureAssignments: Array.from(this.furnitureAssignments.entries()),
+        results: this.results,
+        className: className
+      }, '*');
+      console.log('Sent seating chart data to module:', availableStudents.length, 'students');
+    } else {
+      console.warn('Could not find module iframe to send seating chart data');
     }
   }
 

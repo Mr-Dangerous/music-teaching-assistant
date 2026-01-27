@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Class Seating Chart</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      padding: 15px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    h2 {
+      color: white;
+      margin-bottom: 10px;
+      font-size: 24px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .error-banner {
+      background: #fef3c7;
+      border: 2px solid #f59e0b;
+      color: #92400e;
+      padding: 8px 16px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      font-size: 14px;
+      display: none;
+    }
+
+    .error-banner.show {
+      display: block;
+    }
+
+    .classroom-container {
+      position: relative;
+      width: 100%;
+      max-width: 800px;
+      aspect-ratio: 1.2;
+    }
+
+    /* Teacher area at the front */
+    .teacher-area {
+      background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+      border-radius: 10px 10px 0 0;
+      padding: 10px;
+      text-align: center;
+      color: white;
+      font-weight: 600;
+      font-size: 14px;
+      border: 2px solid #4b5563;
+      border-bottom: none;
+    }
+
+    /* The rug */
+    .rug {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 15px;
+      background: linear-gradient(135deg, #8b7355 0%, #6b5344 100%);
+      border-radius: 0 0 10px 10px;
+      border: 4px solid #5d4037;
+      position: relative;
+    }
+
+    /* Color rows */
+    .color-row {
+      display: flex;
+      justify-content: space-evenly;
+      align-items: center;
+      height: 60px;
+      border-radius: 8px;
+      padding: 5px 10px;
+      position: relative;
+    }
+
+    .color-row[data-color="red"] {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+
+    .color-row[data-color="orange"] {
+      background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    }
+
+    .color-row[data-color="green"] {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    }
+
+    .color-row[data-color="blue"] {
+      background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    }
+
+    .color-row[data-color="purple"] {
+      background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+    }
+
+    /* Student spots on the rug */
+    .student-spot {
+      width: 70px;
+      height: 50px;
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: white;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      text-align: center;
+      padding: 2px;
+      border: 2px solid rgba(255,255,255,0.3);
+      transition: all 0.2s;
+      overflow: hidden;
+    }
+
+    .student-spot.occupied {
+      background: rgba(255, 255, 255, 0.85);
+      color: #1f2937;
+      text-shadow: none;
+      border-color: white;
+    }
+
+    .student-spot.empty {
+      opacity: 0.5;
+    }
+
+    /* Stools container */
+    .stools-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      pointer-events: none;
+    }
+
+    .stool {
+      position: absolute;
+      width: 60px;
+      height: 50px;
+      background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+      color: #1f2937;
+      text-align: center;
+      padding: 2px;
+      border: 3px solid #92400e;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      pointer-events: auto;
+    }
+
+    .stool.occupied {
+      background: linear-gradient(135deg, #fde68a 0%, #fbbf24 100%);
+    }
+
+    .stool.empty {
+      opacity: 0.4;
+    }
+
+    .stool .stool-icon {
+      position: absolute;
+      top: 2px;
+      right: 3px;
+      font-size: 10px;
+    }
+
+    /* Chair styling */
+    .chair {
+      position: absolute;
+      width: 60px;
+      height: 50px;
+      background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+      color: white;
+      text-align: center;
+      padding: 2px;
+      border: 3px solid #4c1d95;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+      pointer-events: auto;
+    }
+
+    .chair.occupied {
+      background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+    }
+
+    .chair.empty {
+      opacity: 0.4;
+    }
+
+    .chair .chair-icon {
+      position: absolute;
+      top: 2px;
+      right: 3px;
+      font-size: 10px;
+    }
+
+    /* Color indicator on stools/chairs */
+    .furniture-color-dot {
+      position: absolute;
+      bottom: 3px;
+      right: 3px;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,0,0,0.2);
+    }
+
+    .furniture-color-dot[data-color="red"] { background: #ef4444; }
+    .furniture-color-dot[data-color="orange"] { background: #f97316; }
+    .furniture-color-dot[data-color="green"] { background: #22c55e; }
+    .furniture-color-dot[data-color="blue"] { background: #3b82f6; }
+    .furniture-color-dot[data-color="purple"] { background: #a855f7; }
+
+    /* Legend */
+    .legend {
+      display: flex;
+      gap: 15px;
+      margin-top: 15px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: white;
+      font-size: 12px;
+    }
+
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+      border: 2px solid white;
+    }
+
+    /* Refresh button */
+    .refresh-btn {
+      margin-top: 15px;
+      padding: 10px 20px;
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .refresh-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+    }
+
+    .student-name {
+      line-height: 1.2;
+      word-break: break-word;
+    }
+  </style>
+</head>
+<body>
+  <h2 id="title">Class Seating Chart</h2>
+  <div class="error-banner" id="errorBanner"></div>
+  
+  <div class="classroom-container">
+    <div class="teacher-area">👩‍🏫 TEACHER / FRONT OF ROOM</div>
+    <div class="rug" id="rug">
+      <!-- Color rows will be generated here -->
+    </div>
+    <div class="stools-container" id="stoolsContainer">
+      <!-- Stools and chairs will be positioned here -->
+    </div>
+  </div>
+
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-color" style="background: linear-gradient(135deg, #fbbf24, #d97706);"></div>
+      <span>Stool</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);"></div>
+      <span>Chair</span>
+    </div>
+  </div>
+
+  <button class="refresh-btn" onclick="refreshSeating()">🔄 Refresh Seating</button>
+
+  <script>
+    // Configuration
+    const COLORS = ['red', 'orange', 'green', 'blue', 'purple'];
+    const SPOTS_PER_ROW = 6;
+    const TOTAL_STOOLS = 8;
+    const TOTAL_CHAIRS = 4;
+
+    // State
+    let currentContext = null;
+    let seatAssignments = new Map(); // studentId -> color
+    let furnitureAssignments = new Map(); // studentId -> 'stool' | 'chair'
+    let manualPositions = new Map(); // studentId -> 'red_1', 'stool_3', etc.
+    let students = [];
+    let errors = [];
+
+    // Initialize the module
+    window.TaskModule = {
+      init: function(context) {
+        console.log('Class Seating Chart initialized:', context);
+        currentContext = context;
+        
+        // Get data from parent app
+        fetchDataFromParent();
+      },
+
+      getResponse: function() {
+        return JSON.stringify({
+          seatAssignments: Array.from(seatAssignments.entries()),
+          furnitureAssignments: Array.from(furnitureAssignments.entries()),
+          errors: errors
+        });
+      },
+
+      isComplete: function() {
+        return true;
+      },
+
+      reset: function() {
+        seatAssignments.clear();
+        furnitureAssignments.clear();
+        manualPositions.clear();
+        errors = [];
+        renderSeatingChart();
+      }
+    };
+
+    // Fetch current data from parent app
+    function fetchDataFromParent() {
+      // Request data from parent
+      window.parent.postMessage({ type: 'seatingchart:request' }, '*');
+    }
+
+    // Listen for messages from parent
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'taskmodule:init') {
+        window.TaskModule.init(event.data.context);
+      } else if (event.data.type === 'seatingchart:data') {
+        // Receive data from parent
+        receiveDataFromParent(event.data);
+      }
+    });
+
+    // Process data from parent app
+    function receiveDataFromParent(data) {
+      students = data.students || [];
+      
+      // Convert arrays back to Maps
+      if (data.seatAssignments) {
+        seatAssignments = new Map(data.seatAssignments);
+      }
+      if (data.furnitureAssignments) {
+        furnitureAssignments = new Map(data.furnitureAssignments);
+      }
+      
+      // Parse manual positions from student notes
+      parseManualPositions(data.results || []);
+      
+      // Update title with class name
+      if (data.className) {
+        document.getElementById('title').textContent = `Seating Chart: ${data.className}`;
+      }
+      
+      renderSeatingChart();
+    }
+
+    // Parse manual position assignments from student notes
+    function parseManualPositions(results) {
+      manualPositions.clear();
+      
+      // Look for student_notes with position patterns
+      const positionPattern = /\b(red|orange|green|blue|purple|stool|chair)_(\d+)\b/gi;
+      
+      students.forEach(student => {
+        const notes = results.filter(r => 
+          r.student_id === student.student_id && r.task_id === 'student_notes'
+        );
+        
+        if (notes.length > 0) {
+          const latestNotes = notes[notes.length - 1].response || '';
+          const matches = latestNotes.matchAll(positionPattern);
+          
+          for (const match of matches) {
+            const type = match[1].toLowerCase();
+            const position = parseInt(match[2]);
+            manualPositions.set(student.student_id, `${type}_${position}`);
+            break; // Only use first match
+          }
+        }
+      });
+    }
+
+    // Render the seating chart
+    function renderSeatingChart() {
+      errors = [];
+      const rug = document.getElementById('rug');
+      const stoolsContainer = document.getElementById('stoolsContainer');
+      
+      rug.innerHTML = '';
+      stoolsContainer.innerHTML = '';
+
+      // Organize students by color
+      const studentsByColor = {};
+      const studentsOnFurniture = [];
+      
+      COLORS.forEach(color => {
+        studentsByColor[color] = [];
+      });
+
+      // Sort students into their assigned spots
+      students.forEach(student => {
+        const color = seatAssignments.get(student.student_id);
+        const furniture = furnitureAssignments.get(student.student_id);
+        
+        if (furniture) {
+          studentsOnFurniture.push({ student, furniture, color });
+        } else if (color) {
+          studentsByColor[color].push(student);
+        }
+      });
+
+      // Handle manual positions
+      const manualRugPositions = {}; // 'red_1' -> student
+      const manualFurniturePositions = { stool: {}, chair: {} }; // 'stool_1' -> student
+      
+      manualPositions.forEach((position, studentId) => {
+        const student = students.find(s => s.student_id === studentId);
+        if (!student) return;
+        
+        const [type, num] = position.split('_');
+        const posNum = parseInt(num);
+        
+        if (COLORS.includes(type)) {
+          if (!manualRugPositions[type]) manualRugPositions[type] = {};
+          if (manualRugPositions[type][posNum]) {
+            errors.push(`Conflict: ${student.name} and ${manualRugPositions[type][posNum].name} both assigned to ${position}`);
+          } else {
+            manualRugPositions[type][posNum] = student;
+          }
+        } else if (type === 'stool' || type === 'chair') {
+          if (manualFurniturePositions[type][posNum]) {
+            errors.push(`Conflict: ${student.name} and ${manualFurniturePositions[type][posNum].name} both assigned to ${position}`);
+          } else {
+            manualFurniturePositions[type][posNum] = student;
+          }
+        }
+      });
+
+      // Render color rows
+      COLORS.forEach((color, rowIndex) => {
+        const row = document.createElement('div');
+        row.className = 'color-row';
+        row.dataset.color = color;
+        
+        const studentsInRow = studentsByColor[color].filter(s => !manualPositions.has(s.student_id));
+        const manualInRow = manualRugPositions[color] || {};
+        
+        // Calculate spacing
+        const totalStudents = studentsInRow.length + Object.keys(manualInRow).length;
+        
+        // Create spots
+        for (let i = 1; i <= SPOTS_PER_ROW; i++) {
+          const spot = document.createElement('div');
+          spot.className = 'student-spot';
+          spot.dataset.position = `${color}_${i}`;
+          
+          // Check for manual assignment first
+          if (manualInRow[i]) {
+            spot.classList.add('occupied');
+            spot.innerHTML = `<span class="student-name">${getFirstName(manualInRow[i].name)}</span>`;
+          } else {
+            spot.classList.add('empty');
+          }
+          
+          row.appendChild(spot);
+        }
+        
+        // Now distribute remaining students evenly in empty spots
+        const emptySpots = Array.from(row.querySelectorAll('.student-spot.empty'));
+        if (studentsInRow.length > 0 && emptySpots.length > 0) {
+          distributeStudents(studentsInRow, emptySpots);
+        }
+        
+        rug.appendChild(row);
+      });
+
+      // Render stools (U-shape around edges, not in front of red)
+      // Left side: 4 stools (positions 1-4, next to orange-purple)
+      // Right side: 4 stools (positions 5-8, next to orange-purple)
+      const stoolPositions = [
+        { id: 1, left: '-70px', top: '75px' },   // Left, row 2 (orange)
+        { id: 2, left: '-70px', top: '145px' },  // Left, row 3 (green)
+        { id: 3, left: '-70px', top: '215px' },  // Left, row 4 (blue)
+        { id: 4, left: '-70px', top: '285px' },  // Left, row 5 (purple)
+        { id: 5, right: '-70px', top: '75px' },  // Right, row 2 (orange)
+        { id: 6, right: '-70px', top: '145px' }, // Right, row 3 (green)
+        { id: 7, right: '-70px', top: '215px' }, // Right, row 4 (blue)
+        { id: 8, right: '-70px', top: '285px' }  // Right, row 5 (purple)
+      ];
+
+      // Get students assigned to stools
+      const stoolStudents = studentsOnFurniture.filter(s => s.furniture === 'stool');
+      const unassignedStoolStudents = stoolStudents.filter(s => !manualPositions.has(s.student.student_id));
+      
+      stoolPositions.forEach((pos, index) => {
+        const stool = document.createElement('div');
+        stool.className = 'stool';
+        stool.style.position = 'absolute';
+        if (pos.left) stool.style.left = pos.left;
+        if (pos.right) stool.style.right = pos.right;
+        stool.style.top = pos.top;
+        
+        // Check manual assignment
+        const manualStudent = manualFurniturePositions.stool[pos.id];
+        let assignedStudent = null;
+        
+        if (manualStudent) {
+          assignedStudent = { student: manualStudent, color: seatAssignments.get(manualStudent.student_id) };
+        } else if (unassignedStoolStudents.length > 0) {
+          assignedStudent = unassignedStoolStudents.shift();
+        }
+        
+        if (assignedStudent) {
+          stool.classList.add('occupied');
+          stool.innerHTML = `
+            <span class="stool-icon">⭐</span>
+            <span class="student-name">${getFirstName(assignedStudent.student.name)}</span>
+            ${assignedStudent.color ? `<span class="furniture-color-dot" data-color="${assignedStudent.color}"></span>` : ''}
+          `;
+        } else {
+          stool.classList.add('empty');
+          stool.innerHTML = `<span class="stool-icon">⭐</span><span>${pos.id}</span>`;
+        }
+        
+        stoolsContainer.appendChild(stool);
+      });
+
+      // Render chairs (4 chairs, placed at back corners and sides)
+      const chairPositions = [
+        { id: 1, left: '-70px', top: '5px' },    // Left front (but after red)
+        { id: 2, right: '-70px', top: '5px' },   // Right front
+        { id: 3, left: '-140px', top: '180px' }, // Far left middle
+        { id: 4, right: '-140px', top: '180px' } // Far right middle
+      ];
+
+      const chairStudents = studentsOnFurniture.filter(s => s.furniture === 'chair');
+      const unassignedChairStudents = chairStudents.filter(s => !manualPositions.has(s.student.student_id));
+
+      chairPositions.forEach((pos, index) => {
+        const chair = document.createElement('div');
+        chair.className = 'chair';
+        chair.style.position = 'absolute';
+        if (pos.left) chair.style.left = pos.left;
+        if (pos.right) chair.style.right = pos.right;
+        chair.style.top = pos.top;
+        
+        // Check manual assignment
+        const manualStudent = manualFurniturePositions.chair[pos.id];
+        let assignedStudent = null;
+        
+        if (manualStudent) {
+          assignedStudent = { student: manualStudent, color: seatAssignments.get(manualStudent.student_id) };
+        } else if (unassignedChairStudents.length > 0) {
+          assignedStudent = unassignedChairStudents.shift();
+        }
+        
+        if (assignedStudent) {
+          chair.classList.add('occupied');
+          chair.innerHTML = `
+            <span class="chair-icon">🪑</span>
+            <span class="student-name">${getFirstName(assignedStudent.student.name)}</span>
+            ${assignedStudent.color ? `<span class="furniture-color-dot" data-color="${assignedStudent.color}"></span>` : ''}
+          `;
+        } else {
+          chair.classList.add('empty');
+          chair.innerHTML = `<span class="chair-icon">🪑</span><span>${pos.id}</span>`;
+        }
+        
+        stoolsContainer.appendChild(chair);
+      });
+
+      // Show errors if any
+      const errorBanner = document.getElementById('errorBanner');
+      if (errors.length > 0) {
+        errorBanner.textContent = '⚠️ ' + errors.join(' | ');
+        errorBanner.classList.add('show');
+      } else {
+        errorBanner.classList.remove('show');
+      }
+
+      // Notify parent
+      notifyParent();
+    }
+
+    // Distribute students evenly across empty spots
+    function distributeStudents(students, spots) {
+      if (students.length === 0 || spots.length === 0) return;
+      
+      // Calculate even distribution
+      const numStudents = students.length;
+      const numSpots = spots.length;
+      
+      if (numStudents >= numSpots) {
+        // Fill all spots
+        spots.forEach((spot, i) => {
+          if (students[i]) {
+            spot.classList.remove('empty');
+            spot.classList.add('occupied');
+            spot.innerHTML = `<span class="student-name">${getFirstName(students[i].name)}</span>`;
+          }
+        });
+      } else {
+        // Distribute evenly
+        const spacing = numSpots / (numStudents + 1);
+        students.forEach((student, i) => {
+          const spotIndex = Math.round(spacing * (i + 1)) - 1;
+          const clampedIndex = Math.min(Math.max(0, spotIndex), numSpots - 1);
+          const spot = spots[clampedIndex];
+          if (spot) {
+            spot.classList.remove('empty');
+            spot.classList.add('occupied');
+            spot.innerHTML = `<span class="student-name">${getFirstName(student.name)}</span>`;
+          }
+        });
+      }
+    }
+
+    // Get first name from full name
+    function getFirstName(fullName) {
+      if (!fullName) return '';
+      const parts = fullName.trim().split(' ');
+      return parts[0];
+    }
+
+    // Refresh seating from parent
+    function refreshSeating() {
+      fetchDataFromParent();
+    }
+
+    // Notify parent of changes
+    function notifyParent() {
+      window.parent.postMessage({
+        type: 'taskmodule:response',
+        value: window.TaskModule.getResponse(),
+        isComplete: true
+      }, '*');
+    }
+
+    // Request data on load (in case we're loaded directly)
+    setTimeout(() => {
+      fetchDataFromParent();
+    }, 500);
+  </script>
+</body>
+</html>
