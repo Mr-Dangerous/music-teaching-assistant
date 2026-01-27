@@ -1984,6 +1984,27 @@ body.snow-theme .app-header {
   background: #a855f7;
 }
 
+/* Light background tint for assigned seats */
+.student-roster-button[data-seat-color="red"] {
+  background: linear-gradient(135deg, #fecaca 0%, #fca5a5 100%);
+}
+
+.student-roster-button[data-seat-color="orange"] {
+  background: linear-gradient(135deg, #fed7aa 0%, #fdba74 100%);
+}
+
+.student-roster-button[data-seat-color="green"] {
+  background: linear-gradient(135deg, #bbf7d0 0%, #86efac 100%);
+}
+
+.student-roster-button[data-seat-color="blue"] {
+  background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
+}
+
+.student-roster-button[data-seat-color="purple"] {
+  background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%);
+}
+
 /* Update student button to accommodate seat dot */
 .student-roster-button {
   display: flex;

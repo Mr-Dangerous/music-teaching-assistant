@@ -3122,6 +3122,9 @@ class TeachingAssistantApp {
     }
     
     if (color) {
+      // Set color attribute on button for background tinting
+      button.dataset.seatColor = color;
+      
       // Create new dot
       const dot = document.createElement('span');
       dot.className = 'student-seat-dot';
@@ -3138,6 +3141,9 @@ class TeachingAssistantApp {
           dot.style.transform = 'scale(1)';
         });
       }
+    } else {
+      // Clear the color attribute when no color
+      delete button.dataset.seatColor;
     }
   }
 
