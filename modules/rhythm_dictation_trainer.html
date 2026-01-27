@@ -1912,9 +1912,11 @@
 
       console.log('Wrong cells:', wrongCells);
       console.log('Correct cells:', correctCells);
+      console.log('dontAcknowledgeCorrect setting:', state.customRules.dontAcknowledgeCorrect);
 
       // Animate correct answers if not disabled by custom rule
       if (!state.customRules.dontAcknowledgeCorrect && correctCells.length > 0) {
+        console.log('🎉 Animating correct cells...');
         correctCells.forEach(cellIndex => {
           const cell = document.querySelector(`.beat-cell[data-beat="${cellIndex}"]`);
           if (cell) {
