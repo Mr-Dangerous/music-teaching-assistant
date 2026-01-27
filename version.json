@@ -1,5 +1,5 @@
 {
-  "version": "2.7.4",
+  "version": "2.7.5",
   "lastUpdated": "2026-01-27",
-  "description": "Use CSS Grid layout on body for proper height distribution"
+  "description": "Enlarge seating chart ~50% with bigger fonts for visibility"
 }
