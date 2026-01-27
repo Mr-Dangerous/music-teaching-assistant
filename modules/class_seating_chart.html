@@ -14,15 +14,17 @@
     html, body {
       height: 100%;
       width: 100%;
+      margin: 0;
+      padding: 0;
     }
 
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
       padding: 10px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      display: grid;
+      grid-template-rows: auto 1fr auto auto;
+      justify-items: center;
       overflow: hidden;
     }
 
@@ -51,9 +53,9 @@
 
     .classroom-container {
       position: relative;
-      flex: 1;
       width: 100%;
       max-width: 95%;
+      height: 100%;
       display: flex;
       flex-direction: column;
     }
@@ -62,13 +64,14 @@
     .teacher-area {
       background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
       border-radius: 10px 10px 0 0;
-      padding: 10px;
+      padding: 8px;
       text-align: center;
       color: white;
       font-weight: 600;
       font-size: 14px;
       border: 2px solid #4b5563;
       border-bottom: none;
+      flex-shrink: 0;
     }
 
     /* The rug */

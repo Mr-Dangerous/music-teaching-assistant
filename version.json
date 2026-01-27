@@ -1,5 +1,5 @@
 {
-  "version": "2.7.3",
+  "version": "2.7.4",
   "lastUpdated": "2026-01-27",
-  "description": "Fix seating chart height chain - use 100% heights instead of vh units"
+  "description": "Use CSS Grid layout on body for proper height distribution"
 }
