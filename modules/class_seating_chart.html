@@ -53,11 +53,13 @@
 
     .classroom-container {
       position: relative;
-      width: 100%;
-      max-width: 100%;
-      height: 100%;
+      width: 85%;
+      max-width: 85%;
+      height: 90%;
       display: flex;
       flex-direction: column;
+      transform: scale(0.9);
+      transform-origin: top center;
     }
 
     /* Teacher area at the front */
@@ -121,22 +123,22 @@
 
     /* Student spots on the rug */
     .student-spot {
-      width: 11%;
-      max-width: 90px;
-      height: 75%;
-      max-height: 60px;
+      width: 15%;
+      max-width: 130px;
+      height: 90%;
+      max-height: 85px;
       background: rgba(255, 255, 255, 0.2);
-      border-radius: 8px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: clamp(10px, 1.5vw, 14px);
-      font-weight: 600;
+      font-size: clamp(16px, 2.5vw, 24px);
+      font-weight: 700;
       color: white;
       text-shadow: 0 1px 2px rgba(0,0,0,0.3);
       text-align: center;
-      padding: 2px;
-      border: 2px solid rgba(255,255,255,0.3);
+      padding: 4px;
+      border: 3px solid rgba(255,255,255,0.4);
       transition: all 0.2s;
       overflow: hidden;
     }
@@ -164,18 +166,18 @@
 
     .stool {
       position: absolute;
-      width: 60px;
-      height: 50px;
+      width: 75px;
+      height: 60px;
       background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
-      border-radius: 8px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 10px;
-      font-weight: 600;
+      font-size: 14px;
+      font-weight: 700;
       color: #1f2937;
       text-align: center;
-      padding: 2px;
+      padding: 4px;
       border: 3px solid #92400e;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       pointer-events: auto;
@@ -199,15 +201,15 @@
     /* Chair styling */
     .chair {
       position: absolute;
-      width: 60px;
-      height: 50px;
+      width: 75px;
+      height: 60px;
       background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
-      border-radius: 8px;
+      border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 10px;
-      font-weight: 600;
+      font-size: 14px;
+      font-weight: 700;
       color: white;
       text-align: center;
       padding: 2px;
@@ -535,14 +537,14 @@
       // Left side: 4 stools (positions 1-4, next to orange-purple)
       // Right side: 4 stools (positions 5-8, next to orange-purple)
       const stoolPositions = [
-        { id: 1, left: '-70px', top: '75px' },   // Left, row 2 (orange)
-        { id: 2, left: '-70px', top: '145px' },  // Left, row 3 (green)
-        { id: 3, left: '-70px', top: '215px' },  // Left, row 4 (blue)
-        { id: 4, left: '-70px', top: '285px' },  // Left, row 5 (purple)
-        { id: 5, right: '-70px', top: '75px' },  // Right, row 2 (orange)
-        { id: 6, right: '-70px', top: '145px' }, // Right, row 3 (green)
-        { id: 7, right: '-70px', top: '215px' }, // Right, row 4 (blue)
-        { id: 8, right: '-70px', top: '285px' }  // Right, row 5 (purple)
+        { id: 1, left: '-85px', top: '70px' },   // Left, row 2 (orange)
+        { id: 2, left: '-85px', top: '140px' },  // Left, row 3 (green)
+        { id: 3, left: '-85px', top: '210px' },  // Left, row 4 (blue)
+        { id: 4, left: '-85px', top: '280px' },  // Left, row 5 (purple)
+        { id: 5, right: '-85px', top: '70px' },  // Right, row 2 (orange)
+        { id: 6, right: '-85px', top: '140px' }, // Right, row 3 (green)
+        { id: 7, right: '-85px', top: '210px' }, // Right, row 4 (blue)
+        { id: 8, right: '-85px', top: '280px' }  // Right, row 5 (purple)
       ];
 
       // Get students assigned to stools
@@ -584,10 +586,10 @@
 
       // Render chairs (4 chairs, placed at back corners and sides)
       const chairPositions = [
-        { id: 1, left: '-70px', top: '5px' },    // Left front (but after red)
-        { id: 2, right: '-70px', top: '5px' },   // Right front
-        { id: 3, left: '-140px', top: '180px' }, // Far left middle
-        { id: 4, right: '-140px', top: '180px' } // Far right middle
+        { id: 1, left: '-85px', top: '5px' },    // Left front (but after red)
+        { id: 2, right: '-85px', top: '5px' },   // Right front
+        { id: 3, left: '-170px', top: '175px' }, // Far left middle
+        { id: 4, right: '-170px', top: '175px' } // Far right middle
       ];
 
       const chairStudents = studentsOnFurniture.filter(s => s.furniture === 'chair');
