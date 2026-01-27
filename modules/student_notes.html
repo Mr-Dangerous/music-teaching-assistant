@@ -63,6 +63,89 @@
             transform: translateY(0);
         }
 
+        .seating-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .seating-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .seating-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .seating-btn.has-flag {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        .seating-menu {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            margin-top: 5px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+            z-index: 100;
+            min-width: 180px;
+            overflow: hidden;
+        }
+
+        .seating-menu.show {
+            display: block;
+        }
+
+        .seating-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 16px;
+            cursor: pointer;
+            color: #1f2937;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+
+        .seating-option:hover {
+            background: #f3f4f6;
+        }
+
+        .seating-option.active {
+            background: #e0f2fe;
+        }
+
+        .seating-option .color-dot {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .seating-option .color-dot.red { background: #ef4444; }
+        .seating-option .color-dot.orange { background: #f97316; }
+        .seating-option .color-dot.green { background: #22c55e; }
+        .seating-option .color-dot.blue { background: #3b82f6; }
+        .seating-option .color-dot.purple { background: #a855f7; }
+        .seating-option .color-dot.none { background: #e5e7eb; }
+
+        .seating-divider {
+            height: 1px;
+            background: #e5e7eb;
+            margin: 4px 0;
+        }
+
         #noteEditor {
             flex: 1;
             width: 100%;
@@ -107,6 +190,36 @@
         <div class="toolbar">
             <button onclick="clearNotes()">🗑️ Clear All</button>
             <button onclick="insertTimestamp()">🕐 Add Timestamp</button>
+            <div class="seating-dropdown">
+                <button class="seating-btn" id="seatingBtn" onclick="toggleSeatingMenu()">🪑 Seating Flag</button>
+                <div class="seating-menu" id="seatingMenu">
+                    <div class="seating-option" onclick="setSeatingFlag('red')">
+                        <span class="color-dot red"></span>
+                        <span>Must be Red</span>
+                    </div>
+                    <div class="seating-option" onclick="setSeatingFlag('orange')">
+                        <span class="color-dot orange"></span>
+                        <span>Must be Orange</span>
+                    </div>
+                    <div class="seating-option" onclick="setSeatingFlag('green')">
+                        <span class="color-dot green"></span>
+                        <span>Must be Green</span>
+                    </div>
+                    <div class="seating-option" onclick="setSeatingFlag('blue')">
+                        <span class="color-dot blue"></span>
+                        <span>Must be Blue</span>
+                    </div>
+                    <div class="seating-option" onclick="setSeatingFlag('purple')">
+                        <span class="color-dot purple"></span>
+                        <span>Must be Purple</span>
+                    </div>
+                    <div class="seating-divider"></div>
+                    <div class="seating-option" onclick="setSeatingFlag(null)">
+                        <span class="color-dot none"></span>
+                        <span>Clear Flag</span>
+                    </div>
+                </div>
+            </div>
         </div>
         <textarea id="noteEditor" placeholder="Type your notes about this student here..."></textarea>
         <div class="char-count" id="charCount">0 characters</div>
@@ -208,6 +321,7 @@
         document.getElementById('noteEditor').addEventListener('input', (e) => {
             currentNotes = e.target.value;
             updateCharCount();
+            updateSeatingButtonState();
             notifyParent();
         });
 
@@ -220,10 +334,118 @@
             }, '*');
         }
 
+        // Toggle seating menu visibility
+        function toggleSeatingMenu() {
+            const menu = document.getElementById('seatingMenu');
+            menu.classList.toggle('show');
+            
+            // Update active state based on current flag
+            updateSeatingMenuState();
+            
+            // Close menu when clicking outside
+            if (menu.classList.contains('show')) {
+                setTimeout(() => {
+                    document.addEventListener('click', closeSeatingMenuOnClickOutside);
+                }, 0);
+            }
+        }
+
+        // Close seating menu when clicking outside
+        function closeSeatingMenuOnClickOutside(e) {
+            const dropdown = document.querySelector('.seating-dropdown');
+            if (!dropdown.contains(e.target)) {
+                document.getElementById('seatingMenu').classList.remove('show');
+                document.removeEventListener('click', closeSeatingMenuOnClickOutside);
+            }
+        }
+
+        // Get current seating flag from notes
+        function getCurrentSeatingFlag() {
+            const colors = ['red', 'orange', 'green', 'blue', 'purple'];
+            for (const color of colors) {
+                const pattern = `MUST_BE_${color.toUpperCase()}`;
+                if (currentNotes.toUpperCase().includes(pattern)) {
+                    return color;
+                }
+            }
+            return null;
+        }
+
+        // Update seating menu to show active flag
+        function updateSeatingMenuState() {
+            const currentFlag = getCurrentSeatingFlag();
+            const options = document.querySelectorAll('.seating-option');
+            
+            options.forEach(option => {
+                option.classList.remove('active');
+            });
+            
+            if (currentFlag) {
+                const activeOption = document.querySelector(`.seating-option .color-dot.${currentFlag}`)?.parentElement;
+                if (activeOption) {
+                    activeOption.classList.add('active');
+                }
+            }
+        }
+
+        // Update seating button appearance based on flag state
+        function updateSeatingButtonState() {
+            const btn = document.getElementById('seatingBtn');
+            const currentFlag = getCurrentSeatingFlag();
+            
+            if (currentFlag) {
+                btn.classList.add('has-flag');
+                btn.textContent = `🪑 ${currentFlag.charAt(0).toUpperCase() + currentFlag.slice(1)}`;
+            } else {
+                btn.classList.remove('has-flag');
+                btn.textContent = '🪑 Seating Flag';
+            }
+        }
+
+        // Set seating flag
+        function setSeatingFlag(color) {
+            const editor = document.getElementById('noteEditor');
+            const colors = ['red', 'orange', 'green', 'blue', 'purple'];
+            
+            // Remove any existing seating flags
+            let notes = currentNotes;
+            for (const c of colors) {
+                const pattern = new RegExp(`\\s*MUST_BE_${c.toUpperCase()}\\s*`, 'gi');
+                notes = notes.replace(pattern, ' ').trim();
+            }
+            
+            // Add new flag if color is specified
+            if (color) {
+                const flag = `MUST_BE_${color.toUpperCase()}`;
+                // Add flag at the beginning of notes
+                notes = notes ? `${flag}\n${notes}` : flag;
+                showStatus(`Seating flag set: ${color}`);
+            } else {
+                showStatus('Seating flag cleared');
+            }
+            
+            // Update editor and state
+            currentNotes = notes;
+            editor.value = currentNotes;
+            updateCharCount();
+            updateSeatingButtonState();
+            notifyParent();
+            
+            // Close menu
+            document.getElementById('seatingMenu').classList.remove('show');
+            document.removeEventListener('click', closeSeatingMenuOnClickOutside);
+        }
+
+        // Initialize seating button state on load
+        document.addEventListener('DOMContentLoaded', () => {
+            updateSeatingButtonState();
+        });
+
         // Listen for init message from parent
         window.addEventListener('message', (event) => {
             if (event.data.type === 'taskmodule:init') {
                 window.TaskModule.init(event.data.context);
+                updateSeatingButtonState();
             }
         });
     </script>
