@@ -475,6 +475,7 @@ class TeachingAssistantApp {
       'audio-player.html',
       'boomwhacker_assigner.html',
       'chord_progression_composer.html',
+      'class_seating_chart.html',
       'dance_viewer.html',
       'greig_boomwhacker_assignment.html',
       'interval_trainer.html',
