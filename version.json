@@ -1,5 +1,5 @@
 {
-  "version": "2.7.1",
+  "version": "2.7.2",
   "lastUpdated": "2026-01-27",
-  "description": "Fix seating chart iframe not filling container (added height: 100% to .task-image-container)"
+  "description": "Make seating chart scale to fill iframe (responsive height-based sizing)"
 }
