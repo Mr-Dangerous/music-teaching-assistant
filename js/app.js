@@ -49,6 +49,11 @@ class TeachingAssistantApp {
     this.seatAssignments = new Map(); // studentId -> color
     this.seatColors = ['red', 'orange', 'green', 'blue', 'purple'];
     this.slotsPerColor = 6;
+    
+    // Furniture assignments - in-memory only
+    this.furnitureAssignments = new Map(); // studentId -> 'stool' | 'chair'
+    this.furnitureTypes = ['stool', 'chair'];
+    this.furnitureSlots = { stool: 8, chair: 4 };
 
     this.initializeApp();
   }
@@ -1212,6 +1217,9 @@ class TeachingAssistantApp {
             break;
           case 'clear-seat':
             this.clearStudentSeat(student);
+            break;
+          case 'clear-furniture':
+            this.clearStudentFurniture(student);
             break;
         }
       };
@@ -2987,6 +2995,31 @@ class TeachingAssistantApp {
         colorEl.style.opacity = '1';
       });
     });
+    
+    // Furniture drag handlers
+    const furnitureItems = document.querySelectorAll('.seat-furniture');
+    
+    furnitureItems.forEach(furnitureEl => {
+      // Drag start
+      furnitureEl.addEventListener('dragstart', (e) => {
+        const furniture = furnitureEl.dataset.furniture;
+        const remainingSlots = this.getRemainingFurnitureSlots(furniture);
+        
+        if (remainingSlots <= 0) {
+          e.preventDefault();
+          return;
+        }
+        
+        e.dataTransfer.setData('text/plain', `furniture:${furniture}`);
+        e.dataTransfer.effectAllowed = 'copy';
+        furnitureEl.style.opacity = '0.5';
+      });
+      
+      // Drag end
+      furnitureEl.addEventListener('dragend', () => {
+        furnitureEl.style.opacity = '1';
+      });
+    });
   }
 
   /**
@@ -3010,9 +3043,21 @@ class TeachingAssistantApp {
       e.preventDefault();
       button.classList.remove('drag-over');
       
-      const color = e.dataTransfer.getData('text/plain');
-      if (color && this.seatColors.includes(color)) {
-        // Check if there are remaining slots for this color
+      const data = e.dataTransfer.getData('text/plain');
+      
+      // Check if it's furniture
+      if (data.startsWith('furniture:')) {
+        const furniture = data.replace('furniture:', '');
+        const remainingSlots = this.getRemainingFurnitureSlots(furniture);
+        if (remainingSlots > 0 || this.furnitureAssignments.get(student.student_id) === furniture) {
+          this.assignFurnitureToStudent(student.student_id, furniture, button);
+        } else {
+          this.showNotification(`No more ${furniture}s available!`, 'warning');
+        }
+      }
+      // Check if it's a color
+      else if (this.seatColors.includes(data)) {
+        const color = data;
         const remainingSlots = this.getRemainingSlots(color);
         if (remainingSlots > 0 || this.seatAssignments.get(student.student_id) === color) {
           this.assignSeatToStudent(student.student_id, color, button);
@@ -3095,6 +3140,90 @@ class TeachingAssistantApp {
         }
       }
     });
+    
+    // Also update furniture counts
+    this.updateFurniturePaletteCounts();
+  }
+
+  /**
+   * Get remaining slots for a furniture type
+   */
+  getRemainingFurnitureSlots(furniture) {
+    let usedSlots = 0;
+    this.furnitureAssignments.forEach((assignedFurniture) => {
+      if (assignedFurniture === furniture) usedSlots++;
+    });
+    return this.furnitureSlots[furniture] - usedSlots;
+  }
+
+  /**
+   * Update the counts displayed on furniture items
+   */
+  updateFurniturePaletteCounts() {
+    this.furnitureTypes.forEach(furniture => {
+      const furnitureEl = document.querySelector(`.seat-furniture[data-furniture="${furniture}"]`);
+      if (furnitureEl) {
+        const remaining = this.getRemainingFurnitureSlots(furniture);
+        const countEl = furnitureEl.querySelector('.seat-count');
+        if (countEl) {
+          countEl.textContent = remaining;
+        }
+        
+        // Mark as empty if no slots remaining
+        if (remaining <= 0) {
+          furnitureEl.classList.add('empty');
+        } else {
+          furnitureEl.classList.remove('empty');
+        }
+      }
+    });
+  }
+
+  /**
+   * Assign furniture to a student
+   */
+  assignFurnitureToStudent(studentId, furniture, buttonElement) {
+    // Assign the furniture
+    this.furnitureAssignments.set(studentId, furniture);
+    
+    // Update the button display
+    this.updateStudentButtonFurniture(buttonElement, furniture);
+    
+    // Update palette counts
+    this.updateFurniturePaletteCounts();
+    
+    this.showNotification(`Assigned ${furniture} to student`, 'success');
+  }
+
+  /**
+   * Update a student button to show their furniture icon
+   */
+  updateStudentButtonFurniture(button, furniture) {
+    // Remove existing furniture icon if any
+    const existingIcon = button.querySelector('.student-furniture-icon');
+    if (existingIcon) {
+      existingIcon.remove();
+    }
+    
+    if (furniture) {
+      // Create new furniture icon
+      const icon = document.createElement('span');
+      icon.className = 'student-furniture-icon';
+      icon.dataset.furniture = furniture;
+      
+      // Insert after the seat dot (or at beginning if no dot)
+      const seatDot = button.querySelector('.student-seat-dot');
+      if (seatDot) {
+        seatDot.after(icon);
+      } else {
+        button.insertBefore(icon, button.firstChild);
+      }
+      
+      // Set furniture attribute on button
+      button.dataset.furniture = furniture;
+    } else {
+      delete button.dataset.furniture;
+    }
   }
 
   /**
@@ -3204,6 +3333,24 @@ class TeachingAssistantApp {
   }
 
   /**
+   * Check if student requires a chair from their notes
+   */
+  getChairRequirement(studentId) {
+    // Look for student_notes responses for this student
+    const notesResults = this.results.filter(r => 
+      r.student_id === studentId && r.task_id === 'student_notes'
+    );
+    
+    if (notesResults.length === 0) return false;
+    
+    // Get the most recent notes
+    const latestNotes = notesResults[notesResults.length - 1];
+    const response = latestNotes.response || '';
+    
+    return response.toUpperCase().includes('MUST_BE_IN_CHAIR');
+  }
+
+  /**
    * Auto-assign seats to students
    */
   async assignSeats() {
@@ -3224,16 +3371,31 @@ class TeachingAssistantApp {
       return;
     }
     
-    // First pass: Assign students with seating requirements
+    // First pass: Identify students with seating/chair requirements
     const studentsWithRequirements = [];
+    const studentsWithChairRequirements = [];
     const studentsWithoutRequirements = [];
     
     availableStudents.forEach(student => {
-      const requirement = this.getSeatRequirement(student.student_id);
-      if (requirement) {
-        studentsWithRequirements.push({ student, requiredColor: requirement });
+      const colorRequirement = this.getSeatRequirement(student.student_id);
+      const chairRequirement = this.getChairRequirement(student.student_id);
+      
+      if (chairRequirement) {
+        // Chair students also get assigned a color
+        studentsWithChairRequirements.push({ student, requiredColor: colorRequirement });
+      } else if (colorRequirement) {
+        studentsWithRequirements.push({ student, requiredColor: colorRequirement });
       } else {
         studentsWithoutRequirements.push(student);
+      }
+    });
+    
+    // Track available chairs
+    let availableChairs = this.furnitureSlots.chair;
+    this.furnitureAssignments.forEach((furniture, studentId) => {
+      if (furniture === 'chair') {
+        const isCurrentClassStudent = availableStudents.some(s => s.student_id === studentId);
+        if (isCurrentClassStudent) availableChairs--;
       }
     });
     
@@ -3254,7 +3416,41 @@ class TeachingAssistantApp {
     
     // Assign required students first (only if not already assigned)
     const assignmentQueue = [];
+    const chairAssignmentQueue = [];
     
+    // First assign chair-required students
+    for (const { student, requiredColor } of studentsWithChairRequirements) {
+      // Skip if already has a chair
+      if (this.furnitureAssignments.get(student.student_id) === 'chair') {
+        continue;
+      }
+      
+      if (availableChairs > 0) {
+        chairAssignmentQueue.push({ student, furniture: 'chair' });
+        availableChairs--;
+        
+        // Also assign a color if they have one, or pick next available
+        if (requiredColor && availableSlots[requiredColor] > 0) {
+          if (this.seatAssignments.get(student.student_id) !== requiredColor) {
+            assignmentQueue.push({ student, color: requiredColor });
+            availableSlots[requiredColor]--;
+          }
+        } else if (!this.seatAssignments.has(student.student_id)) {
+          // Assign next available color
+          for (const color of this.seatColors) {
+            if (availableSlots[color] > 0) {
+              assignmentQueue.push({ student, color });
+              availableSlots[color]--;
+              break;
+            }
+          }
+        }
+      } else {
+        this.showNotification(`Cannot assign ${student.name} to chair - no chairs available`, 'warning');
+      }
+    }
+    
+    // Then assign color-required students
     for (const { student, requiredColor } of studentsWithRequirements) {
       // Skip if already assigned to correct color
       if (this.seatAssignments.get(student.student_id) === requiredColor) {
@@ -3305,10 +3501,72 @@ class TeachingAssistantApp {
       }
     }
     
-    // Animate the assignments sequentially
+    // Animate the chair assignments first
+    await this.animateFurnitureAssignments(chairAssignmentQueue);
+    
+    // Then animate the seat color assignments
     await this.animateSeatAssignments(assignmentQueue);
     
-    this.showNotification(`Assigned ${assignmentQueue.length} seats`, 'success');
+    const totalAssigned = assignmentQueue.length + chairAssignmentQueue.length;
+    this.showNotification(`Assigned ${totalAssigned} seats`, 'success');
+  }
+
+  /**
+   * Animate furniture assignments with flying icons
+   */
+  async animateFurnitureAssignments(furnitureQueue) {
+    for (const { student, furniture } of furnitureQueue) {
+      const button = document.querySelector(`.student-roster-button[data-student-id="${student.student_id}"]`);
+      const paletteFurniture = document.querySelector(`.seat-furniture[data-furniture="${furniture}"]`);
+      
+      if (button && paletteFurniture) {
+        await this.animateFlyingFurniture(paletteFurniture, button, furniture);
+        this.assignFurnitureToStudent(student.student_id, furniture, button);
+      }
+      
+      // Small delay between animations
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+  }
+
+  /**
+   * Animate a furniture icon flying from palette to student button
+   */
+  animateFlyingFurniture(fromElement, toElement, furniture) {
+    return new Promise(resolve => {
+      const fromRect = fromElement.getBoundingClientRect();
+      const toRect = toElement.getBoundingClientRect();
+      
+      // Create flying icon
+      const flyingIcon = document.createElement('div');
+      flyingIcon.className = 'flying-furniture-icon';
+      flyingIcon.dataset.furniture = furniture;
+      flyingIcon.textContent = furniture === 'chair' ? '🪑' : '⭐';
+      flyingIcon.style.position = 'fixed';
+      flyingIcon.style.fontSize = '24px';
+      flyingIcon.style.zIndex = '10000';
+      flyingIcon.style.left = `${fromRect.left + fromRect.width / 2 - 12}px`;
+      flyingIcon.style.top = `${fromRect.top + fromRect.height / 2 - 12}px`;
+      
+      document.body.appendChild(flyingIcon);
+      
+      // Force reflow
+      flyingIcon.offsetHeight;
+      
+      // Animate to destination
+      const destX = toRect.left + 20;
+      const destY = toRect.top + toRect.height / 2 - 12;
+      
+      flyingIcon.style.transition = 'left 0.3s ease-out, top 0.3s ease-out';
+      flyingIcon.style.left = `${destX}px`;
+      flyingIcon.style.top = `${destY}px`;
+      
+      // Remove flying icon after animation
+      setTimeout(() => {
+        flyingIcon.remove();
+        resolve();
+      }, 320);
+    });
   }
 
   /**
@@ -3370,15 +3628,53 @@ class TeachingAssistantApp {
    */
   clearSeatAssignments() {
     this.seatAssignments.clear();
+    this.furnitureAssignments.clear();
     
-    // Remove all dots from student buttons
+    // Remove all dots and furniture icons from student buttons
     const dots = document.querySelectorAll('.student-seat-dot');
     dots.forEach(dot => dot.remove());
+    
+    const furnitureIcons = document.querySelectorAll('.student-furniture-icon');
+    furnitureIcons.forEach(icon => icon.remove());
+    
+    // Remove data attributes from buttons
+    const buttons = document.querySelectorAll('.student-roster-button');
+    buttons.forEach(btn => {
+      delete btn.dataset.seatColor;
+      delete btn.dataset.furniture;
+    });
     
     // Update palette counts
     this.updateSeatPaletteCounts();
     
     this.showNotification('Seat assignments cleared', 'success');
+  }
+
+  /**
+   * Clear furniture assignment for a student
+   */
+  clearStudentFurniture(student) {
+    const studentId = student.student_id;
+    
+    // Check if student has furniture assigned
+    if (!this.furnitureAssignments.has(studentId)) {
+      this.showNotification(`${student.name} has no furniture assigned`, 'warning');
+      return;
+    }
+    
+    // Remove from assignments
+    this.furnitureAssignments.delete(studentId);
+    
+    // Find the student's button and remove the furniture icon
+    const button = document.querySelector(`.student-roster-button[data-student-id="${studentId}"]`);
+    if (button) {
+      this.updateStudentButtonFurniture(button, null);
+    }
+    
+    // Update palette counts
+    this.updateFurniturePaletteCounts();
+    
+    this.showNotification(`${student.name}'s furniture cleared`, 'success');
   }
 }
 

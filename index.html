@@ -42,6 +42,15 @@
           <div class="seat-color" data-color="purple" draggable="true">
             <span class="seat-count">6</span>
           </div>
+          <div class="seat-divider"></div>
+          <div class="seat-furniture" data-furniture="stool" draggable="true" title="Stool">
+            <span class="furniture-icon">🪑</span>
+            <span class="seat-count">8</span>
+          </div>
+          <div class="seat-furniture" data-furniture="chair" draggable="true" title="Chair">
+            <span class="furniture-icon">🪑</span>
+            <span class="seat-count">4</span>
+          </div>
         </div>
         <button id="assign-seats-btn" class="btn btn-seat-assign">Assign Seats</button>
         <button id="clear-seats-btn" class="btn btn-seat-clear">Clear</button>
@@ -281,8 +290,12 @@
       <span>Earned Stool</span>
     </div>
     <div class="context-menu-item" data-action="clear-seat">
+      <span class="context-icon">🎨</span>
+      <span>Clear Seat Color</span>
+    </div>
+    <div class="context-menu-item" data-action="clear-furniture">
       <span class="context-icon">🪑</span>
-      <span>Clear Seat</span>
+      <span>Clear Furniture</span>
     </div>
   </div>
 

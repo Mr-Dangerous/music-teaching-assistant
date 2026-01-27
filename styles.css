@@ -1914,6 +1914,58 @@ body.snow-theme .app-header {
   cursor: not-allowed;
 }
 
+.seat-divider {
+  width: 2px;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.3);
+  margin: 0 4px;
+}
+
+.seat-furniture {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  transition: all 0.2s ease;
+  border: 3px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  position: relative;
+}
+
+.seat-furniture[data-furniture="stool"] {
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+}
+
+.seat-furniture[data-furniture="chair"] {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+}
+
+.seat-furniture:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+.seat-furniture.empty {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.furniture-icon {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.seat-furniture .seat-count {
+  font-size: 11px;
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+}
+
 .seat-count {
   font-size: 14px;
   font-weight: 700;
@@ -2003,6 +2055,21 @@ body.snow-theme .app-header {
 
 .student-roster-button[data-seat-color="purple"] {
   background: linear-gradient(135deg, #e9d5ff 0%, #d8b4fe 100%);
+}
+
+/* Furniture indicator on student buttons */
+.student-furniture-icon {
+  font-size: 14px;
+  margin-right: 2px;
+  flex-shrink: 0;
+}
+
+.student-furniture-icon[data-furniture="stool"]::before {
+  content: '⭐';
+}
+
+.student-furniture-icon[data-furniture="chair"]::before {
+  content: '🪑';
 }
 
 /* Update student button to accommodate seat dot */

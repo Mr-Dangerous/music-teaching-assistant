@@ -138,6 +138,7 @@
         .seating-option .color-dot.green { background: #22c55e; }
         .seating-option .color-dot.blue { background: #3b82f6; }
         .seating-option .color-dot.purple { background: #a855f7; }
+        .seating-option .color-dot.chair { background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); }
         .seating-option .color-dot.none { background: #e5e7eb; }
 
         .seating-divider {
@@ -212,6 +213,11 @@
                     <div class="seating-option" onclick="setSeatingFlag('purple')">
                         <span class="color-dot purple"></span>
                         <span>Must be Purple</span>
+                    </div>
+                    <div class="seating-divider"></div>
+                    <div class="seating-option" onclick="setSeatingFlag('chair')">
+                        <span class="color-dot chair"></span>
+                        <span>Must be in Chair</span>
                     </div>
                     <div class="seating-divider"></div>
                     <div class="seating-option" onclick="setSeatingFlag(null)">
@@ -361,6 +367,11 @@
 
         // Get current seating flag from notes
         function getCurrentSeatingFlag() {
+            // Check for chair flag first
+            if (currentNotes.toUpperCase().includes('MUST_BE_IN_CHAIR')) {
+                return 'chair';
+            }
+            
             const colors = ['red', 'orange', 'green', 'blue', 'purple'];
             for (const color of colors) {
                 const pattern = `MUST_BE_${color.toUpperCase()}`;
@@ -403,7 +414,7 @@
         }
 
         // Set seating flag
-        function setSeatingFlag(color) {
+        function setSeatingFlag(flagType) {
             const editor = document.getElementById('noteEditor');
             const colors = ['red', 'orange', 'green', 'blue', 'purple'];
             
@@ -413,13 +424,20 @@
                 const pattern = new RegExp(`\\s*MUST_BE_${c.toUpperCase()}\\s*`, 'gi');
                 notes = notes.replace(pattern, ' ').trim();
             }
+            // Also remove chair flag
+            notes = notes.replace(/\s*MUST_BE_IN_CHAIR\s*/gi, ' ').trim();
             
-            // Add new flag if color is specified
-            if (color) {
-                const flag = `MUST_BE_${color.toUpperCase()}`;
+            // Add new flag if specified
+            if (flagType) {
+                let flag;
+                if (flagType === 'chair') {
+                    flag = 'MUST_BE_IN_CHAIR';
+                } else {
+                    flag = `MUST_BE_${flagType.toUpperCase()}`;
+                }
                 // Add flag at the beginning of notes
                 notes = notes ? `${flag}\n${notes}` : flag;
-                showStatus(`Seating flag set: ${color}`);
+                showStatus(`Seating flag set: ${flagType}`);
             } else {
                 showStatus('Seating flag cleared');
             }
