@@ -3310,22 +3310,22 @@ class TeachingAssistantApp {
       
       document.body.appendChild(flyingDot);
       
+      // Force reflow to ensure initial position is applied
+      flyingDot.offsetHeight;
+      
       // Animate to destination
-      const deltaX = toRect.left + 12 - (fromRect.left + fromRect.width / 2);
-      const deltaY = toRect.top + toRect.height / 2 - (fromRect.top + fromRect.height / 2);
+      const destX = toRect.left + 12 - 6;
+      const destY = toRect.top + toRect.height / 2 - 6;
       
-      flyingDot.style.transition = 'all 0.3s ease-out';
-      
-      requestAnimationFrame(() => {
-        flyingDot.style.left = `${fromRect.left + fromRect.width / 2 - 6 + deltaX}px`;
-        flyingDot.style.top = `${fromRect.top + fromRect.height / 2 - 6 + deltaY}px`;
-      });
+      flyingDot.style.transition = 'left 0.3s ease-out, top 0.3s ease-out';
+      flyingDot.style.left = `${destX}px`;
+      flyingDot.style.top = `${destY}px`;
       
       // Remove flying dot after animation
       setTimeout(() => {
         flyingDot.remove();
         resolve();
-      }, 300);
+      }, 320);
     });
   }
 
