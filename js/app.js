@@ -45,6 +45,11 @@ class TeachingAssistantApp {
     this.presentationLinks = [];  // Array of {timestamp, url, title}
     this.perClassPresentations = {};  // {className: url} for session persistence
 
+    // Seat palette - in-memory only, not persisted
+    this.seatAssignments = new Map(); // studentId -> color
+    this.seatColors = ['red', 'orange', 'green', 'blue', 'purple'];
+    this.slotsPerColor = 6;
+
     this.initializeApp();
   }
 
@@ -179,6 +184,20 @@ class TeachingAssistantApp {
     if (pickRandomBtn) {
       pickRandomBtn.addEventListener('click', () => this.pickRandomStudent());
     }
+
+    // Seat palette buttons
+    const assignSeatsBtn = document.getElementById('assign-seats-btn');
+    if (assignSeatsBtn) {
+      assignSeatsBtn.addEventListener('click', () => this.assignSeats());
+    }
+
+    const clearSeatsBtn = document.getElementById('clear-seats-btn');
+    if (clearSeatsBtn) {
+      clearSeatsBtn.addEventListener('click', () => this.clearSeatAssignments());
+    }
+
+    // Initialize seat palette drag handlers
+    this.initializeSeatPalette();
 
     // Practice mode button
     const practiceModeBtn = document.getElementById('practice-mode-btn');
@@ -623,6 +642,12 @@ class TeachingAssistantApp {
       backBtn.style.display = 'none';
     }
 
+    // Hide seat palette on class select screen
+    this.hideSeatPalette();
+    
+    // Clear seat assignments when leaving class view
+    this.seatAssignments.clear();
+
     // Get unique classes from students
     const classMap = new Map();
     this.students.forEach(student => {
@@ -883,6 +908,9 @@ class TeachingAssistantApp {
       backBtn.style.display = 'inline-flex';
     }
 
+    // Show seat palette
+    this.showSeatPalette();
+
     // Update header
     document.getElementById('selected-class-name').textContent = this.selectedClass;
 
@@ -932,8 +960,22 @@ class TeachingAssistantApp {
         displayName = `${firstName} ${lastInitial}`;
       }
 
-      button.textContent = displayName;
       button.dataset.studentId = student.student_id;
+      
+      // Add seat dot if assigned
+      const assignedColor = this.seatAssignments.get(student.student_id);
+      if (assignedColor) {
+        const dot = document.createElement('span');
+        dot.className = 'student-seat-dot';
+        dot.dataset.color = assignedColor;
+        button.appendChild(dot);
+      }
+      
+      // Add name in a span
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'student-name-text';
+      nameSpan.textContent = displayName;
+      button.appendChild(nameSpan);
 
       // Add status indicators
       const statusIndicator = document.createElement('span');
@@ -1048,6 +1090,9 @@ class TeachingAssistantApp {
         this.selectedStudent = student;
         this.displayStudentTask(student);
       });
+
+      // Setup drag/drop handlers for seat assignment
+      this.setupStudentDragDropHandlers(button, student);
 
       studentList.appendChild(button);
     });
@@ -2914,6 +2959,395 @@ class TeachingAssistantApp {
       console.error('Error getting dances:', error);
       throw error; // Re-throw instead of returning empty array
     }
+  }
+}
+
+  /**
+   * Initialize seat palette drag and drop handlers
+   */
+  initializeSeatPalette() {
+    const seatColors = document.querySelectorAll('.seat-color');
+    
+    seatColors.forEach(colorEl => {
+      // Drag start
+      colorEl.addEventListener('dragstart', (e) => {
+        const color = colorEl.dataset.color;
+        const remainingSlots = this.getRemainingSlots(color);
+        
+        if (remainingSlots <= 0) {
+          e.preventDefault();
+          return;
+        }
+        
+        e.dataTransfer.setData('text/plain', color);
+        e.dataTransfer.effectAllowed = 'copy';
+        colorEl.style.opacity = '0.5';
+      });
+      
+      // Drag end
+      colorEl.addEventListener('dragend', () => {
+        colorEl.style.opacity = '1';
+      });
+    });
+  }
+
+  /**
+   * Setup drag/drop handlers for student buttons
+   */
+  setupStudentDragDropHandlers(button, student) {
+    // Drag over
+    button.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      button.classList.add('drag-over');
+    });
+    
+    // Drag leave
+    button.addEventListener('dragleave', () => {
+      button.classList.remove('drag-over');
+    });
+    
+    // Drop
+    button.addEventListener('drop', (e) => {
+      e.preventDefault();
+      button.classList.remove('drag-over');
+      
+      const color = e.dataTransfer.getData('text/plain');
+      if (color && this.seatColors.includes(color)) {
+        // Check if there are remaining slots for this color
+        const remainingSlots = this.getRemainingSlots(color);
+        if (remainingSlots > 0 || this.seatAssignments.get(student.student_id) === color) {
+          this.assignSeatToStudent(student.student_id, color, button);
+        } else {
+          this.showNotification(`No more ${color} seats available!`, 'warning');
+        }
+      }
+    });
+  }
+
+  /**
+   * Show the seat palette in the header
+   */
+  showSeatPalette() {
+    const palette = document.getElementById('seat-palette');
+    if (palette) {
+      palette.style.display = 'flex';
+      this.updateSeatPaletteCounts();
+      
+      // Check if class has more than 30 students
+      let classStudents;
+      if (this.selectedClasses.size > 0) {
+        classStudents = this.students.filter(s => this.selectedClasses.has(s.class));
+      } else {
+        classStudents = this.students.filter(s => s.class === this.selectedClass);
+      }
+      
+      const assignBtn = document.getElementById('assign-seats-btn');
+      if (assignBtn) {
+        if (classStudents.length > 30) {
+          assignBtn.disabled = true;
+          assignBtn.title = 'Class has more than 30 students';
+        } else {
+          assignBtn.disabled = false;
+          assignBtn.title = '';
+        }
+      }
+    }
+  }
+
+  /**
+   * Hide the seat palette
+   */
+  hideSeatPalette() {
+    const palette = document.getElementById('seat-palette');
+    if (palette) {
+      palette.style.display = 'none';
+    }
+  }
+
+  /**
+   * Get remaining slots for a color
+   */
+  getRemainingSlots(color) {
+    let usedSlots = 0;
+    this.seatAssignments.forEach((assignedColor) => {
+      if (assignedColor === color) usedSlots++;
+    });
+    return this.slotsPerColor - usedSlots;
+  }
+
+  /**
+   * Update the counts displayed on seat palette colors
+   */
+  updateSeatPaletteCounts() {
+    this.seatColors.forEach(color => {
+      const colorEl = document.querySelector(`.seat-color[data-color="${color}"]`);
+      if (colorEl) {
+        const remaining = this.getRemainingSlots(color);
+        const countEl = colorEl.querySelector('.seat-count');
+        if (countEl) {
+          countEl.textContent = remaining;
+        }
+        
+        // Mark as empty if no slots remaining
+        if (remaining <= 0) {
+          colorEl.classList.add('empty');
+        } else {
+          colorEl.classList.remove('empty');
+        }
+      }
+    });
+  }
+
+  /**
+   * Assign a seat color to a student
+   */
+  assignSeatToStudent(studentId, color, buttonElement, animate = false) {
+    // If student already has a different color, free up that slot
+    const previousColor = this.seatAssignments.get(studentId);
+    
+    // Assign the new color
+    this.seatAssignments.set(studentId, color);
+    
+    // Update the button display
+    this.updateStudentButtonSeatDot(buttonElement, color, animate);
+    
+    // Update palette counts
+    this.updateSeatPaletteCounts();
+  }
+
+  /**
+   * Update a student button to show their seat dot
+   */
+  updateStudentButtonSeatDot(button, color, animate = false) {
+    // Remove existing dot if any
+    const existingDot = button.querySelector('.student-seat-dot');
+    if (existingDot) {
+      existingDot.remove();
+    }
+    
+    if (color) {
+      // Create new dot
+      const dot = document.createElement('span');
+      dot.className = 'student-seat-dot';
+      dot.dataset.color = color;
+      
+      // Insert at the beginning of the button
+      button.insertBefore(dot, button.firstChild);
+      
+      // Animation effect
+      if (animate) {
+        dot.style.transform = 'scale(0)';
+        dot.style.transition = 'transform 0.3s ease-out';
+        requestAnimationFrame(() => {
+          dot.style.transform = 'scale(1)';
+        });
+      }
+    }
+  }
+
+  /**
+   * Get seating requirement for a student from their notes
+   */
+  getSeatRequirement(studentId) {
+    // Look for student_notes responses for this student
+    const notesResults = this.results.filter(r => 
+      r.student_id === studentId && r.task_id === 'student_notes'
+    );
+    
+    if (notesResults.length === 0) return null;
+    
+    // Get the most recent notes
+    const latestNotes = notesResults[notesResults.length - 1];
+    const response = latestNotes.response || '';
+    
+    // Look for MUST_BE_COLOR pattern
+    for (const color of this.seatColors) {
+      const pattern = `MUST_BE_${color.toUpperCase()}`;
+      if (response.toUpperCase().includes(pattern)) {
+        return color;
+      }
+    }
+    
+    return null;
+  }
+
+  /**
+   * Auto-assign seats to students
+   */
+  async assignSeats() {
+    // Get students in current class
+    let classStudents;
+    if (this.selectedClasses.size > 0) {
+      classStudents = this.students.filter(s => this.selectedClasses.has(s.class));
+    } else {
+      classStudents = this.students.filter(s => s.class === this.selectedClass);
+    }
+    
+    // Filter out absent students
+    const availableStudents = classStudents.filter(s => !this.isStudentAbsent(s.student_id));
+    
+    // Check if too many students
+    if (availableStudents.length > 30) {
+      this.showNotification('Too many students (>30) for seating assignment', 'warning');
+      return;
+    }
+    
+    // First pass: Assign students with seating requirements
+    const studentsWithRequirements = [];
+    const studentsWithoutRequirements = [];
+    
+    availableStudents.forEach(student => {
+      const requirement = this.getSeatRequirement(student.student_id);
+      if (requirement) {
+        studentsWithRequirements.push({ student, requiredColor: requirement });
+      } else {
+        studentsWithoutRequirements.push(student);
+      }
+    });
+    
+    // Track available slots per color
+    const availableSlots = {};
+    this.seatColors.forEach(color => {
+      availableSlots[color] = this.slotsPerColor;
+    });
+    
+    // Subtract already assigned seats (keeping existing assignments)
+    this.seatAssignments.forEach((color, studentId) => {
+      // Only count if student is in current class and not absent
+      const isCurrentClassStudent = availableStudents.some(s => s.student_id === studentId);
+      if (isCurrentClassStudent) {
+        availableSlots[color]--;
+      }
+    });
+    
+    // Assign required students first (only if not already assigned)
+    const assignmentQueue = [];
+    
+    for (const { student, requiredColor } of studentsWithRequirements) {
+      // Skip if already assigned to correct color
+      if (this.seatAssignments.get(student.student_id) === requiredColor) {
+        continue;
+      }
+      
+      if (availableSlots[requiredColor] > 0) {
+        assignmentQueue.push({ student, color: requiredColor });
+        availableSlots[requiredColor]--;
+      } else {
+        this.showNotification(`Cannot assign ${student.name} to ${requiredColor} - no slots available`, 'warning');
+      }
+    }
+    
+    // Sort remaining students by last name (or first name if no last name)
+    studentsWithoutRequirements.sort((a, b) => {
+      const aNameParts = a.name.split(' ');
+      const bNameParts = b.name.split(' ');
+      const aLastName = aNameParts.length > 1 ? aNameParts[aNameParts.length - 1] : aNameParts[0];
+      const bLastName = bNameParts.length > 1 ? bNameParts[bNameParts.length - 1] : bNameParts[0];
+      return aLastName.localeCompare(bLastName);
+    });
+    
+    // Assign remaining students
+    let colorIndex = 0;
+    for (const student of studentsWithoutRequirements) {
+      // Skip if already assigned
+      if (this.seatAssignments.has(student.student_id)) {
+        continue;
+      }
+      
+      // Find next color with available slots
+      let assigned = false;
+      for (let i = 0; i < this.seatColors.length; i++) {
+        const color = this.seatColors[(colorIndex + i) % this.seatColors.length];
+        if (availableSlots[color] > 0) {
+          assignmentQueue.push({ student, color });
+          availableSlots[color]--;
+          colorIndex = (colorIndex + i + 1) % this.seatColors.length;
+          assigned = true;
+          break;
+        }
+      }
+      
+      if (!assigned) {
+        this.showNotification(`Not enough seats for all students`, 'warning');
+        break;
+      }
+    }
+    
+    // Animate the assignments sequentially
+    await this.animateSeatAssignments(assignmentQueue);
+    
+    this.showNotification(`Assigned ${assignmentQueue.length} seats`, 'success');
+  }
+
+  /**
+   * Animate seat assignments with flying dots
+   */
+  async animateSeatAssignments(assignmentQueue) {
+    for (const { student, color } of assignmentQueue) {
+      const button = document.querySelector(`.student-roster-button[data-student-id="${student.student_id}"]`);
+      const paletteColor = document.querySelector(`.seat-color[data-color="${color}"]`);
+      
+      if (button && paletteColor) {
+        await this.animateFlyingDot(paletteColor, button, color);
+        this.assignSeatToStudent(student.student_id, color, button, false);
+      }
+      
+      // Small delay between animations
+      await new Promise(resolve => setTimeout(resolve, 80));
+    }
+  }
+
+  /**
+   * Animate a dot flying from palette to student button
+   */
+  animateFlyingDot(fromElement, toElement, color) {
+    return new Promise(resolve => {
+      const fromRect = fromElement.getBoundingClientRect();
+      const toRect = toElement.getBoundingClientRect();
+      
+      // Create flying dot
+      const flyingDot = document.createElement('div');
+      flyingDot.className = 'flying-seat-dot';
+      flyingDot.dataset.color = color;
+      flyingDot.style.left = `${fromRect.left + fromRect.width / 2 - 6}px`;
+      flyingDot.style.top = `${fromRect.top + fromRect.height / 2 - 6}px`;
+      
+      document.body.appendChild(flyingDot);
+      
+      // Animate to destination
+      const deltaX = toRect.left + 12 - (fromRect.left + fromRect.width / 2);
+      const deltaY = toRect.top + toRect.height / 2 - (fromRect.top + fromRect.height / 2);
+      
+      flyingDot.style.transition = 'all 0.3s ease-out';
+      
+      requestAnimationFrame(() => {
+        flyingDot.style.left = `${fromRect.left + fromRect.width / 2 - 6 + deltaX}px`;
+        flyingDot.style.top = `${fromRect.top + fromRect.height / 2 - 6 + deltaY}px`;
+      });
+      
+      // Remove flying dot after animation
+      setTimeout(() => {
+        flyingDot.remove();
+        resolve();
+      }, 300);
+    });
+  }
+
+  /**
+   * Clear all seat assignments
+   */
+  clearSeatAssignments() {
+    this.seatAssignments.clear();
+    
+    // Remove all dots from student buttons
+    const dots = document.querySelectorAll('.student-seat-dot');
+    dots.forEach(dot => dot.remove());
+    
+    // Update palette counts
+    this.updateSeatPaletteCounts();
+    
+    this.showNotification('Seat assignments cleared', 'success');
   }
 }
 

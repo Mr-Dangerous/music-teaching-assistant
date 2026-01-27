@@ -24,6 +24,28 @@
       <button id="back-to-classes-btn" class="btn btn-secondary" style="display: none;">
         ← Back to Classes
       </button>
+      <!-- Seat Palette - only visible on class view screen -->
+      <div id="seat-palette" class="seat-palette" style="display: none;">
+        <div class="seat-palette-colors">
+          <div class="seat-color" data-color="red" draggable="true">
+            <span class="seat-count">6</span>
+          </div>
+          <div class="seat-color" data-color="orange" draggable="true">
+            <span class="seat-count">6</span>
+          </div>
+          <div class="seat-color" data-color="green" draggable="true">
+            <span class="seat-count">6</span>
+          </div>
+          <div class="seat-color" data-color="blue" draggable="true">
+            <span class="seat-count">6</span>
+          </div>
+          <div class="seat-color" data-color="purple" draggable="true">
+            <span class="seat-count">6</span>
+          </div>
+        </div>
+        <button id="assign-seats-btn" class="btn btn-seat-assign">Assign Seats</button>
+        <button id="clear-seats-btn" class="btn btn-seat-clear">Clear</button>
+      </div>
     </div>
     <div class="header-actions">
       <select id="task-selector" class="task-selector" style="display: none;">
