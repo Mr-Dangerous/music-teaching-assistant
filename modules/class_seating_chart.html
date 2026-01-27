@@ -31,7 +31,7 @@
     h2 {
       color: white;
       margin-bottom: 5px;
-      font-size: 20px;
+      font-size: clamp(24px, 3vw, 32px);
       text-shadow: 0 2px 4px rgba(0,0,0,0.3);
       flex-shrink: 0;
     }
@@ -39,11 +39,12 @@
     .error-banner {
       background: #fef3c7;
       border: 2px solid #f59e0b;
-      color: #92400e;
-      padding: 8px 16px;
+      color: #78350f;
+      padding: 12px 20px;
       border-radius: 8px;
       margin-bottom: 10px;
-      font-size: 14px;
+      font-size: clamp(16px, 2vw, 20px);
+      font-weight: 600;
       display: none;
     }
 
@@ -66,11 +67,11 @@
     .teacher-area {
       background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
       border-radius: 10px 10px 0 0;
-      padding: 8px;
+      padding: 12px;
       text-align: center;
       color: white;
-      font-weight: 600;
-      font-size: 14px;
+      font-weight: 700;
+      font-size: clamp(18px, 2.5vw, 24px);
       border: 2px solid #4b5563;
       border-bottom: none;
       flex-shrink: 0;
@@ -125,33 +126,40 @@
     .student-spot {
       width: 15%;
       max-width: 130px;
+      min-width: 60px;
       height: 90%;
       max-height: 85px;
-      background: rgba(255, 255, 255, 0.2);
+      min-height: 60px;
+      background: rgba(255, 255, 255, 0.25);
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: clamp(16px, 2.5vw, 24px);
+      font-size: clamp(18px, 2.5vw, 26px);
       font-weight: 700;
       color: white;
-      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+      text-shadow: 0 2px 3px rgba(0,0,0,0.4);
       text-align: center;
-      padding: 4px;
-      border: 3px solid rgba(255,255,255,0.4);
+      padding: 6px;
+      border: 3px solid rgba(255,255,255,0.5);
       transition: all 0.2s;
       overflow: hidden;
     }
 
     .student-spot.occupied {
-      background: rgba(255, 255, 255, 0.85);
+      background: rgba(255, 255, 255, 0.9);
       color: #1f2937;
       text-shadow: none;
       border-color: white;
     }
 
     .student-spot.empty {
-      opacity: 0.5;
+      opacity: 0.6;
+    }
+
+    .student-spot:focus-visible {
+      outline: 3px solid #fbbf24;
+      outline-offset: 2px;
     }
 
     /* Stools container */
@@ -166,18 +174,18 @@
 
     .stool {
       position: absolute;
-      width: 75px;
-      height: 60px;
+      min-width: 80px;
+      min-height: 70px;
       background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
+      font-size: clamp(16px, 2vw, 20px);
       font-weight: 700;
       color: #1f2937;
       text-align: center;
-      padding: 4px;
+      padding: 8px;
       border: 3px solid #92400e;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       pointer-events: auto;
@@ -188,31 +196,31 @@
     }
 
     .stool.empty {
-      opacity: 0.4;
+      opacity: 0.5;
     }
 
     .stool .stool-icon {
       position: absolute;
-      top: 2px;
-      right: 3px;
-      font-size: 10px;
+      top: 4px;
+      right: 5px;
+      font-size: 14px;
     }
 
     /* Chair styling */
     .chair {
       position: absolute;
-      width: 75px;
-      height: 60px;
+      min-width: 80px;
+      min-height: 70px;
       background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
       border-radius: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 14px;
+      font-size: clamp(16px, 2vw, 20px);
       font-weight: 700;
       color: white;
       text-align: center;
-      padding: 2px;
+      padding: 8px;
       border: 3px solid #4c1d95;
       box-shadow: 0 2px 8px rgba(0,0,0,0.3);
       pointer-events: auto;
@@ -223,25 +231,25 @@
     }
 
     .chair.empty {
-      opacity: 0.4;
+      opacity: 0.5;
     }
 
     .chair .chair-icon {
       position: absolute;
-      top: 2px;
-      right: 3px;
-      font-size: 10px;
+      top: 4px;
+      right: 5px;
+      font-size: 14px;
     }
 
     /* Color indicator on stools/chairs */
     .furniture-color-dot {
       position: absolute;
-      bottom: 3px;
-      right: 3px;
-      width: 10px;
-      height: 10px;
+      bottom: 5px;
+      right: 5px;
+      width: 16px;
+      height: 16px;
       border-radius: 50%;
-      border: 1px solid rgba(0,0,0,0.2);
+      border: 2px solid rgba(0,0,0,0.3);
     }
 
     .furniture-color-dot[data-color="red"] { background: #ef4444; }
@@ -253,8 +261,8 @@
     /* Legend */
     .legend {
       display: flex;
-      gap: 10px;
-      margin-top: 8px;
+      gap: 16px;
+      margin-top: 10px;
       flex-wrap: wrap;
       justify-content: center;
       flex-shrink: 0;
@@ -263,28 +271,31 @@
     .legend-item {
       display: flex;
       align-items: center;
-      gap: 5px;
+      gap: 8px;
       color: white;
-      font-size: 12px;
+      font-size: clamp(16px, 2vw, 20px);
+      font-weight: 600;
     }
 
     .legend-color {
-      width: 20px;
-      height: 20px;
-      border-radius: 4px;
-      border: 2px solid white;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      border: 3px solid white;
     }
 
     /* Refresh button */
     .refresh-btn {
-      margin-top: 8px;
-      padding: 8px 16px;
+      margin-top: 10px;
+      padding: 14px 28px;
+      min-height: 60px;
+      min-width: 160px;
       background: linear-gradient(135deg, #10b981 0%, #059669 100%);
       color: white;
       border: none;
-      border-radius: 10px;
-      font-size: 12px;
-      font-weight: 600;
+      border-radius: 12px;
+      font-size: clamp(16px, 2vw, 20px);
+      font-weight: 700;
       cursor: pointer;
       transition: all 0.2s;
       flex-shrink: 0;
@@ -295,27 +306,56 @@
       box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
     }
 
+    .refresh-btn:focus {
+      outline: 3px solid #34d399;
+      outline-offset: 2px;
+    }
+
     .student-name {
-      line-height: 1.2;
+      line-height: 1.4;
       word-break: break-word;
+    }
+
+    /* Focus indicators for accessibility */
+    :focus-visible {
+      outline: 3px solid #fbbf24;
+      outline-offset: 2px;
+    }
+
+    /* Skip link for keyboard navigation */
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: #fbbf24;
+      color: #1f2937;
+      padding: 8px 16px;
+      font-weight: 700;
+      z-index: 100;
+      border-radius: 0 0 8px 0;
+    }
+
+    .skip-link:focus {
+      top: 0;
     }
   </style>
 </head>
 <body>
+  <a href="#rug" class="skip-link">Skip to seating chart</a>
   <h2 id="title">Class Seating Chart</h2>
-  <div class="error-banner" id="errorBanner"></div>
+  <div class="error-banner" id="errorBanner" role="alert" aria-live="polite"></div>
   
-  <div class="classroom-container">
+  <main class="classroom-container" role="main" aria-label="Classroom seating arrangement">
     <div class="teacher-area">👩‍🏫 TEACHER / FRONT OF ROOM</div>
-    <div class="rug" id="rug">
+    <div class="rug" id="rug" role="region" aria-label="Floor seating rug with color-coded rows" tabindex="0">
       <!-- Color rows will be generated here -->
     </div>
-    <div class="stools-container" id="stoolsContainer">
+    <div class="stools-container" id="stoolsContainer" aria-label="Special seating (stools and chairs)">
       <!-- Stools and chairs will be positioned here -->
     </div>
-  </div>
+  </main>
 
-  <div class="legend">
+  <nav class="legend" aria-label="Seating legend">
     <div class="legend-item">
       <div class="legend-color" style="background: linear-gradient(135deg, #fbbf24, #d97706);"></div>
       <span>Stool</span>
@@ -324,9 +364,9 @@
       <div class="legend-color" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);"></div>
       <span>Chair</span>
     </div>
-  </div>
+  </nav>
 
-  <button class="refresh-btn" onclick="refreshSeating()">🔄 Refresh Seating</button>
+  <button class="refresh-btn" onclick="refreshSeating()" aria-label="Refresh seating chart">🔄 Refresh Seating</button>
 
   <script>
     // Configuration
