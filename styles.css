@@ -663,6 +663,8 @@ body {
   gap: var(--spacing-md);
   flex: 1;
   overflow: hidden;
+  height: 100%;
+  min-height: 0;
 }
 
 .task-image-container {

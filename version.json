@@ -1,5 +1,5 @@
 {
-  "version": "2.7.2",
+  "version": "2.7.3",
   "lastUpdated": "2026-01-27",
-  "description": "Make seating chart scale to fill iframe (responsive height-based sizing)"
+  "description": "Fix seating chart height chain - use 100% heights instead of vh units"
 }
