@@ -2612,11 +2612,16 @@ class TeachingAssistantApp {
     // Send data to the seating chart module
     const moduleIframe = document.querySelector('#task-image-container iframe');
     if (moduleIframe && moduleIframe.contentWindow) {
+      const seatData = Array.from(this.seatAssignments.entries());
+      const furnitureData = Array.from(this.furnitureAssignments.entries());
+      console.log('Parent sending seat assignments:', seatData.length, 'entries', seatData);
+      console.log('Parent sending furniture assignments:', furnitureData.length, 'entries', furnitureData);
+      
       moduleIframe.contentWindow.postMessage({
         type: 'seatingchart:data',
         students: availableStudents,
-        seatAssignments: Array.from(this.seatAssignments.entries()),
-        furnitureAssignments: Array.from(this.furnitureAssignments.entries()),
+        seatAssignments: seatData,
+        furnitureAssignments: furnitureData,
         results: this.results,
         className: className
       }, '*');

@@ -1,5 +1,5 @@
 {
-  "version": "2.8.0",
+  "version": "2.8.1",
   "lastUpdated": "2026-01-27",
-  "description": "Remove scale transform from seating chart"
+  "description": "Add debugging logs for seat assignment persistence issue"
 }

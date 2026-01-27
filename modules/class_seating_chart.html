@@ -390,14 +390,19 @@
 
     // Process data from parent app
     function receiveDataFromParent(data) {
+      console.log('Seating chart received data:', data);
+      console.log('Seat assignments received:', data.seatAssignments);
+      
       students = data.students || [];
       
       // Convert arrays back to Maps
       if (data.seatAssignments) {
         seatAssignments = new Map(data.seatAssignments);
+        console.log('Seat assignments after Map conversion:', seatAssignments.size, 'entries');
       }
       if (data.furnitureAssignments) {
         furnitureAssignments = new Map(data.furnitureAssignments);
+        console.log('Furniture assignments after Map conversion:', furnitureAssignments.size, 'entries');
       }
       
       // Parse manual positions from student notes
