@@ -1,5 +1,5 @@
 {
-  "version": "2.8.1",
+  "version": "2.8.2",
   "lastUpdated": "2026-01-27",
-  "description": "Add debugging logs for seat assignment persistence issue"
+  "description": "Fix seat/furniture colors persisting on roster buttons when switching modules"
 }

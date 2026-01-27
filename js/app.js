@@ -978,10 +978,21 @@ class TeachingAssistantApp {
       // Add seat dot if assigned
       const assignedColor = this.seatAssignments.get(student.student_id);
       if (assignedColor) {
+        button.dataset.seatColor = assignedColor;
         const dot = document.createElement('span');
         dot.className = 'student-seat-dot';
         dot.dataset.color = assignedColor;
         button.appendChild(dot);
+      }
+      
+      // Add furniture icon if assigned
+      const assignedFurniture = this.furnitureAssignments.get(student.student_id);
+      if (assignedFurniture) {
+        button.dataset.furniture = assignedFurniture;
+        const furnitureIcon = document.createElement('span');
+        furnitureIcon.className = 'student-furniture-icon';
+        furnitureIcon.dataset.furniture = assignedFurniture;
+        button.appendChild(furnitureIcon);
       }
       
       // Add name in a span
@@ -2612,22 +2623,14 @@ class TeachingAssistantApp {
     // Send data to the seating chart module
     const moduleIframe = document.querySelector('#task-image-container iframe');
     if (moduleIframe && moduleIframe.contentWindow) {
-      const seatData = Array.from(this.seatAssignments.entries());
-      const furnitureData = Array.from(this.furnitureAssignments.entries());
-      console.log('Parent sending seat assignments:', seatData.length, 'entries', seatData);
-      console.log('Parent sending furniture assignments:', furnitureData.length, 'entries', furnitureData);
-      
       moduleIframe.contentWindow.postMessage({
         type: 'seatingchart:data',
         students: availableStudents,
-        seatAssignments: seatData,
-        furnitureAssignments: furnitureData,
+        seatAssignments: Array.from(this.seatAssignments.entries()),
+        furnitureAssignments: Array.from(this.furnitureAssignments.entries()),
         results: this.results,
         className: className
       }, '*');
-      console.log('Sent seating chart data to module:', availableStudents.length, 'students');
-    } else {
-      console.warn('Could not find module iframe to send seating chart data');
     }
   }
 
