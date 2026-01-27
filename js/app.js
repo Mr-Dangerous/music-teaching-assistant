@@ -1210,6 +1210,9 @@ class TeachingAssistantApp {
           case 'stool':
             this.toggleEarnedStool(student);
             break;
+          case 'clear-seat':
+            this.clearStudentSeat(student);
+            break;
         }
       };
     });
@@ -3109,6 +3112,33 @@ class TeachingAssistantApp {
     
     // Update palette counts
     this.updateSeatPaletteCounts();
+  }
+
+  /**
+   * Clear seat assignment for a student
+   */
+  clearStudentSeat(student) {
+    const studentId = student.student_id;
+    
+    // Check if student has a seat assigned
+    if (!this.seatAssignments.has(studentId)) {
+      this.showNotification(`${student.name} has no seat assigned`, 'warning');
+      return;
+    }
+    
+    // Remove from assignments
+    this.seatAssignments.delete(studentId);
+    
+    // Find the student's button and remove the dot
+    const button = document.querySelector(`.student-roster-button[data-student-id="${studentId}"]`);
+    if (button) {
+      this.updateStudentButtonSeatDot(button, null);
+    }
+    
+    // Update palette counts
+    this.updateSeatPaletteCounts();
+    
+    this.showNotification(`${student.name}'s seat cleared`, 'success');
   }
 
   /**
