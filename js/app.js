@@ -228,14 +228,13 @@ class TeachingAssistantApp {
       });
     }
 
-    // Video recording buttons toggle
-    document.getElementById('video-recording-hq-btn').addEventListener('click', async () => {
-      await this.toggleVideoRecording('high');
-    });
-
-    document.getElementById('video-recording-lq-btn').addEventListener('click', async () => {
-      await this.toggleVideoRecording('low');
-    });
+    // Video recording button toggle
+    const videoRecordingBtn = document.getElementById('video-recording-lq-btn');
+    if (videoRecordingBtn) {
+      videoRecordingBtn.addEventListener('click', async () => {
+        await this.toggleVideoRecording('low');
+      });
+    }
 
     const backToStudentsBtn = document.getElementById('back-to-students-btn');
     if (backToStudentsBtn) {
@@ -339,7 +338,6 @@ class TeachingAssistantApp {
       // Show header elements after file load
       document.getElementById('recording-btn').style.display = 'block';
       document.getElementById('mic-gain-control').style.display = 'flex';
-      document.getElementById('video-recording-hq-btn').style.display = 'block';
       document.getElementById('video-recording-lq-btn').style.display = 'block';
 
       // Hide back button initially
@@ -2414,20 +2412,17 @@ class TeachingAssistantApp {
    * Toggle video recording on/off
    * @param {string} quality - 'high' or 'low' quality mode
    */
-  async toggleVideoRecording(quality = 'high') {
-    const hqBtn = document.getElementById('video-recording-hq-btn');
+  async toggleVideoRecording(quality = 'low') {
     const lqBtn = document.getElementById('video-recording-lq-btn');
-    const activeBtn = quality === 'high' ? hqBtn : lqBtn;
-    const otherBtn = quality === 'high' ? lqBtn : hqBtn;
 
     try {
       if (this.videoManager.getIsRecording()) {
         // Stop recording
         await this.videoManager.stopRecording();
-        hqBtn.classList.remove('recording');
-        lqBtn.classList.remove('recording');
-        hqBtn.disabled = false;
-        lqBtn.disabled = false;
+        if (lqBtn) {
+          lqBtn.classList.remove('recording');
+          lqBtn.disabled = false;
+        }
       } else {
         // Update context before starting
         this.videoManager.setContext(
@@ -2437,16 +2432,17 @@ class TeachingAssistantApp {
 
         // Start recording with specified quality
         await this.videoManager.startRecording(quality);
-        activeBtn.classList.add('recording');
-        otherBtn.disabled = true; // Disable other quality button while recording
+        if (lqBtn) {
+          lqBtn.classList.add('recording');
+        }
       }
     } catch (error) {
       console.error('Video recording error:', error);
       this.showNotification(`Video recording error: ${error.message}`, 'error');
-      hqBtn.classList.remove('recording');
-      lqBtn.classList.remove('recording');
-      hqBtn.disabled = false;
-      lqBtn.disabled = false;
+      if (lqBtn) {
+        lqBtn.classList.remove('recording');
+        lqBtn.disabled = false;
+      }
     }
   }
 
