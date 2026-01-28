@@ -884,6 +884,11 @@
       const palette = document.getElementById('instrumentPalette');
       palette.innerHTML = '';
 
+      if (!appState.instruments || appState.instruments.length === 0) {
+        console.warn('No instruments to render');
+        return;
+      }
+
       appState.instruments.forEach((instrument, index) => {
         const card = document.createElement('div');
         card.className = 'instrument-card';
@@ -1018,6 +1023,10 @@
     // HELPER FUNCTIONS
     // ========================================
     function countAssignments(instrumentName) {
+      if (!appState.assignments) {
+        console.error('appState.assignments is not defined');
+        return 0;
+      }
       return Object.values(appState.assignments).filter(name => name === instrumentName).length;
     }
 

@@ -1,5 +1,5 @@
 {
-  "version": "2.9.4",
+  "version": "2.9.5",
   "lastUpdated": "2026-01-28",
-  "description": "Instrument Assigner: Redesign layout to 2-column, show present students in center grid, fix add instrument button, improve debugging"
+  "description": "Instrument Assigner: Add error handling for undefined variables, improve parent window logging"
 }
