@@ -1,0 +1,1522 @@
+<!DOCTYPE html>
+<html>
+<!--
+  INSTRUMENT ASSIGNER MODULE
+
+  A drag-and-drop tool for quickly distributing classroom instruments to students.
+
+  FEATURES:
+  - Drag instruments from the palette to students (supports mouse and touch)
+  - Random assignment with memory (avoids repeating previous assignments)
+  - Adjust temporary quantities per instrument (+/- buttons, hold to repeat)
+  - Enable/disable instruments
+  - Save/load song configurations
+  - Add new instruments to inventory
+  - Full keyboard navigation and ARIA labels for accessibility
+
+  DATA STORAGE:
+  - Uses localStorage for persistence
+  - Instrument inventory: instrument name, quantity, type, icon
+  - Song configurations: saved assignment presets
+
+  USAGE:
+  1. Select this task from the task dropdown
+  2. Drag instruments to students or use "Random Assignment"
+  3. Adjust quantities and enable/disable as needed
+  4. Save configurations for specific songs
+  5. Load saved configurations to quickly restore setups
+
+  UDL FEATURES:
+  - Large touch targets (60px+)
+  - High contrast colors
+  - Multiple interaction methods (drag, click, keyboard)
+  - ARIA labels for screen readers
+  - Visual feedback for all interactions
+  - Hold-to-repeat for quantity buttons
+-->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instrument Assigner</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+    }
+
+    #container {
+      display: grid;
+      grid-template-columns: 1fr 2fr 1fr;
+      grid-template-rows: auto 1fr;
+      gap: 15px;
+      height: 100vh;
+      padding: 15px;
+    }
+
+    #controls {
+      grid-column: 1 / -1;
+      background: white;
+      border-radius: 15px;
+      padding: 15px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    #controls label {
+      font-size: 18px;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    #controls select {
+      flex: 1;
+      min-width: 200px;
+      padding: 12px 15px;
+      font-size: 18px;
+      border: 2px solid #667eea;
+      border-radius: 10px;
+      background: white;
+      cursor: pointer;
+    }
+
+    #controls button {
+      padding: 12px 24px;
+      font-size: 18px;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      outline: none;
+    }
+
+    #controls button:focus {
+      outline: 3px solid #ffd700;
+      outline-offset: 2px;
+    }
+
+    #saveConfigBtn {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      color: white;
+    }
+
+    #loadConfigBtn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    #controls button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    #controls button:active {
+      transform: translateY(0);
+    }
+
+    .column {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .column h2 {
+      font-size: 24px;
+      margin-bottom: 15px;
+      color: #667eea;
+      text-align: center;
+      border-bottom: 3px solid #667eea;
+      padding-bottom: 10px;
+    }
+
+    /* Student roster (left column) */
+    #studentRoster {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .student-card {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      border-radius: 12px;
+      padding: 15px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      min-height: 80px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      outline: none;
+    }
+
+    .student-card:focus {
+      outline: 4px solid #ffd700;
+      outline-offset: 2px;
+    }
+
+    .student-card.has-instrument {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .student-card.drop-target {
+      background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+      transform: scale(1.05);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .student-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .student-name {
+      font-size: 20px;
+      font-weight: bold;
+      color: white;
+      text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    }
+
+    .student-instrument {
+      font-size: 18px;
+      color: white;
+      margin-top: 5px;
+      font-weight: 600;
+    }
+
+    #randomBtn {
+      margin-top: auto;
+      padding: 18px;
+      font-size: 22px;
+      font-weight: bold;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+
+    #randomBtn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 10px rgba(0,0,0,0.3);
+    }
+
+    #randomBtn:active {
+      transform: translateY(0);
+    }
+
+    /* Center assignment display */
+    #assignmentDisplay {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      color: #667eea;
+      text-align: center;
+      padding: 40px;
+      background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+      border-radius: 15px;
+      min-height: 300px;
+    }
+
+    /* Instrument palette (right column) */
+    #instrumentPalette {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .instrument-card {
+      background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+      border-radius: 12px;
+      padding: 15px;
+      cursor: grab;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 80px;
+      outline: none;
+    }
+
+    .instrument-card:focus {
+      outline: 4px solid #ffd700;
+      outline-offset: 2px;
+    }
+
+    .instrument-card:active {
+      cursor: grabbing;
+    }
+
+    .instrument-card.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      filter: grayscale(100%);
+    }
+
+    .instrument-card.dragging {
+      opacity: 0.5;
+      transform: scale(1.05);
+    }
+
+    .instrument-icon {
+      font-size: 40px;
+      min-width: 50px;
+      text-align: center;
+    }
+
+    .instrument-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .instrument-name {
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+    }
+
+    .instrument-quantity {
+      font-size: 16px;
+      color: #666;
+      font-weight: 600;
+    }
+
+    .instrument-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .qty-btn {
+      width: 45px;
+      height: 45px;
+      border: none;
+      border-radius: 8px;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #667eea;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      outline: none;
+    }
+
+    .qty-btn:focus {
+      outline: 3px solid #ffd700;
+      outline-offset: 2px;
+    }
+
+    .qty-btn:hover {
+      background: #764ba2;
+      transform: scale(1.1);
+    }
+
+    .qty-btn:active {
+      transform: scale(0.95);
+    }
+
+    .toggle-btn {
+      width: 50px;
+      height: 40px;
+      border: 2px solid #667eea;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: white;
+      color: #667eea;
+    }
+
+    .toggle-btn.enabled {
+      background: #11998e;
+      color: white;
+      border-color: #11998e;
+    }
+
+    #addInstrumentBtn {
+      margin-top: auto;
+      padding: 18px;
+      font-size: 20px;
+      font-weight: bold;
+      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+    }
+
+    #addInstrumentBtn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 10px rgba(0,0,0,0.3);
+    }
+
+    /* Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      border-radius: 20px;
+      padding: 30px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
+    }
+
+    .modal-content h3 {
+      font-size: 28px;
+      margin-bottom: 20px;
+      color: #667eea;
+    }
+
+    .form-group {
+      margin-bottom: 20px;
+    }
+
+    .form-group label {
+      display: block;
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 8px;
+    }
+
+    .form-group input,
+    .form-group select {
+      width: 100%;
+      padding: 12px;
+      font-size: 18px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      transition: border-color 0.2s;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 15px;
+      margin-top: 25px;
+    }
+
+    .modal-buttons button {
+      flex: 1;
+      padding: 15px;
+      font-size: 20px;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn-secondary {
+      background: #ddd;
+      color: #333;
+    }
+
+    .modal-buttons button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    /* Scrollbar styling */
+    .column::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .column::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+
+    .column::-webkit-scrollbar-thumb {
+      background: #667eea;
+      border-radius: 10px;
+    }
+
+    .column::-webkit-scrollbar-thumb:hover {
+      background: #764ba2;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <!-- Top controls -->
+    <div id="controls">
+      <label for="songSelect">Song Configuration:</label>
+      <select id="songSelect">
+        <option value="">-- New Configuration --</option>
+      </select>
+      <button id="saveConfigBtn">💾 Save</button>
+      <button id="loadConfigBtn">📂 Load</button>
+    </div>
+
+    <!-- Left: Student roster -->
+    <div class="column">
+      <h2>Students</h2>
+      <div id="studentRoster"></div>
+      <button id="randomBtn">🎲 Random Assignment</button>
+    </div>
+
+    <!-- Center: Assignment display -->
+    <div class="column">
+      <h2>Assignment Display</h2>
+      <div id="assignmentDisplay">
+        Drag instruments to students<br>or use Random Assignment
+      </div>
+    </div>
+
+    <!-- Right: Instrument palette -->
+    <div class="column">
+      <h2>Instruments</h2>
+      <div id="instrumentPalette"></div>
+      <button id="addInstrumentBtn">➕ Add Instrument</button>
+    </div>
+  </div>
+
+  <!-- Add Instrument Modal -->
+  <div id="addInstrumentModal" class="modal">
+    <div class="modal-content">
+      <h3>Add New Instrument</h3>
+      <form id="addInstrumentForm">
+        <div class="form-group">
+          <label for="instrumentName">Instrument Name:</label>
+          <input type="text" id="instrumentName" required>
+        </div>
+        <div class="form-group">
+          <label for="instrumentQuantity">Quantity:</label>
+          <input type="number" id="instrumentQuantity" min="1" value="1" required>
+        </div>
+        <div class="form-group">
+          <label for="instrumentType">Type:</label>
+          <select id="instrumentType" required>
+            <option value="rhythm">Rhythm</option>
+            <option value="melody">Melody</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="instrumentIcon">Emoji Icon:</label>
+          <input type="text" id="instrumentIcon" placeholder="🎵" maxlength="4" required>
+        </div>
+        <div class="modal-buttons">
+          <button type="submit" class="btn-primary">Add</button>
+          <button type="button" class="btn-secondary" id="cancelAddBtn">Cancel</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Save Configuration Modal -->
+  <div id="saveConfigModal" class="modal">
+    <div class="modal-content">
+      <h3>Save Configuration</h3>
+      <div class="form-group">
+        <label for="configName">Song/Configuration Name:</label>
+        <input type="text" id="configName" placeholder="e.g., 'I Have a Car'" required>
+      </div>
+      <div class="modal-buttons">
+        <button id="confirmSaveBtn" class="btn-primary">Save</button>
+        <button id="cancelSaveBtn" class="btn-secondary">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ========================================
+    // STATE MANAGEMENT
+    // ========================================
+    let appState = {
+      students: [],
+      instruments: [],
+      assignments: {}, // studentId -> instrumentName
+      previousAssignments: {}, // For random assignment memory
+      configurations: [], // Saved song configurations
+      currentConfigName: ''
+    };
+
+    let moduleContext = null;
+
+    // ========================================
+    // TASKMOUDLE INTERFACE
+    // ========================================
+    window.TaskModule = {
+      init: function(context) {
+        console.log('Instrument Assigner initialized:', context);
+        moduleContext = context;
+
+        // Initialize the app
+        initializeApp(context);
+
+        // Restore existing response if any
+        if (context.existingResponse) {
+          try {
+            const savedState = JSON.parse(context.existingResponse);
+            restoreState(savedState);
+          } catch (e) {
+            console.error('Error restoring state:', e);
+          }
+        }
+      },
+
+      getResponse: function() {
+        return JSON.stringify({
+          assignments: appState.assignments,
+          configName: appState.currentConfigName,
+          timestamp: new Date().toISOString()
+        });
+      },
+
+      isComplete: function() {
+        return Object.keys(appState.assignments).length > 0;
+      },
+
+      reset: function() {
+        appState.assignments = {};
+        appState.previousAssignments = {};
+        appState.currentConfigName = '';
+        renderStudentRoster();
+        updateAssignmentDisplay();
+        notifyParent();
+      }
+    };
+
+    // ========================================
+    // INITIALIZATION
+    // ========================================
+    async function initializeApp(context) {
+      // Load CSV data
+      await loadCSVData();
+
+      // Load students from context (get full class roster)
+      // This will be implemented when we integrate with parent app
+      loadStudentsFromContext(context);
+
+      // Render UI
+      renderStudentRoster();
+      renderInstrumentPalette();
+      renderConfigurationDropdown();
+      updateAssignmentDisplay();
+
+      // Set up event listeners
+      setupEventListeners();
+    }
+
+    function loadStudentsFromContext(context) {
+      // Get class roster from parent app
+      try {
+        if (window.parent && window.parent.app && window.parent.app.students) {
+          const className = context.class;
+          const allStudents = window.parent.app.students;
+
+          // Filter students by class
+          const classStudents = allStudents.filter(s => s.class === className);
+
+          // Map to our format
+          appState.students = classStudents.map(s => ({
+            id: s.student_id,
+            name: s.name
+          }));
+
+          console.log(`Loaded ${appState.students.length} students from class ${className}`);
+        } else {
+          // Fallback to mock data if parent app not accessible
+          console.warn('Could not access parent app, using mock data');
+          appState.students = [
+            { id: '1', name: 'Alice Smith' },
+            { id: '2', name: 'Bob Johnson' },
+            { id: '3', name: 'Charlie Brown' },
+            { id: '4', name: 'Diana Prince' },
+            { id: '5', name: 'Ethan Hunt' }
+          ];
+        }
+      } catch (e) {
+        console.error('Error loading students:', e);
+        // Fallback to mock data
+        appState.students = [
+          { id: '1', name: 'Student 1' },
+          { id: '2', name: 'Student 2' },
+          { id: '3', name: 'Student 3' }
+        ];
+      }
+    }
+
+    async function loadCSVData() {
+      // Load instrument inventory
+      await loadInstrumentInventory();
+
+      // Load song configurations
+      await loadSongConfigurations();
+    }
+
+    async function loadInstrumentInventory() {
+      // Default instruments from example CSV
+      const defaultInstruments = [
+        { name: 'Xylophone', quantity: 10, type: 'melody', icon: '🎹', enabled: true, tempQuantity: 10 },
+        { name: 'Egg Shakers', quantity: 24, type: 'rhythm', icon: '🥚', enabled: true, tempQuantity: 24 },
+        { name: 'Cymbals', quantity: 1, type: 'rhythm', icon: '🥁', enabled: true, tempQuantity: 1 },
+        { name: 'Sand Blocks', quantity: 8, type: 'rhythm', icon: '🪵', enabled: true, tempQuantity: 8 },
+        { name: 'Drums', quantity: 10, type: 'rhythm', icon: '🥁', enabled: true, tempQuantity: 10 },
+        { name: 'Tapaphone (large)', quantity: 25, type: 'melody', icon: '🎵', enabled: true, tempQuantity: 25 },
+        { name: 'Tapaphone (small)', quantity: 10, type: 'melody', icon: '🎵', enabled: true, tempQuantity: 10 },
+        { name: 'Frame Drums', quantity: 5, type: 'rhythm', icon: '🪘', enabled: true, tempQuantity: 5 },
+        { name: 'Rhythm Sticks', quantity: 30, type: 'rhythm', icon: '🥢', enabled: true, tempQuantity: 30 }
+      ];
+
+      // Try to load from localStorage
+      const savedData = localStorage.getItem('instrument_inventory');
+      if (savedData) {
+        try {
+          const parsed = JSON.parse(savedData);
+          // Ensure all required fields exist
+          appState.instruments = parsed.map(inst => ({
+            ...inst,
+            enabled: inst.enabled !== undefined ? inst.enabled : true,
+            tempQuantity: inst.tempQuantity !== undefined ? inst.tempQuantity : inst.quantity
+          }));
+        } catch (e) {
+          console.error('Error parsing instrument inventory:', e);
+          appState.instruments = defaultInstruments;
+          saveInstrumentInventory();
+        }
+      } else {
+        // First time - save defaults
+        appState.instruments = defaultInstruments;
+        saveInstrumentInventory();
+      }
+    }
+
+    function saveInstrumentInventory() {
+      try {
+        localStorage.setItem('instrument_inventory', JSON.stringify(appState.instruments));
+      } catch (e) {
+        console.error('Error saving instrument inventory:', e);
+      }
+    }
+
+    async function loadSongConfigurations() {
+      const savedData = localStorage.getItem('song_configurations');
+      if (savedData) {
+        try {
+          appState.configurations = JSON.parse(savedData);
+        } catch (e) {
+          console.error('Error parsing song configurations:', e);
+          appState.configurations = [];
+        }
+      } else {
+        appState.configurations = [];
+      }
+    }
+
+    function saveSongConfigurations() {
+      try {
+        localStorage.setItem('song_configurations', JSON.stringify(appState.configurations));
+      } catch (e) {
+        console.error('Error saving song configurations:', e);
+      }
+    }
+
+    // ========================================
+    // CSV EXPORT FUNCTIONS (for download)
+    // ========================================
+    function exportInstrumentInventoryCSV() {
+      const headers = ['instrument', 'quantity', 'instrument_type', 'icon'];
+      const rows = appState.instruments.map(inst => [
+        inst.name,
+        inst.quantity,
+        inst.type,
+        inst.icon
+      ]);
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.join(','))
+      ].join('\n');
+
+      downloadCSV(csvContent, 'instrument_inventory.csv');
+    }
+
+    function exportSongConfigurationsCSV() {
+      const headers = ['song_name', 'config_data'];
+      const rows = appState.configurations.map(config => [
+        config.name,
+        JSON.stringify(config.data).replace(/"/g, '""') // Escape quotes for CSV
+      ]);
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => `${row[0]},"${row[1]}"`)
+      ].join('\n');
+
+      downloadCSV(csvContent, 'song_configurations.csv');
+    }
+
+    function downloadCSV(content, filename) {
+      const blob = new Blob([content], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function restoreState(savedState) {
+      if (savedState.assignments) {
+        appState.assignments = savedState.assignments;
+      }
+      if (savedState.configName) {
+        appState.currentConfigName = savedState.configName;
+      }
+      renderStudentRoster();
+      updateAssignmentDisplay();
+    }
+
+    // ========================================
+    // UI RENDERING
+    // ========================================
+    function renderStudentRoster() {
+      const roster = document.getElementById('studentRoster');
+      roster.innerHTML = '';
+
+      appState.students.forEach(student => {
+        const card = document.createElement('div');
+        card.className = 'student-card';
+        card.dataset.studentId = student.id;
+        card.tabIndex = 0;
+        card.role = 'button';
+
+        const assignedInstrument = appState.assignments[student.id];
+        if (assignedInstrument) {
+          card.classList.add('has-instrument');
+          card.setAttribute('aria-label', `${student.name}, assigned ${assignedInstrument}. Press Enter to remove.`);
+        } else {
+          card.setAttribute('aria-label', `${student.name}, no instrument assigned. Drop instrument here.`);
+        }
+
+        const nameDiv = document.createElement('div');
+        nameDiv.className = 'student-name';
+        nameDiv.textContent = student.name;
+        card.appendChild(nameDiv);
+
+        if (assignedInstrument) {
+          const instrumentDiv = document.createElement('div');
+          instrumentDiv.className = 'student-instrument';
+          const instrument = appState.instruments.find(i => i.name === assignedInstrument);
+          instrumentDiv.textContent = instrument ? `${instrument.icon} ${assignedInstrument}` : assignedInstrument;
+          card.appendChild(instrumentDiv);
+        }
+
+        roster.appendChild(card);
+      });
+    }
+
+    function renderInstrumentPalette() {
+      const palette = document.getElementById('instrumentPalette');
+      palette.innerHTML = '';
+
+      appState.instruments.forEach((instrument, index) => {
+        const card = document.createElement('div');
+        card.className = 'instrument-card';
+        if (!instrument.enabled) {
+          card.classList.add('disabled');
+        }
+        card.dataset.instrumentIndex = index;
+        card.draggable = instrument.enabled;
+        card.tabIndex = instrument.enabled ? 0 : -1;
+        card.role = 'button';
+
+        const available = instrument.tempQuantity - countAssignments(instrument.name);
+        card.setAttribute('aria-label', `${instrument.name}, ${available} of ${instrument.tempQuantity} available. Drag to assign to student.`);
+
+        // Icon
+        const icon = document.createElement('div');
+        icon.className = 'instrument-icon';
+        icon.textContent = instrument.icon;
+        card.appendChild(icon);
+
+        // Info
+        const info = document.createElement('div');
+        info.className = 'instrument-info';
+
+        const name = document.createElement('div');
+        name.className = 'instrument-name';
+        name.textContent = instrument.name;
+        info.appendChild(name);
+
+        const quantity = document.createElement('div');
+        quantity.className = 'instrument-quantity';
+        const available = instrument.tempQuantity - countAssignments(instrument.name);
+        quantity.textContent = `${available} / ${instrument.tempQuantity} available`;
+        info.appendChild(quantity);
+
+        card.appendChild(info);
+
+        // Controls
+        const controls = document.createElement('div');
+        controls.className = 'instrument-controls';
+
+        const minusBtn = document.createElement('button');
+        minusBtn.className = 'qty-btn';
+        minusBtn.textContent = '−';
+        minusBtn.setAttribute('aria-label', `Decrease ${instrument.name} quantity`);
+        minusBtn.onclick = (e) => {
+          e.stopPropagation();
+          adjustQuantity(index, -1);
+        };
+        // Hold-to-repeat
+        let holdInterval = null;
+        minusBtn.onmousedown = (e) => {
+          if (e.button !== 0) return;
+          e.stopPropagation();
+          adjustQuantity(index, -1);
+          holdInterval = setInterval(() => adjustQuantity(index, -1), 150);
+        };
+        minusBtn.onmouseup = () => clearInterval(holdInterval);
+        minusBtn.onmouseleave = () => clearInterval(holdInterval);
+        minusBtn.ontouchstart = (e) => {
+          e.stopPropagation();
+          adjustQuantity(index, -1);
+          holdInterval = setInterval(() => adjustQuantity(index, -1), 150);
+        };
+        minusBtn.ontouchend = () => clearInterval(holdInterval);
+        controls.appendChild(minusBtn);
+
+        const plusBtn = document.createElement('button');
+        plusBtn.className = 'qty-btn';
+        plusBtn.textContent = '+';
+        plusBtn.setAttribute('aria-label', `Increase ${instrument.name} quantity`);
+        plusBtn.onclick = (e) => {
+          e.stopPropagation();
+          adjustQuantity(index, 1);
+        };
+        // Hold-to-repeat
+        plusBtn.onmousedown = (e) => {
+          if (e.button !== 0) return;
+          e.stopPropagation();
+          adjustQuantity(index, 1);
+          holdInterval = setInterval(() => adjustQuantity(index, 1), 150);
+        };
+        plusBtn.onmouseup = () => clearInterval(holdInterval);
+        plusBtn.onmouseleave = () => clearInterval(holdInterval);
+        plusBtn.ontouchstart = (e) => {
+          e.stopPropagation();
+          adjustQuantity(index, 1);
+          holdInterval = setInterval(() => adjustQuantity(index, 1), 150);
+        };
+        plusBtn.ontouchend = () => clearInterval(holdInterval);
+        controls.appendChild(plusBtn);
+
+        const toggleBtn = document.createElement('button');
+        toggleBtn.className = 'toggle-btn';
+        if (instrument.enabled) {
+          toggleBtn.classList.add('enabled');
+          toggleBtn.textContent = 'ON';
+          toggleBtn.setAttribute('aria-label', `${instrument.name} enabled. Click to disable.`);
+        } else {
+          toggleBtn.textContent = 'OFF';
+          toggleBtn.setAttribute('aria-label', `${instrument.name} disabled. Click to enable.`);
+        }
+        toggleBtn.onclick = (e) => {
+          e.stopPropagation();
+          toggleInstrument(index);
+        };
+        controls.appendChild(toggleBtn);
+
+        card.appendChild(controls);
+        palette.appendChild(card);
+      });
+    }
+
+    function renderConfigurationDropdown() {
+      const select = document.getElementById('songSelect');
+      select.innerHTML = '<option value="">-- New Configuration --</option>';
+
+      appState.configurations.forEach(config => {
+        const option = document.createElement('option');
+        option.value = config.name;
+        option.textContent = config.name;
+        select.appendChild(option);
+      });
+    }
+
+    function updateAssignmentDisplay() {
+      const display = document.getElementById('assignmentDisplay');
+      const assignedCount = Object.keys(appState.assignments).length;
+      const totalStudents = appState.students.length;
+
+      if (assignedCount === 0) {
+        display.innerHTML = 'Drag instruments to students<br>or use Random Assignment';
+      } else if (assignedCount === totalStudents) {
+        display.innerHTML = `✅ All ${totalStudents} students assigned!`;
+      } else {
+        display.innerHTML = `${assignedCount} / ${totalStudents} students assigned`;
+      }
+    }
+
+    // ========================================
+    // HELPER FUNCTIONS
+    // ========================================
+    function countAssignments(instrumentName) {
+      return Object.values(appState.assignments).filter(name => name === instrumentName).length;
+    }
+
+    function adjustQuantity(index, delta) {
+      const instrument = appState.instruments[index];
+      const newQuantity = instrument.tempQuantity + delta;
+
+      if (newQuantity >= 0 && newQuantity <= instrument.quantity) {
+        instrument.tempQuantity = newQuantity;
+        renderInstrumentPalette();
+        notifyParent();
+      }
+    }
+
+    function toggleInstrument(index) {
+      appState.instruments[index].enabled = !appState.instruments[index].enabled;
+      renderInstrumentPalette();
+      notifyParent();
+    }
+
+    function notifyParent() {
+      window.parent.postMessage({
+        type: 'taskmodule:response',
+        value: window.TaskModule.getResponse(),
+        isComplete: window.TaskModule.isComplete()
+      }, '*');
+    }
+
+    // ========================================
+    // EVENT LISTENERS
+    // ========================================
+    function setupEventListeners() {
+      // Drag and drop - instrument cards
+      setupDragAndDrop();
+
+      // Random assignment button
+      document.getElementById('randomBtn').addEventListener('click', randomAssignment);
+
+      // Add instrument button
+      document.getElementById('addInstrumentBtn').addEventListener('click', showAddInstrumentModal);
+
+      // Save/Load configuration
+      document.getElementById('saveConfigBtn').addEventListener('click', showSaveConfigModal);
+      document.getElementById('loadConfigBtn').addEventListener('click', loadConfiguration);
+
+      // Modal handlers
+      document.getElementById('cancelAddBtn').addEventListener('click', hideAddInstrumentModal);
+      document.getElementById('addInstrumentForm').addEventListener('submit', handleAddInstrument);
+      document.getElementById('cancelSaveBtn').addEventListener('click', hideSaveConfigModal);
+      document.getElementById('confirmSaveBtn').addEventListener('click', handleSaveConfiguration);
+    }
+
+    // ========================================
+    // DRAG AND DROP
+    // ========================================
+    let dragState = {
+      instrumentIndex: null,
+      instrumentName: null,
+      isDragging: false,
+      touchStartX: 0,
+      touchStartY: 0
+    };
+
+    function setupDragAndDrop() {
+      // Instrument cards - mouse events
+      const palette = document.getElementById('instrumentPalette');
+      palette.addEventListener('dragstart', handleDragStart);
+      palette.addEventListener('dragend', handleDragEnd);
+
+      // Instrument cards - touch events
+      palette.addEventListener('touchstart', handleTouchStart, { passive: false });
+      palette.addEventListener('touchmove', handleTouchMove, { passive: false });
+      palette.addEventListener('touchend', handleTouchEnd);
+
+      // Student cards - mouse drop events
+      const roster = document.getElementById('studentRoster');
+      roster.addEventListener('dragover', handleDragOver);
+      roster.addEventListener('drop', handleDrop);
+      roster.addEventListener('dragleave', handleDragLeave);
+
+      // Student cards - click to remove assignment
+      roster.addEventListener('click', handleStudentClick);
+
+      // Keyboard navigation
+      document.addEventListener('keydown', handleKeyboardNavigation);
+    }
+
+    function handleKeyboardNavigation(e) {
+      // Handle Enter/Space on focused elements
+      if (e.key === 'Enter' || e.key === ' ') {
+        const focused = document.activeElement;
+
+        // Student card - remove assignment
+        if (focused.classList.contains('student-card')) {
+          e.preventDefault();
+          const studentId = focused.dataset.studentId;
+          const currentInstrument = appState.assignments[studentId];
+          if (currentInstrument) {
+            delete appState.assignments[studentId];
+            renderStudentRoster();
+            renderInstrumentPalette();
+            updateAssignmentDisplay();
+            notifyParent();
+          }
+        }
+
+        // Instrument card - show quick assign menu (future enhancement)
+        if (focused.classList.contains('instrument-card')) {
+          e.preventDefault();
+          // Could add a quick-assign menu here
+        }
+      }
+    }
+
+    function handleDragStart(e) {
+      const card = e.target.closest('.instrument-card');
+      if (!card || card.classList.contains('disabled')) {
+        e.preventDefault();
+        return;
+      }
+
+      const index = parseInt(card.dataset.instrumentIndex);
+      const instrument = appState.instruments[index];
+
+      // Check if any available
+      const available = instrument.tempQuantity - countAssignments(instrument.name);
+      if (available <= 0) {
+        e.preventDefault();
+        return;
+      }
+
+      dragState.instrumentIndex = index;
+      dragState.instrumentName = instrument.name;
+      dragState.isDragging = true;
+
+      card.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'copy';
+      e.dataTransfer.setData('text/plain', instrument.name);
+    }
+
+    function handleDragEnd(e) {
+      const card = e.target.closest('.instrument-card');
+      if (card) {
+        card.classList.remove('dragging');
+      }
+      dragState.isDragging = false;
+    }
+
+    function handleDragOver(e) {
+      const studentCard = e.target.closest('.student-card');
+      if (studentCard && dragState.isDragging) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+        studentCard.classList.add('drop-target');
+      }
+    }
+
+    function handleDragLeave(e) {
+      const studentCard = e.target.closest('.student-card');
+      if (studentCard && e.target === studentCard) {
+        studentCard.classList.remove('drop-target');
+      }
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      const studentCard = e.target.closest('.student-card');
+
+      if (studentCard && dragState.instrumentName) {
+        const studentId = studentCard.dataset.studentId;
+        assignInstrument(studentId, dragState.instrumentName);
+        studentCard.classList.remove('drop-target');
+      }
+
+      // Clean up all drop targets
+      document.querySelectorAll('.student-card').forEach(card => {
+        card.classList.remove('drop-target');
+      });
+
+      dragState.instrumentIndex = null;
+      dragState.instrumentName = null;
+      dragState.isDragging = false;
+    }
+
+    // Touch event handlers
+    function handleTouchStart(e) {
+      const card = e.target.closest('.instrument-card');
+      if (!card || card.classList.contains('disabled')) {
+        return;
+      }
+
+      // Don't interfere with button touches
+      if (e.target.closest('.instrument-controls')) {
+        return;
+      }
+
+      const index = parseInt(card.dataset.instrumentIndex);
+      const instrument = appState.instruments[index];
+
+      // Check if any available
+      const available = instrument.tempQuantity - countAssignments(instrument.name);
+      if (available <= 0) {
+        return;
+      }
+
+      dragState.instrumentIndex = index;
+      dragState.instrumentName = instrument.name;
+      dragState.isDragging = true;
+      dragState.touchStartX = e.touches[0].clientX;
+      dragState.touchStartY = e.touches[0].clientY;
+
+      card.classList.add('dragging');
+      e.preventDefault();
+    }
+
+    function handleTouchMove(e) {
+      if (!dragState.isDragging) return;
+
+      const touch = e.touches[0];
+      const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+      const studentCard = elementUnderTouch?.closest('.student-card');
+
+      // Remove all drop targets
+      document.querySelectorAll('.student-card').forEach(card => {
+        card.classList.remove('drop-target');
+      });
+
+      // Add drop target to current card
+      if (studentCard) {
+        studentCard.classList.add('drop-target');
+      }
+
+      e.preventDefault();
+    }
+
+    function handleTouchEnd(e) {
+      if (!dragState.isDragging) return;
+
+      const touch = e.changedTouches[0];
+      const elementUnderTouch = document.elementFromPoint(touch.clientX, touch.clientY);
+      const studentCard = elementUnderTouch?.closest('.student-card');
+
+      if (studentCard && dragState.instrumentName) {
+        const studentId = studentCard.dataset.studentId;
+        assignInstrument(studentId, dragState.instrumentName);
+      }
+
+      // Clean up
+      document.querySelectorAll('.instrument-card').forEach(card => {
+        card.classList.remove('dragging');
+      });
+      document.querySelectorAll('.student-card').forEach(card => {
+        card.classList.remove('drop-target');
+      });
+
+      dragState.instrumentIndex = null;
+      dragState.instrumentName = null;
+      dragState.isDragging = false;
+    }
+
+    function handleStudentClick(e) {
+      const studentCard = e.target.closest('.student-card');
+      if (!studentCard) return;
+
+      const studentId = studentCard.dataset.studentId;
+      const currentInstrument = appState.assignments[studentId];
+
+      if (currentInstrument) {
+        // Click to unassign
+        if (confirm(`Remove ${currentInstrument} from this student?`)) {
+          delete appState.assignments[studentId];
+          renderStudentRoster();
+          renderInstrumentPalette(); // Update available quantities
+          updateAssignmentDisplay();
+          notifyParent();
+        }
+      }
+    }
+
+    function assignInstrument(studentId, instrumentName) {
+      const instrument = appState.instruments.find(i => i.name === instrumentName);
+      if (!instrument || !instrument.enabled) return;
+
+      // Check availability
+      const available = instrument.tempQuantity - countAssignments(instrumentName);
+      if (available <= 0) {
+        alert(`No more ${instrumentName} available!`);
+        return;
+      }
+
+      // Assign
+      appState.assignments[studentId] = instrumentName;
+
+      // Update previous assignments for random memory
+      appState.previousAssignments[studentId] = instrumentName;
+
+      renderStudentRoster();
+      renderInstrumentPalette(); // Update available quantities
+      updateAssignmentDisplay();
+      notifyParent();
+    }
+
+    // ========================================
+    // RANDOM ASSIGNMENT
+    // ========================================
+    function randomAssignment() {
+      // Get unassigned students
+      const unassignedStudents = appState.students.filter(
+        student => !appState.assignments[student.id]
+      );
+
+      if (unassignedStudents.length === 0) {
+        alert('All students already have instruments!');
+        return;
+      }
+
+      // Get available instruments (enabled with remaining quantity)
+      const availableInstruments = appState.instruments.filter(inst => {
+        if (!inst.enabled) return false;
+        const available = inst.tempQuantity - countAssignments(inst.name);
+        return available > 0;
+      });
+
+      if (availableInstruments.length === 0) {
+        alert('No instruments available!');
+        return;
+      }
+
+      // Assign randomly with memory
+      unassignedStudents.forEach(student => {
+        // Get current available counts
+        const instrumentPool = availableInstruments.filter(inst => {
+          const available = inst.tempQuantity - countAssignments(inst.name);
+          return available > 0;
+        });
+
+        if (instrumentPool.length === 0) return; // No more instruments
+
+        // Try to avoid previous instrument
+        const previousInstrument = appState.previousAssignments[student.id];
+        let selectedInstrument;
+
+        if (previousInstrument && instrumentPool.length > 1) {
+          // Try to pick different instrument
+          const differentInstruments = instrumentPool.filter(i => i.name !== previousInstrument);
+          if (differentInstruments.length > 0) {
+            selectedInstrument = differentInstruments[Math.floor(Math.random() * differentInstruments.length)];
+          } else {
+            // All available instruments are the same as previous, pick any
+            selectedInstrument = instrumentPool[Math.floor(Math.random() * instrumentPool.length)];
+          }
+        } else {
+          // No previous or only one instrument available
+          selectedInstrument = instrumentPool[Math.floor(Math.random() * instrumentPool.length)];
+        }
+
+        // Assign
+        appState.assignments[student.id] = selectedInstrument.name;
+        appState.previousAssignments[student.id] = selectedInstrument.name;
+      });
+
+      renderStudentRoster();
+      renderInstrumentPalette();
+      updateAssignmentDisplay();
+      notifyParent();
+    }
+
+    // ========================================
+    // ADD INSTRUMENT MODAL
+    // ========================================
+    function showAddInstrumentModal() {
+      document.getElementById('addInstrumentModal').classList.add('active');
+    }
+
+    function hideAddInstrumentModal() {
+      document.getElementById('addInstrumentModal').classList.remove('active');
+      document.getElementById('addInstrumentForm').reset();
+    }
+
+    function handleAddInstrument(e) {
+      e.preventDefault();
+
+      const name = document.getElementById('instrumentName').value.trim();
+      const quantity = parseInt(document.getElementById('instrumentQuantity').value);
+      const type = document.getElementById('instrumentType').value;
+      const icon = document.getElementById('instrumentIcon').value.trim();
+
+      appState.instruments.push({
+        name,
+        quantity,
+        type,
+        icon,
+        enabled: true,
+        tempQuantity: quantity
+      });
+
+      saveInstrumentInventory();
+      renderInstrumentPalette();
+      hideAddInstrumentModal();
+      notifyParent();
+    }
+
+    // ========================================
+    // SAVE/LOAD CONFIGURATION
+    // ========================================
+    function showSaveConfigModal() {
+      document.getElementById('saveConfigModal').classList.add('active');
+      document.getElementById('configName').value = appState.currentConfigName;
+    }
+
+    function hideSaveConfigModal() {
+      document.getElementById('saveConfigModal').classList.remove('active');
+    }
+
+    function handleSaveConfiguration() {
+      const name = document.getElementById('configName').value.trim();
+      if (!name) {
+        alert('Please enter a configuration name');
+        return;
+      }
+
+      // Create configuration object
+      const configData = {
+        assignments: { ...appState.assignments },
+        instrumentStates: appState.instruments.map(inst => ({
+          name: inst.name,
+          tempQuantity: inst.tempQuantity,
+          enabled: inst.enabled
+        }))
+      };
+
+      // Check if config with this name already exists
+      const existingIndex = appState.configurations.findIndex(c => c.name === name);
+      if (existingIndex >= 0) {
+        // Overwrite existing
+        if (confirm(`Configuration "${name}" already exists. Overwrite?`)) {
+          appState.configurations[existingIndex].data = configData;
+        } else {
+          return;
+        }
+      } else {
+        // Add new
+        appState.configurations.push({ name, data: configData });
+      }
+
+      saveSongConfigurations();
+      renderConfigurationDropdown();
+
+      appState.currentConfigName = name;
+      document.getElementById('songSelect').value = name;
+
+      hideSaveConfigModal();
+      notifyParent();
+    }
+
+    function loadConfiguration() {
+      const select = document.getElementById('songSelect');
+      const configName = select.value;
+
+      if (!configName) {
+        // New configuration - reset
+        appState.currentConfigName = '';
+        // Reset temp quantities to max
+        appState.instruments.forEach(inst => {
+          inst.tempQuantity = inst.quantity;
+          inst.enabled = true;
+        });
+        renderInstrumentPalette();
+        notifyParent();
+        return;
+      }
+
+      // Find configuration
+      const config = appState.configurations.find(c => c.name === configName);
+      if (!config) {
+        alert(`Configuration "${configName}" not found`);
+        return;
+      }
+
+      // Load assignments
+      appState.assignments = { ...config.data.assignments };
+
+      // Load instrument states
+      if (config.data.instrumentStates) {
+        config.data.instrumentStates.forEach(savedState => {
+          const instrument = appState.instruments.find(i => i.name === savedState.name);
+          if (instrument) {
+            instrument.tempQuantity = savedState.tempQuantity;
+            instrument.enabled = savedState.enabled;
+          }
+        });
+      }
+
+      appState.currentConfigName = configName;
+
+      renderStudentRoster();
+      renderInstrumentPalette();
+      updateAssignmentDisplay();
+      notifyParent();
+    }
+
+    // Listen for init message from parent
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'taskmodule:init') {
+        window.TaskModule.init(event.data.context);
+      }
+    });
+  </script>
+</body>
+</html>

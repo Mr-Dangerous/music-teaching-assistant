@@ -484,6 +484,7 @@ class TeachingAssistantApp {
       'class_seating_chart.html',
       'dance_viewer.html',
       'greig_boomwhacker_assignment.html',
+      'instrument-assigner.html',
       'interval_trainer.html',
       'martins-dream-of-1963.html',
       'pentatonic_composer.html',

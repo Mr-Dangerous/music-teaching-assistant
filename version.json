@@ -1,5 +1,5 @@
 {
-  "version": "2.9.2",
+  "version": "2.9.3",
   "lastUpdated": "2026-01-28",
-  "description": "Fix drag-and-drop event handling: Global touch handlers, improved target detection, proper event cleanup"
+  "description": "Add Instrument Assigner module: Drag-and-drop instrument distribution, smart random assignment, save/load configurations, full UDL accessibility"
 }

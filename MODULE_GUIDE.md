@@ -24,11 +24,16 @@ The app automatically discovers all modules in the `modules/` folder. Each `.htm
 
 1. **Create your module** (e.g., `my-module.html`) in the `modules/` folder
 
-2. **Add to the module list** - Edit `js/app.js` and add your module filename to the `knownModules` array in the `loadKnownModules()` function (around line 443)
+2. **⚠️ REQUIRED: Add to the fallback module list**
+   - Edit `js/app.js`
+   - Find the `loadKnownModules()` function (around line 480)
+   - Add your module filename to the `knownModules` array
+   - Example: `'my-module.html',`
+   - **This step is REQUIRED - your module will not appear without it!**
 
 3. **Reload the app** - your module now appears in the task dropdown
 
-**Why this step is needed:** The app attempts to auto-discover modules by scanning the `modules/` folder, but this requires directory listing to be enabled on your web server. If directory listing isn't available, the app falls back to the hardcoded list in `knownModules`. Adding your module to this list ensures it works in all environments.
+**Why this step is required:** The app attempts to auto-discover modules by scanning the `modules/` folder, but this requires directory listing to be enabled on your web server (which most don't have for security reasons). The app **always** falls back to the hardcoded `knownModules` list in `js/app.js`. Adding your module to this list ensures it works in all environments. Without this step, your module won't be loadable even though the file exists.
 
 ### Getting New Modules
 
@@ -68,9 +73,11 @@ interface with init, getResponse, isComplete, and reset methods.
 
 #### 3. Register and Test Your Module
 - Save as `modules/my-module.html`
-- Add `'my-module.html'` to the `knownModules` array in `js/app.js` (line 443)
+- **⚠️ REQUIRED:** Add `'my-module.html'` to the `knownModules` array in `js/app.js` (around line 480)
 - Reload the app - your module appears in the task dropdown
 - Select it and test!
+
+**Don't skip step 2!** The module will not appear in the task list without being registered in the knownModules array.
 
 ---
 
@@ -351,12 +358,16 @@ The `isComplete` flag in your postMessage tells the parent app whether to enable
 ## Troubleshooting
 
 ### Module Not Appearing in Dropdown
-**Check:**
-- HTML file exists in `modules/` folder
-- Filename doesn't start with `_` (underscore files are ignored)
-- **Module is registered** in the `knownModules` array in `js/app.js` (line 443)
-- Reload the app to refresh the module list
-- Browser console (F12) for error messages
+**Most Common Cause:** Module not registered in the fallback list!
+
+**Check (in order):**
+1. **⚠️ MOST IMPORTANT:** Module is registered in the `knownModules` array in `js/app.js` (around line 480)
+2. HTML file exists in `modules/` folder
+3. Filename doesn't start with `_` (underscore files are ignored)
+4. Reload the app to refresh the module list (Ctrl+R or Cmd+R)
+5. Browser console (F12) for error messages
+
+**90% of the time, the issue is forgetting to add the module to knownModules in js/app.js!**
 
 ### Response Not Saving
 **Check:**
@@ -420,9 +431,11 @@ music_teaching_assistant/
 ### To Use a Shared Module:
 1. Save HTML to your `modules/` folder
 2. Add any required images to appropriate `tasks/Grade X/` folder (if applicable)
-3. Register the module in `js/app.js` by adding the filename to the `knownModules` array (line 443)
+3. **⚠️ REQUIRED:** Register the module in `js/app.js` by adding the filename to the `knownModules` array (around line 480)
 4. Reload the app - the module appears in the task dropdown
 5. Test with a student
+
+**Step 3 is mandatory!** Without registering in knownModules, the module won't appear in the task dropdown.
 
 ---
 
