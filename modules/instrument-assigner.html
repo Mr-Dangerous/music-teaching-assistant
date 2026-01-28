@@ -920,7 +920,6 @@
 
         const quantity = document.createElement('div');
         quantity.className = 'instrument-quantity';
-        const available = instrument.tempQuantity - countAssignments(instrument.name);
         quantity.textContent = `${available} / ${instrument.tempQuantity} available`;
         info.appendChild(quantity);
 

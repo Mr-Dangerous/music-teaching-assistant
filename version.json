@@ -1,5 +1,5 @@
 {
-  "version": "2.9.5",
+  "version": "2.9.6",
   "lastUpdated": "2026-01-28",
-  "description": "Instrument Assigner: Add error handling for undefined variables, improve parent window logging"
+  "description": "Instrument Assigner: Fix duplicate 'available' variable declaration causing module crash"
 }
