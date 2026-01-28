@@ -718,18 +718,27 @@
     // Setup drag and drop for student spots
     let draggedSpot = null;
     let draggedStudentId = null;
+    let dropTargetSpot = null;
+    let touchMoveHandlerAdded = false;
 
     function setupDragAndDrop() {
       const spots = document.querySelectorAll('.student-spot.occupied');
 
       spots.forEach(spot => {
-        // Drag start
+        // Mouse drag start
         spot.addEventListener('dragstart', (e) => {
           draggedSpot = spot;
           draggedStudentId = spot.dataset.studentId;
           spot.classList.add('dragging');
           e.dataTransfer.effectAllowed = 'move';
-          e.dataTransfer.setData('text/html', spot.innerHTML);
+          e.dataTransfer.setData('text/plain', spot.dataset.studentId);
+        });
+
+        // Mouse drag end
+        spot.addEventListener('dragend', (e) => {
+          spot.classList.remove('dragging');
+          draggedSpot = null;
+          draggedStudentId = null;
         });
 
         // Touch start (for mobile/smartboard)
@@ -739,28 +748,12 @@
           spot.classList.add('dragging');
           e.preventDefault();
         }, { passive: false });
-
-        // Drag end
-        spot.addEventListener('dragend', (e) => {
-          spot.classList.remove('dragging');
-          draggedSpot = null;
-          draggedStudentId = null;
-        });
-
-        // Touch end
-        spot.addEventListener('touchend', (e) => {
-          if (draggedSpot) {
-            draggedSpot.classList.remove('dragging');
-            draggedSpot = null;
-            draggedStudentId = null;
-          }
-        });
       });
 
       // Setup drop targets (all spots)
       const allSpots = document.querySelectorAll('.student-spot');
       allSpots.forEach(spot => {
-        // Drag over
+        // Mouse drag over
         spot.addEventListener('dragover', (e) => {
           e.preventDefault();
           e.dataTransfer.dropEffect = 'move';
@@ -769,12 +762,12 @@
           }
         });
 
-        // Drag leave
+        // Mouse drag leave
         spot.addEventListener('dragleave', (e) => {
           spot.classList.remove('drag-over');
         });
 
-        // Drop
+        // Mouse drop
         spot.addEventListener('drop', (e) => {
           e.preventDefault();
           spot.classList.remove('drag-over');
@@ -783,31 +776,61 @@
             swapStudents(draggedSpot, spot);
           }
         });
-
-        // Touch move (handle touch dragging)
-        document.addEventListener('touchmove', (e) => {
-          if (draggedSpot) {
-            const touch = e.touches[0];
-            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
-
-            // Remove drag-over from all spots
-            allSpots.forEach(s => s.classList.remove('drag-over'));
-
-            // Add drag-over to spot under finger
-            if (elementBelow && elementBelow.classList.contains('student-spot') && elementBelow !== draggedSpot) {
-              elementBelow.classList.add('drag-over');
-            }
-          }
-        }, { passive: false });
-
-        // Touch end on specific spot (complete the swap)
-        spot.addEventListener('touchend', (e) => {
-          if (draggedSpot && spot !== draggedSpot && spot.classList.contains('drag-over')) {
-            swapStudents(draggedSpot, spot);
-            spot.classList.remove('drag-over');
-          }
-        });
       });
+
+      // Add global touch handlers only once
+      if (!touchMoveHandlerAdded) {
+        document.addEventListener('touchmove', handleTouchMove, { passive: false });
+        document.addEventListener('touchend', handleTouchEnd, { passive: false });
+        touchMoveHandlerAdded = true;
+      }
+    }
+
+    function handleTouchMove(e) {
+      if (!draggedSpot) return;
+
+      const touch = e.touches[0];
+      const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+
+      // Remove drag-over from all spots
+      const allSpots = document.querySelectorAll('.student-spot');
+      allSpots.forEach(s => s.classList.remove('drag-over'));
+
+      // Find the spot element (might be the spot itself or a child)
+      let targetSpot = elementBelow;
+      while (targetSpot && !targetSpot.classList.contains('student-spot')) {
+        targetSpot = targetSpot.parentElement;
+      }
+
+      // Add drag-over to spot under finger
+      if (targetSpot && targetSpot.classList.contains('student-spot') && targetSpot !== draggedSpot) {
+        targetSpot.classList.add('drag-over');
+        dropTargetSpot = targetSpot;
+      } else {
+        dropTargetSpot = null;
+      }
+
+      e.preventDefault();
+    }
+
+    function handleTouchEnd(e) {
+      if (!draggedSpot) return;
+
+      draggedSpot.classList.remove('dragging');
+
+      // Remove drag-over from all spots
+      const allSpots = document.querySelectorAll('.student-spot');
+      allSpots.forEach(s => s.classList.remove('drag-over'));
+
+      // Complete the swap if we have a valid drop target
+      if (dropTargetSpot && dropTargetSpot !== draggedSpot) {
+        swapStudents(draggedSpot, dropTargetSpot);
+      }
+
+      // Reset state
+      draggedSpot = null;
+      draggedStudentId = null;
+      dropTargetSpot = null;
     }
 
     // Swap two students' positions

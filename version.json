@@ -1,5 +1,5 @@
 {
-  "version": "2.9.1",
+  "version": "2.9.2",
   "lastUpdated": "2026-01-28",
-  "description": "Seating chart drag-and-drop: Move students via touch/mouse, saves specific positions, handles combined classes >30 students"
+  "description": "Fix drag-and-drop event handling: Global touch handlers, improved target detection, proper event cleanup"
 }
