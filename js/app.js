@@ -907,13 +907,16 @@ class TeachingAssistantApp {
   /**
    * Show student selection screen with roster and task display
    */
-  showStudentScreen() {
+  async showStudentScreen() {
     // Cancel any active countdown
     this.cancelCountdown();
 
     this.currentScreen = 'student-select';
     this.selectedStudent = null;
     this.showScreen('student-select');
+
+    // Load seating chart for this class
+    await this.loadSeatingCharts();
 
     // Show back button on student screen
     const backBtn = document.getElementById('back-to-classes-btn');
@@ -2705,6 +2708,148 @@ class TeachingAssistantApp {
   }
 
   /**
+   * Load seating charts from CSV
+   */
+  async loadSeatingCharts() {
+    try {
+      if (!this.fileManager.folderHandle) {
+        console.log('No folder selected yet - seating charts will load after folder is selected');
+        return;
+      }
+
+      const handle = await this.fileManager.folderHandle.getFileHandle('seating_charts.csv');
+      const file = await handle.getFile();
+      const text = await file.text();
+
+      // Parse CSV using csvHandler
+      const parsedLines = this.csvHandler.parseCSVLines(text);
+
+      if (parsedLines.length <= 1) {
+        console.log('Seating charts file is empty');
+        return;
+      }
+
+      // Clear existing assignments
+      this.seatAssignments.clear();
+      this.furnitureAssignments.clear();
+
+      // Skip header row and load seating data
+      parsedLines.slice(1).forEach(fields => {
+        const [classIdentifier, studentId, rugColor, furnitureType] = fields;
+
+        // Only load assignments for the current class/combination
+        let currentClassIdentifier;
+        if (this.selectedClasses.size > 0) {
+          currentClassIdentifier = Array.from(this.selectedClasses).sort().join('+');
+        } else if (this.selectedClass) {
+          currentClassIdentifier = this.selectedClass;
+        }
+
+        if (classIdentifier === currentClassIdentifier) {
+          // Load rug color assignment
+          if (rugColor && rugColor.trim() !== '') {
+            this.seatAssignments.set(studentId, rugColor);
+          }
+
+          // Load furniture assignment (chairs only, no stools)
+          if (furnitureType === 'chair') {
+            this.furnitureAssignments.set(studentId, 'chair');
+          }
+        }
+      });
+
+      console.log(`Loaded seating chart for ${currentClassIdentifier || 'unknown class'}`);
+    } catch (error) {
+      console.log('No seating charts file found or error:', error);
+      // Don't show error notification - file might not exist yet (first run)
+    }
+  }
+
+  /**
+   * Save seating charts to CSV
+   */
+  async saveSeatingCharts() {
+    try {
+      if (!this.fileManager.folderHandle) {
+        throw new Error('No folder selected. Please load your data folder first.');
+      }
+
+      // Determine current class identifier
+      let currentClassIdentifier;
+      if (this.selectedClasses.size > 0) {
+        currentClassIdentifier = Array.from(this.selectedClasses).sort().join('+');
+      } else if (this.selectedClass) {
+        currentClassIdentifier = this.selectedClass;
+      } else {
+        throw new Error('No class selected');
+      }
+
+      // Get current class students
+      let classStudents;
+      if (this.selectedClasses.size > 0) {
+        classStudents = this.students.filter(s => this.selectedClasses.has(s.class));
+      } else {
+        classStudents = this.students.filter(s => s.class === this.selectedClass);
+      }
+
+      // Load existing seating charts from all classes
+      let existingData = [];
+      try {
+        const handle = await this.fileManager.folderHandle.getFileHandle('seating_charts.csv');
+        const file = await handle.getFile();
+        const text = await file.text();
+        const parsedLines = this.csvHandler.parseCSVLines(text);
+
+        if (parsedLines.length > 1) {
+          // Keep data from other classes
+          existingData = parsedLines.slice(1).filter(fields => {
+            const [classIdentifier] = fields;
+            return classIdentifier !== currentClassIdentifier;
+          });
+        }
+      } catch (error) {
+        // File doesn't exist yet, that's ok
+        console.log('Creating new seating_charts.csv');
+      }
+
+      // Build new data for current class
+      const currentClassData = [];
+      classStudents.forEach(student => {
+        const rugColor = this.seatAssignments.get(student.student_id) || '';
+        const furniture = this.furnitureAssignments.get(student.student_id);
+
+        // Only save if student has a rug assignment or chair assignment
+        // NEVER save stool assignments (they're temporary)
+        if (rugColor || furniture === 'chair') {
+          const furnitureType = (furniture === 'chair') ? 'chair' : '';
+          currentClassData.push([currentClassIdentifier, student.student_id, rugColor, furnitureType]);
+        }
+      });
+
+      // Combine with existing data from other classes
+      const allData = [...existingData, ...currentClassData];
+
+      // Create CSV content
+      const header = 'class_identifier,student_id,rug_color,furniture_type\n';
+      const rows = allData.map(fields =>
+        `${fields[0]},${fields[1]},${fields[2]},${fields[3]}`
+      ).join('\n');
+      const csvContent = header + rows;
+
+      // Save to file in data folder
+      const handle = await this.fileManager.folderHandle.getFileHandle('seating_charts.csv', { create: true });
+      const writable = await handle.createWritable();
+      await writable.write(csvContent);
+      await writable.close();
+
+      console.log(`✓ Saved seating chart for ${currentClassIdentifier} to seating_charts.csv`);
+    } catch (error) {
+      console.error('Error saving seating charts:', error);
+      // Don't throw - seating chart saving is not critical
+    }
+  }
+
+  /**
    * Save a presentation link (updates if URL already exists)
    */
   async savePresentationLink(url, title) {
@@ -3252,17 +3397,20 @@ class TeachingAssistantApp {
   /**
    * Assign furniture to a student
    */
-  assignFurnitureToStudent(studentId, furniture, buttonElement) {
+  async assignFurnitureToStudent(studentId, furniture, buttonElement) {
     // Assign the furniture
     this.furnitureAssignments.set(studentId, furniture);
-    
+
     // Update the button display
     this.updateStudentButtonFurniture(buttonElement, furniture);
-    
+
     // Update palette counts
     this.updateFurniturePaletteCounts();
-    
+
     this.showNotification(`Assigned ${furniture} to student`, 'success');
+
+    // Save seating chart (only saves chairs, not stools)
+    await this.saveSeatingCharts();
   }
 
   /**
@@ -3299,45 +3447,51 @@ class TeachingAssistantApp {
   /**
    * Assign a seat color to a student
    */
-  assignSeatToStudent(studentId, color, buttonElement, animate = false) {
+  async assignSeatToStudent(studentId, color, buttonElement, animate = false) {
     // If student already has a different color, free up that slot
     const previousColor = this.seatAssignments.get(studentId);
-    
+
     // Assign the new color
     this.seatAssignments.set(studentId, color);
-    
+
     // Update the button display
     this.updateStudentButtonSeatDot(buttonElement, color, animate);
-    
+
     // Update palette counts
     this.updateSeatPaletteCounts();
+
+    // Save seating chart
+    await this.saveSeatingCharts();
   }
 
   /**
    * Clear seat assignment for a student
    */
-  clearStudentSeat(student) {
+  async clearStudentSeat(student) {
     const studentId = student.student_id;
-    
+
     // Check if student has a seat assigned
     if (!this.seatAssignments.has(studentId)) {
       this.showNotification(`${student.name} has no seat assigned`, 'warning');
       return;
     }
-    
+
     // Remove from assignments
     this.seatAssignments.delete(studentId);
-    
+
     // Find the student's button and remove the dot
     const button = document.querySelector(`.student-roster-button[data-student-id="${studentId}"]`);
     if (button) {
       this.updateStudentButtonSeatDot(button, null);
     }
-    
+
     // Update palette counts
     this.updateSeatPaletteCounts();
-    
+
     this.showNotification(`${student.name}'s seat cleared`, 'success');
+
+    // Save seating chart
+    await this.saveSeatingCharts();
   }
 
   /**
@@ -3573,12 +3727,15 @@ class TeachingAssistantApp {
     
     // Animate the chair assignments first
     await this.animateFurnitureAssignments(chairAssignmentQueue);
-    
+
     // Then animate the seat color assignments
     await this.animateSeatAssignments(assignmentQueue);
-    
+
     const totalAssigned = assignmentQueue.length + chairAssignmentQueue.length;
     this.showNotification(`Assigned ${totalAssigned} seats`, 'success');
+
+    // Save seating chart to CSV (excludes stools, only saves rug colors and chairs)
+    await this.saveSeatingCharts();
   }
 
   /**
@@ -3723,28 +3880,31 @@ class TeachingAssistantApp {
   /**
    * Clear furniture assignment for a student
    */
-  clearStudentFurniture(student) {
+  async clearStudentFurniture(student) {
     const studentId = student.student_id;
-    
+
     // Check if student has furniture assigned
     if (!this.furnitureAssignments.has(studentId)) {
       this.showNotification(`${student.name} has no furniture assigned`, 'warning');
       return;
     }
-    
+
     // Remove from assignments
     this.furnitureAssignments.delete(studentId);
-    
+
     // Find the student's button and remove the furniture icon
     const button = document.querySelector(`.student-roster-button[data-student-id="${studentId}"]`);
     if (button) {
       this.updateStudentButtonFurniture(button, null);
     }
-    
+
     // Update palette counts
     this.updateFurniturePaletteCounts();
-    
+
     this.showNotification(`${student.name}'s furniture cleared`, 'success');
+
+    // Save seating chart
+    await this.saveSeatingCharts();
   }
 }
 
