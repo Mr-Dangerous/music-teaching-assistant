@@ -55,7 +55,7 @@
 
     #container {
       display: grid;
-      grid-template-columns: 1fr 2fr 1fr;
+      grid-template-columns: 3fr 1fr;
       grid-template-rows: auto 1fr;
       gap: 15px;
       height: 100vh;
@@ -202,40 +202,48 @@
     }
 
     #randomBtn {
-      margin-top: auto;
-      padding: 18px;
-      font-size: 22px;
+      padding: 12px 24px;
+      font-size: 18px;
       font-weight: bold;
       background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
       color: white;
       border: none;
-      border-radius: 12px;
+      border-radius: 10px;
       cursor: pointer;
       transition: all 0.2s;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
 
     #randomBtn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 10px rgba(0,0,0,0.3);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
     }
 
     #randomBtn:active {
       transform: translateY(0);
     }
 
+    #randomBtn:focus {
+      outline: 3px solid #ffd700;
+      outline-offset: 2px;
+    }
+
     /* Center assignment display */
     #assignmentDisplay {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 15px;
+      padding: 20px;
+      align-content: start;
+    }
+
+    #assignmentDisplay.empty {
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 28px;
       color: #667eea;
       text-align: center;
-      padding: 40px;
-      background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
-      border-radius: 15px;
-      min-height: 300px;
     }
 
     /* Instrument palette (right column) */
@@ -502,19 +510,13 @@
       </select>
       <button id="saveConfigBtn">💾 Save</button>
       <button id="loadConfigBtn">📂 Load</button>
-    </div>
-
-    <!-- Left: Student roster -->
-    <div class="column">
-      <h2>Students</h2>
-      <div id="studentRoster"></div>
       <button id="randomBtn">🎲 Random Assignment</button>
     </div>
 
-    <!-- Center: Assignment display -->
+    <!-- Center: Assignment display (students) -->
     <div class="column">
-      <h2>Assignment Display</h2>
-      <div id="assignmentDisplay">
+      <h2>Students</h2>
+      <div id="assignmentDisplay" class="empty">
         Drag instruments to students<br>or use Random Assignment
       </div>
     </div>
@@ -660,9 +662,12 @@
         if (window.parent && window.parent.app && window.parent.app.students) {
           const className = context.class;
           const allStudents = window.parent.app.students;
+          const absentStudents = window.parent.app.sessionAbsentStudents || new Set();
 
-          // Filter students by class
-          const classStudents = allStudents.filter(s => s.class === className);
+          // Filter students by class and exclude absent students
+          const classStudents = allStudents.filter(s =>
+            s.class === className && !absentStudents.has(s.student_id)
+          );
 
           // Map to our format
           appState.students = classStudents.map(s => ({
@@ -670,7 +675,7 @@
             name: s.name
           }));
 
-          console.log(`Loaded ${appState.students.length} students from class ${className}`);
+          console.log(`Loaded ${appState.students.length} present students from class ${className}`);
         } else {
           // Fallback to mock data if parent app not accessible
           console.warn('Could not access parent app, using mock data');
@@ -720,6 +725,7 @@
       if (savedData) {
         try {
           const parsed = JSON.parse(savedData);
+          console.log('Loaded instruments from localStorage:', parsed);
           // Ensure all required fields exist
           appState.instruments = parsed.map(inst => ({
             ...inst,
@@ -733,9 +739,12 @@
         }
       } else {
         // First time - save defaults
+        console.log('No saved instruments, using defaults');
         appState.instruments = defaultInstruments;
         saveInstrumentInventory();
       }
+
+      console.log('Final instrument list:', appState.instruments);
     }
 
     function saveInstrumentInventory() {
@@ -828,8 +837,16 @@
     // UI RENDERING
     // ========================================
     function renderStudentRoster() {
-      const roster = document.getElementById('studentRoster');
-      roster.innerHTML = '';
+      const display = document.getElementById('assignmentDisplay');
+      display.innerHTML = '';
+
+      if (appState.students.length === 0) {
+        display.className = 'empty';
+        display.textContent = 'No students present in this class';
+        return;
+      }
+
+      display.className = '';
 
       appState.students.forEach(student => {
         const card = document.createElement('div');
@@ -859,7 +876,7 @@
           card.appendChild(instrumentDiv);
         }
 
-        roster.appendChild(card);
+        display.appendChild(card);
       });
     }
 
@@ -993,17 +1010,8 @@
     }
 
     function updateAssignmentDisplay() {
-      const display = document.getElementById('assignmentDisplay');
-      const assignedCount = Object.keys(appState.assignments).length;
-      const totalStudents = appState.students.length;
-
-      if (assignedCount === 0) {
-        display.innerHTML = 'Drag instruments to students<br>or use Random Assignment';
-      } else if (assignedCount === totalStudents) {
-        display.innerHTML = `✅ All ${totalStudents} students assigned!`;
-      } else {
-        display.innerHTML = `${assignedCount} / ${totalStudents} students assigned`;
-      }
+      // This function is now handled by renderStudentRoster()
+      // Keeping it for compatibility with existing code
     }
 
     // ========================================
@@ -1085,13 +1093,13 @@
       palette.addEventListener('touchend', handleTouchEnd);
 
       // Student cards - mouse drop events
-      const roster = document.getElementById('studentRoster');
-      roster.addEventListener('dragover', handleDragOver);
-      roster.addEventListener('drop', handleDrop);
-      roster.addEventListener('dragleave', handleDragLeave);
+      const display = document.getElementById('assignmentDisplay');
+      display.addEventListener('dragover', handleDragOver);
+      display.addEventListener('drop', handleDrop);
+      display.addEventListener('dragleave', handleDragLeave);
 
       // Student cards - click to remove assignment
-      roster.addEventListener('click', handleStudentClick);
+      display.addEventListener('click', handleStudentClick);
 
       // Keyboard navigation
       document.addEventListener('keydown', handleKeyboardNavigation);
@@ -1391,11 +1399,19 @@
 
     function handleAddInstrument(e) {
       e.preventDefault();
+      console.log('handleAddInstrument called');
 
       const name = document.getElementById('instrumentName').value.trim();
       const quantity = parseInt(document.getElementById('instrumentQuantity').value);
       const type = document.getElementById('instrumentType').value;
       const icon = document.getElementById('instrumentIcon').value.trim();
+
+      console.log('Adding instrument:', { name, quantity, type, icon });
+
+      if (!name || !quantity || !icon) {
+        alert('Please fill in all fields');
+        return;
+      }
 
       appState.instruments.push({
         name,
@@ -1405,6 +1421,8 @@
         enabled: true,
         tempQuantity: quantity
       });
+
+      console.log('Updated instruments:', appState.instruments);
 
       saveInstrumentInventory();
       renderInstrumentPalette();

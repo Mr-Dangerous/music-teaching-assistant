@@ -1,5 +1,5 @@
 {
-  "version": "2.9.3",
+  "version": "2.9.4",
   "lastUpdated": "2026-01-28",
-  "description": "Add Instrument Assigner module: Drag-and-drop instrument distribution, smart random assignment, save/load configurations, full UDL accessibility"
+  "description": "Instrument Assigner: Redesign layout to 2-column, show present students in center grid, fix add instrument button, improve debugging"
 }
