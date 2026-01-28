@@ -1532,7 +1532,25 @@
     // Listen for init message from parent
     window.addEventListener('message', (event) => {
       if (event.data.type === 'taskmodule:init') {
-        window.TaskModule.init(event.data.context);
+        console.log('Received init message from parent');
+        window.parent.postMessage({
+          type: 'taskmodule:log',
+          message: 'Instrument Assigner: Received init message'
+        }, '*');
+
+        try {
+          window.TaskModule.init(event.data.context);
+          window.parent.postMessage({
+            type: 'taskmodule:log',
+            message: `Instrument Assigner: Init completed - ${appState.students.length} students, ${appState.instruments.length} instruments`
+          }, '*');
+        } catch (e) {
+          console.error('Error during init:', e);
+          window.parent.postMessage({
+            type: 'taskmodule:error',
+            message: 'Instrument Assigner: ' + e.message + ' - ' + e.stack
+          }, '*');
+        }
       }
     });
   </script>
