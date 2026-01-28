@@ -1,5 +1,5 @@
 {
-  "version": "2.9.0",
+  "version": "2.9.1",
   "lastUpdated": "2026-01-28",
-  "description": "Seating chart persistence: Save/load seating assignments from seating_charts.csv by class, excludes temporary stool assignments"
+  "description": "Seating chart drag-and-drop: Move students via touch/mouse, saves specific positions, handles combined classes >30 students"
 }

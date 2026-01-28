@@ -157,6 +157,22 @@
       opacity: 0.6;
     }
 
+    .student-spot.occupied {
+      cursor: move;
+      user-select: none;
+    }
+
+    .student-spot.drag-over {
+      background: rgba(251, 191, 36, 0.5);
+      transform: scale(1.05);
+      border-color: #fbbf24;
+    }
+
+    .student-spot.dragging {
+      opacity: 0.5;
+      border: 3px dashed white;
+    }
+
     .student-spot:focus-visible {
       outline: 3px solid #fbbf24;
       outline-offset: 2px;
@@ -433,7 +449,7 @@
     // Process data from parent app
     function receiveDataFromParent(data) {
       students = data.students || [];
-      
+
       // Convert arrays back to Maps
       if (data.seatAssignments) {
         seatAssignments = new Map(data.seatAssignments);
@@ -441,42 +457,16 @@
       if (data.furnitureAssignments) {
         furnitureAssignments = new Map(data.furnitureAssignments);
       }
-      
-      // Parse manual positions from student notes
-      parseManualPositions(data.results || []);
-      
+      if (data.manualPositions) {
+        manualPositions = new Map(data.manualPositions);
+      }
+
       // Update title with class name
       if (data.className) {
         document.getElementById('title').textContent = `Seating Chart: ${data.className}`;
       }
-      
-      renderSeatingChart();
-    }
 
-    // Parse manual position assignments from student notes
-    function parseManualPositions(results) {
-      manualPositions.clear();
-      
-      // Look for student_notes with position patterns
-      const positionPattern = /\b(red|orange|green|blue|purple|stool|chair)_(\d+)\b/gi;
-      
-      students.forEach(student => {
-        const notes = results.filter(r => 
-          r.student_id === student.student_id && r.task_id === 'student_notes'
-        );
-        
-        if (notes.length > 0) {
-          const latestNotes = notes[notes.length - 1].response || '';
-          const matches = latestNotes.matchAll(positionPattern);
-          
-          for (const match of matches) {
-            const type = match[1].toLowerCase();
-            const position = parseInt(match[2]);
-            manualPositions.set(student.student_id, `${type}_${position}`);
-            break; // Only use first match
-          }
-        }
-      });
+      renderSeatingChart();
     }
 
     // Render the seating chart
@@ -552,15 +542,19 @@
           const spot = document.createElement('div');
           spot.className = 'student-spot';
           spot.dataset.position = `${color}_${i}`;
-          
+
           // Check for manual assignment first
           if (manualInRow[i]) {
             spot.classList.add('occupied');
+            spot.dataset.studentId = manualInRow[i].student_id;
             spot.innerHTML = `<span class="student-name">${getFirstName(manualInRow[i].name)}</span>`;
+
+            // Make draggable
+            spot.draggable = true;
           } else {
             spot.classList.add('empty');
           }
-          
+
           row.appendChild(spot);
         }
         
@@ -677,6 +671,9 @@
         errorBanner.classList.remove('show');
       }
 
+      // Setup drag and drop handlers
+      setupDragAndDrop();
+
       // Notify parent
       notifyParent();
     }
@@ -695,7 +692,9 @@
           if (students[i]) {
             spot.classList.remove('empty');
             spot.classList.add('occupied');
+            spot.dataset.studentId = students[i].student_id;
             spot.innerHTML = `<span class="student-name">${getFirstName(students[i].name)}</span>`;
+            spot.draggable = true;
           }
         });
       } else {
@@ -708,10 +707,143 @@
           if (spot) {
             spot.classList.remove('empty');
             spot.classList.add('occupied');
+            spot.dataset.studentId = student.student_id;
             spot.innerHTML = `<span class="student-name">${getFirstName(student.name)}</span>`;
+            spot.draggable = true;
           }
         });
       }
+    }
+
+    // Setup drag and drop for student spots
+    let draggedSpot = null;
+    let draggedStudentId = null;
+
+    function setupDragAndDrop() {
+      const spots = document.querySelectorAll('.student-spot.occupied');
+
+      spots.forEach(spot => {
+        // Drag start
+        spot.addEventListener('dragstart', (e) => {
+          draggedSpot = spot;
+          draggedStudentId = spot.dataset.studentId;
+          spot.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/html', spot.innerHTML);
+        });
+
+        // Touch start (for mobile/smartboard)
+        spot.addEventListener('touchstart', (e) => {
+          draggedSpot = spot;
+          draggedStudentId = spot.dataset.studentId;
+          spot.classList.add('dragging');
+          e.preventDefault();
+        }, { passive: false });
+
+        // Drag end
+        spot.addEventListener('dragend', (e) => {
+          spot.classList.remove('dragging');
+          draggedSpot = null;
+          draggedStudentId = null;
+        });
+
+        // Touch end
+        spot.addEventListener('touchend', (e) => {
+          if (draggedSpot) {
+            draggedSpot.classList.remove('dragging');
+            draggedSpot = null;
+            draggedStudentId = null;
+          }
+        });
+      });
+
+      // Setup drop targets (all spots)
+      const allSpots = document.querySelectorAll('.student-spot');
+      allSpots.forEach(spot => {
+        // Drag over
+        spot.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          if (spot !== draggedSpot) {
+            spot.classList.add('drag-over');
+          }
+        });
+
+        // Drag leave
+        spot.addEventListener('dragleave', (e) => {
+          spot.classList.remove('drag-over');
+        });
+
+        // Drop
+        spot.addEventListener('drop', (e) => {
+          e.preventDefault();
+          spot.classList.remove('drag-over');
+
+          if (draggedSpot && spot !== draggedSpot) {
+            swapStudents(draggedSpot, spot);
+          }
+        });
+
+        // Touch move (handle touch dragging)
+        document.addEventListener('touchmove', (e) => {
+          if (draggedSpot) {
+            const touch = e.touches[0];
+            const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+
+            // Remove drag-over from all spots
+            allSpots.forEach(s => s.classList.remove('drag-over'));
+
+            // Add drag-over to spot under finger
+            if (elementBelow && elementBelow.classList.contains('student-spot') && elementBelow !== draggedSpot) {
+              elementBelow.classList.add('drag-over');
+            }
+          }
+        }, { passive: false });
+
+        // Touch end on specific spot (complete the swap)
+        spot.addEventListener('touchend', (e) => {
+          if (draggedSpot && spot !== draggedSpot && spot.classList.contains('drag-over')) {
+            swapStudents(draggedSpot, spot);
+            spot.classList.remove('drag-over');
+          }
+        });
+      });
+    }
+
+    // Swap two students' positions
+    function swapStudents(spot1, spot2) {
+      const student1Id = spot1.dataset.studentId;
+      const student2Id = spot2.dataset.studentId;
+      const pos1 = spot1.dataset.position;
+      const pos2 = spot2.dataset.position;
+
+      // Update manual positions
+      if (student1Id) {
+        manualPositions.set(student1Id, pos2);
+      }
+      if (student2Id) {
+        manualPositions.set(student2Id, pos1);
+      } else if (student1Id) {
+        // Moving to empty spot
+        manualPositions.set(student1Id, pos2);
+      }
+
+      // Re-render to show changes
+      renderSeatingChart();
+
+      // Notify parent to save changes
+      notifyParentPositionChange();
+    }
+
+    // Notify parent of position changes (for saving to CSV)
+    function notifyParentPositionChange() {
+      // Convert manualPositions Map to array for transmission
+      const positionsArray = Array.from(manualPositions.entries());
+
+      window.parent.postMessage({
+        type: 'seatingchart:positionchange',
+        positions: positionsArray
+      }, '*');
     }
 
     // Get first name from full name

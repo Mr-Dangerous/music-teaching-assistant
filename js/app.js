@@ -49,7 +49,10 @@ class TeachingAssistantApp {
     this.seatAssignments = new Map(); // studentId -> color
     this.seatColors = ['red', 'orange', 'green', 'blue', 'purple'];
     this.slotsPerColor = 6;
-    
+
+    // Manual position assignments - saved to seating_charts.csv
+    this.manualPositions = new Map(); // studentId -> 'red_3', 'blue_1', etc.
+
     // Furniture assignments - in-memory only
     this.furnitureAssignments = new Map(); // studentId -> 'stool' | 'chair'
     this.furnitureTypes = ['stool', 'chair'];
@@ -148,6 +151,9 @@ class TeachingAssistantApp {
       } else if (event.data.type === 'seatingchart:request') {
         // Seating chart module is requesting current seating data
         this.handleSeatingChartRequest(event);
+      } else if (event.data.type === 'seatingchart:positionchange') {
+        // Seating chart module is reporting position changes (drag-and-drop)
+        this.handleSeatingChartPositionChange(event);
       } else if (event.data.type === 'saveBoomwhackerSong') {
         // Save boomwhacker song configuration
         this.saveBoomwhackerSong(event.data.songName, event.data.configJson);
@@ -2631,10 +2637,33 @@ class TeachingAssistantApp {
         students: availableStudents,
         seatAssignments: Array.from(this.seatAssignments.entries()),
         furnitureAssignments: Array.from(this.furnitureAssignments.entries()),
+        manualPositions: Array.from(this.manualPositions.entries()),
         results: this.results,
         className: className
       }, '*');
     }
+  }
+
+  /**
+   * Handle seating chart position changes from drag-and-drop
+   * @param {MessageEvent} event - Message event from module
+   */
+  async handleSeatingChartPositionChange(event) {
+    // Receive manual position assignments from seating chart module
+    const positions = event.data.positions || [];
+
+    // Clear existing manual positions for current class
+    this.manualPositions.clear();
+
+    // Update manual positions Map
+    positions.forEach(([studentId, position]) => {
+      this.manualPositions.set(studentId, position);
+    });
+
+    // Save to CSV
+    await this.saveSeatingCharts();
+
+    console.log('Seating positions updated:', positions);
   }
 
   /**
@@ -2732,10 +2761,11 @@ class TeachingAssistantApp {
       // Clear existing assignments
       this.seatAssignments.clear();
       this.furnitureAssignments.clear();
+      this.manualPositions.clear();
 
       // Skip header row and load seating data
       parsedLines.slice(1).forEach(fields => {
-        const [classIdentifier, studentId, rugColor, furnitureType] = fields;
+        const [classIdentifier, studentId, rugColor, furnitureType, specificPosition] = fields;
 
         // Only load assignments for the current class/combination
         let currentClassIdentifier;
@@ -2754,6 +2784,11 @@ class TeachingAssistantApp {
           // Load furniture assignment (chairs only, no stools)
           if (furnitureType === 'chair') {
             this.furnitureAssignments.set(studentId, 'chair');
+          }
+
+          // Load specific manual position
+          if (specificPosition && specificPosition.trim() !== '') {
+            this.manualPositions.set(studentId, specificPosition);
           }
         }
       });
@@ -2817,12 +2852,13 @@ class TeachingAssistantApp {
       classStudents.forEach(student => {
         const rugColor = this.seatAssignments.get(student.student_id) || '';
         const furniture = this.furnitureAssignments.get(student.student_id);
+        const specificPosition = this.manualPositions.get(student.student_id) || '';
 
         // Only save if student has a rug assignment or chair assignment
         // NEVER save stool assignments (they're temporary)
         if (rugColor || furniture === 'chair') {
           const furnitureType = (furniture === 'chair') ? 'chair' : '';
-          currentClassData.push([currentClassIdentifier, student.student_id, rugColor, furnitureType]);
+          currentClassData.push([currentClassIdentifier, student.student_id, rugColor, furnitureType, specificPosition]);
         }
       });
 
@@ -2830,9 +2866,9 @@ class TeachingAssistantApp {
       const allData = [...existingData, ...currentClassData];
 
       // Create CSV content
-      const header = 'class_identifier,student_id,rug_color,furniture_type\n';
+      const header = 'class_identifier,student_id,rug_color,furniture_type,specific_position\n';
       const rows = allData.map(fields =>
-        `${fields[0]},${fields[1]},${fields[2]},${fields[3]}`
+        `${fields[0]},${fields[1]},${fields[2]},${fields[3]},${fields[4] || ''}`
       ).join('\n');
       const csvContent = header + rows;
 
@@ -3588,11 +3624,13 @@ class TeachingAssistantApp {
     
     // Filter out absent students
     const availableStudents = classStudents.filter(s => !this.isStudentAbsent(s.student_id));
-    
-    // Check if too many students
-    if (availableStudents.length > 30) {
-      this.showNotification('Too many students (>30) for seating assignment', 'warning');
-      return;
+
+    // Check if this is a combined class with overflow (>30 students)
+    const isOverflowClass = availableStudents.length > 30;
+    const MAX_RUG_CAPACITY = 30; // 5 colors × 6 spots each
+
+    if (isOverflowClass) {
+      console.log(`Combined class with ${availableStudents.length} students - using overflow mode`);
     }
     
     // First pass: Identify students with seating/chair requirements
@@ -3705,7 +3743,7 @@ class TeachingAssistantApp {
       if (this.seatAssignments.has(student.student_id)) {
         continue;
       }
-      
+
       // Find next color with available slots
       let assigned = false;
       for (let i = 0; i < this.seatColors.length; i++) {
@@ -3718,9 +3756,17 @@ class TeachingAssistantApp {
           break;
         }
       }
-      
+
+      // If rug is full and we're in overflow mode, assign to chair only
+      if (!assigned && isOverflowClass && availableChairs > 0) {
+        chairAssignmentQueue.push({ student, furniture: 'chair' });
+        availableChairs--;
+        assigned = true;
+        console.log(`Overflow student ${student.name} assigned to chair only (no rug spot)`);
+      }
+
       if (!assigned) {
-        this.showNotification(`Not enough seats for all students`, 'warning');
+        this.showNotification(`Not enough seats (rug + chairs) for all students`, 'warning');
         break;
       }
     }
