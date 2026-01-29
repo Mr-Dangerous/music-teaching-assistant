@@ -657,45 +657,32 @@
     }
 
     function loadStudentsFromContext(context) {
-      // Get class roster from parent app
+      // Get class roster from context
       console.log('loadStudentsFromContext called with:', context);
-      console.log('window.parent.app exists?', window.parent && window.parent.app);
 
       try {
-        if (window.parent && window.parent.app && window.parent.app.students) {
-          const className = context.class;
-          const allStudents = window.parent.app.students;
-          const absentStudents = window.parent.app.sessionAbsentStudents || new Set();
+        // Use classStudents from context (passed by parent app)
+        if (context.classStudents && context.classStudents.length > 0) {
+          // Filter to only present students and map to our format
+          appState.students = context.classStudents
+            .filter(s => s.present)
+            .map(s => ({
+              id: s.id,
+              name: s.name
+            }));
 
-          console.log('Total students in app:', allStudents.length);
-          console.log('Looking for class:', className);
-          console.log('Absent students:', Array.from(absentStudents));
-
-          // Filter students by class and exclude absent students
-          const classStudents = allStudents.filter(s =>
-            s.class === className && !absentStudents.has(s.student_id)
-          );
-
-          console.log('Filtered class students:', classStudents);
-
-          // Map to our format
-          appState.students = classStudents.map(s => ({
-            id: s.student_id,
-            name: s.name
-          }));
-
-          console.log(`Loaded ${appState.students.length} present students from class ${className}`);
+          console.log(`Loaded ${appState.students.length} present students from class ${context.class}`);
 
           window.parent.postMessage({
             type: 'taskmodule:log',
-            message: `Loaded ${appState.students.length} students from class ${className}`
+            message: `Loaded ${appState.students.length} students from class ${context.class}`
           }, '*');
         } else {
-          // Fallback to mock data if parent app not accessible
-          console.warn('Could not access parent app, using mock data');
+          // Fallback to mock data if classStudents not provided
+          console.warn('No classStudents in context, using mock data');
           window.parent.postMessage({
             type: 'taskmodule:log',
-            message: 'Warning: Using mock student data - parent app not accessible'
+            message: 'Warning: Using mock student data - classStudents not in context'
           }, '*');
 
           appState.students = [

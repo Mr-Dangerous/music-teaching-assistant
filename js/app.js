@@ -1427,6 +1427,17 @@ class TeachingAssistantApp {
     // Get most recent result to restore previous response (if any)
     const existingResult = this.getMostRecentResult(student.student_id, taskData.task_id);
 
+    // Get all students from the same class (for modules that need full roster)
+    const classStudents = this.students
+      .filter(s => s.class === student.class)
+      .map(s => ({
+        id: s.student_id,
+        name: s.name,
+        grade: s.grade,
+        class: s.class,
+        present: !this.sessionAbsentStudents.has(s.student_id)
+      }));
+
     const context = {
       studentId: student.student_id,
       taskId: taskData.task_id,
@@ -1434,7 +1445,8 @@ class TeachingAssistantApp {
       studentName: student.name,
       class: student.class,
       question: taskData.question,
-      existingResponse: existingResult ? existingResult.response : ''
+      existingResponse: existingResult ? existingResult.response : '',
+      classStudents: classStudents  // Full class roster for modules that need it
     };
 
     this.moduleLoader.loadModule(

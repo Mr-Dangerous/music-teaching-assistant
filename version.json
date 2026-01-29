@@ -1,5 +1,5 @@
 {
-  "version": "2.9.7",
-  "lastUpdated": "2026-01-28",
-  "description": "Instrument Assigner: Fix button double-trigger, add extensive student loading debug logs"
+  "version": "2.9.8",
+  "lastUpdated": "2026-01-29",
+  "description": "Instrument Assigner: Fix student list loading by passing classStudents in module context"
 }
