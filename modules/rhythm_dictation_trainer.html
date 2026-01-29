@@ -1443,8 +1443,6 @@
       state.isPlaying = true;
       document.getElementById('playBtn').disabled = true;
 
-      initAudio();
-
       const beatDuration = 60 / state.bpm; // Calculate beat duration from BPM
       let currentTime = 0;
       let cellIndex = 0; // Track which visual cell we're on

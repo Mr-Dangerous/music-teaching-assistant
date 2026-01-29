@@ -1,5 +1,5 @@
 {
-  "version": "3.0.0",
+  "version": "3.0.1",
   "lastUpdated": "2026-01-29",
-  "description": "Major audio upgrade: Tone.js with real instrument samples (10 instruments). Updated rhythm_dictation_trainer with instrument selector (default: xylophone). Requires local server and internet on first load."
+  "description": "Fix: Remove obsolete initAudio() call in rhythm_dictation_trainer"
 }
