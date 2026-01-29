@@ -568,6 +568,8 @@
       <button id="saveConfigBtn">💾 Save</button>
       <button id="loadConfigBtn">📂 Load</button>
       <button id="randomBtn">🎲 Random Assignment</button>
+      <button id="rotateBtn">🔄 Rotate Instruments</button>
+      <button id="sortBtn">📊 Sort by Instrument</button>
     </div>
 
     <!-- Center: Assignment display (students) -->
@@ -645,7 +647,9 @@
       previousAssignments: {}, // For random assignment memory
       configurations: [], // Saved song configurations
       currentConfigName: '',
-      showAllInstruments: false // Toggle for showing disabled instruments
+      showAllInstruments: false, // Toggle for showing disabled instruments
+      sortedByInstrument: false, // Whether students are sorted by instrument
+      savedStateForRotate: null // Temporary state save for rotation undo
     };
 
     let moduleContext = null;
@@ -779,15 +783,15 @@
     async function loadInstrumentInventory() {
       // Default instruments from example CSV
       const defaultInstruments = [
-        { name: 'Xylophone', quantity: 10, type: 'melody', icon: '🎹', enabled: true, tempQuantity: 10 },
-        { name: 'Egg Shakers', quantity: 24, type: 'rhythm', icon: '🥚', enabled: true, tempQuantity: 24 },
-        { name: 'Cymbals', quantity: 1, type: 'rhythm', icon: '🥁', enabled: true, tempQuantity: 1 },
-        { name: 'Sand Blocks', quantity: 8, type: 'rhythm', icon: '🪵', enabled: true, tempQuantity: 8 },
-        { name: 'Drums', quantity: 10, type: 'rhythm', icon: '🥁', enabled: true, tempQuantity: 10 },
-        { name: 'Tapaphone (large)', quantity: 25, type: 'melody', icon: '🎵', enabled: true, tempQuantity: 25 },
-        { name: 'Tapaphone (small)', quantity: 10, type: 'melody', icon: '🎵', enabled: true, tempQuantity: 10 },
-        { name: 'Frame Drums', quantity: 5, type: 'rhythm', icon: '🪘', enabled: true, tempQuantity: 5 },
-        { name: 'Rhythm Sticks', quantity: 30, type: 'rhythm', icon: '🥢', enabled: true, tempQuantity: 30 }
+        { name: 'Xylophone', quantity: 10, type: 'melody', icon: '🎹', enabled: true, tempQuantity: 10, priority: false },
+        { name: 'Egg Shakers', quantity: 24, type: 'rhythm', icon: '🥚', enabled: true, tempQuantity: 24, priority: false },
+        { name: 'Cymbals', quantity: 1, type: 'rhythm', icon: '🥁', enabled: true, tempQuantity: 1, priority: false },
+        { name: 'Sand Blocks', quantity: 8, type: 'rhythm', icon: '🪵', enabled: true, tempQuantity: 8, priority: false },
+        { name: 'Drums', quantity: 10, type: 'rhythm', icon: '🥁', enabled: true, tempQuantity: 10, priority: false },
+        { name: 'Tapaphone (large)', quantity: 25, type: 'melody', icon: '🎵', enabled: true, tempQuantity: 25, priority: false },
+        { name: 'Tapaphone (small)', quantity: 10, type: 'melody', icon: '🎵', enabled: true, tempQuantity: 10, priority: false },
+        { name: 'Frame Drums', quantity: 5, type: 'rhythm', icon: '🪘', enabled: true, tempQuantity: 5, priority: false },
+        { name: 'Rhythm Sticks', quantity: 30, type: 'rhythm', icon: '🥢', enabled: true, tempQuantity: 30, priority: false }
       ];
 
       // Try to load from localStorage
@@ -800,7 +804,8 @@
           appState.instruments = parsed.map(inst => ({
             ...inst,
             enabled: inst.enabled !== undefined ? inst.enabled : true,
-            tempQuantity: inst.tempQuantity !== undefined ? inst.tempQuantity : inst.quantity
+            tempQuantity: inst.tempQuantity !== undefined ? inst.tempQuantity : inst.quantity,
+            priority: inst.priority !== undefined ? inst.priority : false
           }));
         } catch (e) {
           console.error('Error parsing instrument inventory:', e);
@@ -918,7 +923,41 @@
 
       display.className = '';
 
-      appState.students.forEach(student => {
+      // Determine student order based on sort mode
+      let orderedStudents;
+      if (appState.sortedByInstrument) {
+        // Group by instrument, then by name within groups
+        const grouped = {};
+        const unassigned = [];
+
+        appState.students.forEach(student => {
+          const instrument = appState.assignments[student.id];
+          if (instrument) {
+            if (!grouped[instrument]) grouped[instrument] = [];
+            grouped[instrument].push(student);
+          } else {
+            unassigned.push(student);
+          }
+        });
+
+        // Sort each group by name
+        Object.keys(grouped).forEach(instrument => {
+          grouped[instrument].sort((a, b) => a.name.localeCompare(b.name));
+        });
+        unassigned.sort((a, b) => a.name.localeCompare(b.name));
+
+        // Flatten into ordered list
+        orderedStudents = [];
+        Object.keys(grouped).sort().forEach(instrument => {
+          orderedStudents.push(...grouped[instrument]);
+        });
+        orderedStudents.push(...unassigned);
+      } else {
+        // Default: alphabetical by name
+        orderedStudents = [...appState.students].sort((a, b) => a.name.localeCompare(b.name));
+      }
+
+      orderedStudents.forEach(student => {
         const card = document.createElement('div');
         card.className = 'student-card';
         card.dataset.studentId = student.id;
@@ -1064,6 +1103,30 @@
         };
         controls.appendChild(toggleBtn);
 
+        // Priority checkbox
+        const priorityLabel = document.createElement('label');
+        priorityLabel.style.cursor = 'pointer';
+        priorityLabel.style.fontSize = '20px';
+        priorityLabel.title = 'Priority: Assign this instrument first';
+        priorityLabel.onclick = (e) => e.stopPropagation();
+
+        const priorityCheckbox = document.createElement('input');
+        priorityCheckbox.type = 'checkbox';
+        priorityCheckbox.checked = instrument.priority || false;
+        priorityCheckbox.style.display = 'none';
+        priorityCheckbox.onchange = (e) => {
+          e.stopPropagation();
+          togglePriority(index);
+        };
+
+        const priorityIcon = document.createElement('span');
+        priorityIcon.textContent = instrument.priority ? '⭐' : '☆';
+        priorityIcon.style.cursor = 'pointer';
+
+        priorityLabel.appendChild(priorityCheckbox);
+        priorityLabel.appendChild(priorityIcon);
+        controls.appendChild(priorityLabel);
+
         card.appendChild(controls);
         palette.appendChild(card);
       });
@@ -1110,6 +1173,14 @@
 
     function toggleInstrument(index) {
       appState.instruments[index].enabled = !appState.instruments[index].enabled;
+      saveInstrumentInventory();
+      renderInstrumentPalette();
+      notifyParent();
+    }
+
+    function togglePriority(index) {
+      appState.instruments[index].priority = !appState.instruments[index].priority;
+      saveInstrumentInventory();
       renderInstrumentPalette();
       notifyParent();
     }
@@ -1131,6 +1202,12 @@
 
       // Random assignment button
       document.getElementById('randomBtn').addEventListener('click', randomAssignment);
+
+      // Rotate button
+      document.getElementById('rotateBtn').addEventListener('click', rotateInstruments);
+
+      // Sort button
+      document.getElementById('sortBtn').addEventListener('click', toggleSort);
 
       // Add instrument button
       document.getElementById('addInstrumentBtn').addEventListener('click', showAddInstrumentModal);
@@ -1457,11 +1534,19 @@
       }
 
       // Get available instruments (enabled with remaining quantity)
-      const availableInstruments = appState.instruments.filter(inst => {
-        if (!inst.enabled) return false;
-        const available = inst.tempQuantity - countAssignments(inst.name);
-        return available > 0;
-      });
+      // Sort by priority (priority instruments first)
+      const availableInstruments = appState.instruments
+        .filter(inst => {
+          if (!inst.enabled) return false;
+          const available = inst.tempQuantity - countAssignments(inst.name);
+          return available > 0;
+        })
+        .sort((a, b) => {
+          // Priority instruments first
+          if (a.priority && !b.priority) return -1;
+          if (!a.priority && b.priority) return 1;
+          return 0;
+        });
 
       if (availableInstruments.length === 0) {
         alert('No instruments available!');
@@ -1563,6 +1648,136 @@
     }
 
     // ========================================
+    // SORT BY INSTRUMENT
+    // ========================================
+    function toggleSort() {
+      appState.sortedByInstrument = !appState.sortedByInstrument;
+      const btn = document.getElementById('sortBtn');
+
+      if (appState.sortedByInstrument) {
+        btn.textContent = '📊 Sort by Name';
+        btn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+      } else {
+        btn.textContent = '📊 Sort by Instrument';
+        btn.style.background = '';
+      }
+
+      renderStudentRoster();
+    }
+
+    // ========================================
+    // ROTATE INSTRUMENTS
+    // ========================================
+    async function rotateInstruments() {
+      // Check if there are any assignments
+      if (Object.keys(appState.assignments).length === 0) {
+        alert('No students have instruments assigned yet!');
+        return;
+      }
+
+      // Save current state for potential undo
+      appState.savedStateForRotate = {
+        assignments: { ...appState.assignments },
+        previousAssignments: { ...appState.previousAssignments }
+      };
+
+      // Group students by current instrument
+      const groups = {};
+      Object.entries(appState.assignments).forEach(([studentId, instrumentName]) => {
+        if (!groups[instrumentName]) groups[instrumentName] = [];
+        groups[instrumentName].push(studentId);
+      });
+
+      // Get all enabled instruments sorted by priority
+      const availableInstruments = appState.instruments
+        .filter(inst => inst.enabled)
+        .sort((a, b) => {
+          if (a.priority && !b.priority) return -1;
+          if (!a.priority && b.priority) return 1;
+          return 0;
+        });
+
+      if (availableInstruments.length < 2) {
+        alert('Need at least 2 enabled instruments to rotate!');
+        return;
+      }
+
+      // Build rotation plan: each student gets a DIFFERENT instrument
+      const rotationPlan = [];
+
+      Object.entries(groups).forEach(([currentInstrument, studentIds]) => {
+        // For each student in this group, find a different instrument
+        studentIds.forEach(studentId => {
+          const student = appState.students.find(s => s.id === studentId);
+          if (!student) return;
+
+          // Find instruments this student hasn't used recently (prefer variety)
+          const previousInstrument = appState.previousAssignments[studentId];
+
+          // Get instruments different from current
+          let candidateInstruments = availableInstruments.filter(inst =>
+            inst.name !== currentInstrument
+          );
+
+          // Prefer instruments they haven't used before
+          const neverUsed = candidateInstruments.filter(inst =>
+            inst.name !== previousInstrument
+          );
+
+          if (neverUsed.length > 0) {
+            candidateInstruments = neverUsed;
+          }
+
+          // Pick first available candidate (priority already sorted)
+          let selectedInstrument = null;
+          for (const inst of candidateInstruments) {
+            const currentCount = rotationPlan.filter(p => p.instrument.name === inst.name).length;
+            const existingCount = countAssignments(inst.name);
+            if (currentCount + existingCount < inst.tempQuantity) {
+              selectedInstrument = inst;
+              break;
+            }
+          }
+
+          if (selectedInstrument) {
+            rotationPlan.push({ student, instrument: selectedInstrument, from: currentInstrument });
+          } else {
+            // No alternative found, keep on same instrument
+            const sameInst = appState.instruments.find(i => i.name === currentInstrument);
+            rotationPlan.push({ student, instrument: sameInst, from: currentInstrument });
+          }
+        });
+      });
+
+      // Clear current assignments
+      appState.assignments = {};
+
+      // Animate rotations one by one
+      for (const { student, instrument, from } of rotationPlan) {
+        const instrumentCard = document.querySelector(`.instrument-card[data-instrument-name="${instrument.name}"]`);
+        const studentCard = document.querySelector(`.student-card[data-student-id="${student.id}"]`);
+
+        // Update assignment
+        appState.assignments[student.id] = instrument.name;
+        appState.previousAssignments[student.id] = instrument.name;
+
+        if (instrumentCard && studentCard && instrument.name !== from) {
+          // Only animate if actually changing instruments
+          await createFlyingInstrument(instrument.icon, instrumentCard, studentCard);
+          updateStudentCard(student.id);
+        } else {
+          // No animation, just update
+          updateStudentCard(student.id);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 80));
+      }
+
+      renderInstrumentPalette();
+      notifyParent();
+    }
+
+    // ========================================
     // ADD INSTRUMENT MODAL
     // ========================================
     function showAddInstrumentModal() {
@@ -1596,7 +1811,8 @@
         type,
         icon,
         enabled: true,
-        tempQuantity: quantity
+        tempQuantity: quantity,
+        priority: false
       });
 
       console.log('Updated instruments:', appState.instruments);
@@ -1627,11 +1843,12 @@
       }
 
       // Create configuration object
-      // Only save which instruments are enabled/disabled (not assignments or quantities)
+      // Save instrument states: enabled/disabled and priority (per-configuration)
       const configData = {
         instrumentStates: appState.instruments.map(inst => ({
           name: inst.name,
-          enabled: inst.enabled
+          enabled: inst.enabled,
+          priority: inst.priority
         }))
       };
 
@@ -1688,18 +1905,20 @@
       // Clear all assignments (fresh start for new class)
       appState.assignments = {};
 
-      // Reset all instruments to max quantity and apply enabled/disabled states
+      // Reset all instruments to max quantity and default states
       appState.instruments.forEach(inst => {
         inst.tempQuantity = inst.quantity; // Reset to maximum
         inst.enabled = true; // Default to enabled
+        inst.priority = false; // Default to no priority
       });
 
-      // Apply saved instrument states (enabled/disabled only)
+      // Apply saved instrument states (enabled/disabled and priority)
       if (config.data.instrumentStates) {
         config.data.instrumentStates.forEach(savedState => {
           const instrument = appState.instruments.find(i => i.name === savedState.name);
           if (instrument) {
             instrument.enabled = savedState.enabled;
+            instrument.priority = savedState.priority !== undefined ? savedState.priority : false;
           }
         });
       }

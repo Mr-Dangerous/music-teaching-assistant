@@ -183,16 +183,22 @@ export class AudioPlayer {
 
         const config = instruments[instrumentName] || instruments.piano;
 
-        // Create Tone.js Sampler
-        this.instrument = new this.Tone.Sampler({
-            urls: config.urls,
-            baseUrl: config.baseUrl,
-            onload: () => {
-                console.log(`${instrumentName} loaded successfully`);
-            }
-        }).toDestination();
-
-        this.instrumentName = instrumentName;
+        // Create Tone.js Sampler and wait for samples to load
+        return new Promise((resolve, reject) => {
+            this.instrument = new this.Tone.Sampler({
+                urls: config.urls,
+                baseUrl: config.baseUrl,
+                onload: () => {
+                    console.log(`${instrumentName} loaded successfully`);
+                    this.instrumentName = instrumentName;
+                    resolve();
+                },
+                onerror: (error) => {
+                    console.error(`Failed to load ${instrumentName}:`, error);
+                    reject(error);
+                }
+            }).toDestination();
+        });
     }
 
     /**
@@ -205,7 +211,17 @@ export class AudioPlayer {
             return;
         }
 
-        await this.loadInstrument(instrumentName);
+        this.isLoading = true;
+        this.isReady = false;
+
+        try {
+            await this.loadInstrument(instrumentName);
+            this.isReady = true;
+        } catch (error) {
+            console.error('Failed to load instrument:', error);
+        } finally {
+            this.isLoading = false;
+        }
     }
 
     /**
@@ -293,7 +309,19 @@ export class AudioPlayer {
      * @param {number} startTime - Start time (unused in Tone.js version, plays immediately)
      * @param {number} duration - Duration in seconds
      */
-    playNote(frequency, startTime = 0, duration = 1) {
+    async playNote(frequency, startTime = 0, duration = 1) {
+        // Wait for instrument to load if still loading
+        if (this.isLoading) {
+            await new Promise(resolve => {
+                const checkReady = setInterval(() => {
+                    if (!this.isLoading) {
+                        clearInterval(checkReady);
+                        resolve();
+                    }
+                }, 100);
+            });
+        }
+
         if (this.useFallback) {
             return this.playNoteFallback(frequency, startTime, duration);
         }
