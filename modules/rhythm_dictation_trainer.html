@@ -1089,6 +1089,9 @@
       // Instruments that sound good in lower register (D3)
       const lowerRegisterInstruments = ['cello', 'piano', 'guitar', 'saxophone'];
 
+      // Highest register instruments (D5)
+      const highestRegisterInstruments = ['xylophone', 'violin', 'flute'];
+
       // Trombone has limited range, use its highest comfortable note
       if (instrument === 'trombone') {
         return 174.61; // F3 - highest note in trombone range
@@ -1099,7 +1102,12 @@
         return 146.83; // D3
       }
 
-      // Higher register instruments (violin, flute, trumpet, xylophone, harp) use D4
+      // Highest register instruments use D5
+      if (highestRegisterInstruments.includes(instrument)) {
+        return 587.33; // D5
+      }
+
+      // Mid register instruments (trumpet, harp) use D4
       return 293.66; // D4
     }
 
@@ -1108,6 +1116,9 @@
 
       // Instruments that sound good in lower register
       const lowerRegisterInstruments = ['cello', 'piano', 'guitar', 'saxophone'];
+
+      // Highest register instruments
+      const highestRegisterInstruments = ['xylophone', 'violin', 'flute'];
 
       // Trombone: stay in its range
       if (instrument === 'trombone') {
@@ -1119,7 +1130,12 @@
         return 164.81; // E3
       }
 
-      // Higher register instruments use E4 (slightly higher than D4)
+      // Highest register instruments use E5
+      if (highestRegisterInstruments.includes(instrument)) {
+        return 659.25; // E5
+      }
+
+      // Mid register instruments use E4 (slightly higher than D4)
       return 329.63; // E4
     }
 

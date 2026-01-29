@@ -1,5 +1,5 @@
 {
-  "version": "3.0.5",
+  "version": "3.0.6",
   "lastUpdated": "2026-01-29",
-  "description": "Fix: Modal close buttons work + instrument-specific note selection for better sound quality"
+  "description": "Increase xylophone, violin, and flute by one octave (D5/E5) for better sound"
 }
