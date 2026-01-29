@@ -1,5 +1,5 @@
 {
-  "version": "2.9.8",
+  "version": "2.9.9",
   "lastUpdated": "2026-01-29",
-  "description": "Instrument Assigner: Fix student list loading by passing classStudents in module context"
+  "description": "Add debug logging to troubleshoot instrument assigner context"
 }

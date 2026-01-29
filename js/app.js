@@ -1424,6 +1424,10 @@ class TeachingAssistantApp {
   loadTaskModule(taskData, student) {
     const container = document.getElementById('task-image-container');
 
+    // Debug: Log student object to see what properties it has
+    console.log('loadTaskModule called with student:', student);
+    console.log('student.class:', student.class);
+
     // Get most recent result to restore previous response (if any)
     const existingResult = this.getMostRecentResult(student.student_id, taskData.task_id);
 
@@ -1438,6 +1442,8 @@ class TeachingAssistantApp {
         present: !this.sessionAbsentStudents.has(s.student_id)
       }));
 
+    console.log('Filtered classStudents:', classStudents.length, 'students for class:', student.class);
+
     const context = {
       studentId: student.student_id,
       taskId: taskData.task_id,
@@ -1448,6 +1454,8 @@ class TeachingAssistantApp {
       existingResponse: existingResult ? existingResult.response : '',
       classStudents: classStudents  // Full class roster for modules that need it
     };
+
+    console.log('Context being sent to module:', context);
 
     this.moduleLoader.loadModule(
       taskData.module_path,
