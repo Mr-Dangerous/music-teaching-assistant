@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Player Test - Tone.js</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #764ba2;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .status.loading {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+
+        .status.ready {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+
+        .instrument-selector {
+            margin-bottom: 30px;
+        }
+
+        .instrument-selector label {
+            display: block;
+            margin-bottom: 10px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .instrument-selector select {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background-color: white;
+            cursor: pointer;
+        }
+
+        .instrument-selector select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .btn {
+            padding: 15px 25px;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #56ab2f, #a8e063);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #f093fb, #f5576c);
+            color: white;
+        }
+
+        .btn-info {
+            background: linear-gradient(135deg, #4facfe, #00f2fe);
+            color: white;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #667eea;
+        }
+
+        .note-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+            gap: 10px;
+        }
+
+        .note-btn {
+            padding: 12px;
+            font-size: 14px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #ffecd2, #fcb69f);
+            color: #333;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .note-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .info-box {
+            background-color: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+
+        .info-box h4 {
+            color: #1976D2;
+            margin-bottom: 10px;
+        }
+
+        .info-box ul {
+            margin-left: 20px;
+            color: #333;
+        }
+
+        .info-box li {
+            margin-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎵 Audio Player Test</h1>
+        <p class="subtitle">Testing Tone.js with Real Instrument Samples</p>
+
+        <div id="status" class="status loading">Loading audio engine...</div>
+
+        <div class="instrument-selector">
+            <label for="instrumentSelect">Choose an Instrument:</label>
+            <select id="instrumentSelect">
+                <option value="piano">🎹 Piano</option>
+                <option value="violin">🎻 Violin</option>
+                <option value="flute">🎶 Flute</option>
+                <option value="cello">🎻 Cello</option>
+                <option value="saxophone">🎷 Saxophone</option>
+                <option value="trumpet">🎺 Trumpet</option>
+                <option value="trombone">🎺 Trombone</option>
+                <option value="guitar">🎸 Guitar</option>
+                <option value="xylophone">🎵 Xylophone</option>
+                <option value="harp">🎵 Harp</option>
+            </select>
+        </div>
+
+        <div class="section">
+            <h3>Test Melodies</h3>
+            <div class="controls">
+                <button class="btn btn-primary" onclick="playScale()">Play Scale</button>
+                <button class="btn btn-success" onclick="playTwinkleTwinkle()">Twinkle Twinkle</button>
+                <button class="btn btn-warning" onclick="playMaryHadALamb()">Mary Had a Little Lamb</button>
+                <button class="btn btn-info" onclick="stopAudio()">Stop</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Play Individual Notes</h3>
+            <div class="note-grid" id="noteGrid"></div>
+        </div>
+
+        <div class="info-box">
+            <h4>What's New?</h4>
+            <ul>
+                <li><strong>Real Instrument Sounds:</strong> No more synthetic beeps! Using actual recorded samples.</li>
+                <li><strong>10 Instruments:</strong> Piano, Violin, Flute, Cello, Saxophone, Trumpet, Trombone, Guitar, Xylophone, Harp</li>
+                <li><strong>Automatic Fallback:</strong> Falls back to basic oscillators if Tone.js fails to load</li>
+                <li><strong>Easy Integration:</strong> Drop-in replacement for existing modules</li>
+            </ul>
+        </div>
+    </div>
+
+    <script type="module">
+        import { AudioPlayer } from './shared/AudioPlayer.js';
+
+        let audioPlayer = new AudioPlayer('piano');
+        const statusDiv = document.getElementById('status');
+        const instrumentSelect = document.getElementById('instrumentSelect');
+
+        // Note frequencies for testing
+        const noteFrequencies = {
+            'C4': 261.63, 'D4': 293.66, 'E4': 329.63, 'F4': 349.23,
+            'G4': 392.00, 'A4': 440.00, 'B4': 493.88, 'C5': 523.25,
+            'D5': 587.33, 'E5': 659.25, 'F5': 698.46, 'G5': 783.99
+        };
+
+        // Wait for audio player to be ready
+        setTimeout(() => {
+            if (audioPlayer.isReady) {
+                statusDiv.className = 'status ready';
+                statusDiv.textContent = '✓ Audio engine ready! Try playing some sounds.';
+            } else if (audioPlayer.useFallback) {
+                statusDiv.className = 'status error';
+                statusDiv.textContent = '⚠️ Using fallback mode (basic oscillators)';
+            } else {
+                statusDiv.className = 'status loading';
+                statusDiv.textContent = 'Still loading...';
+            }
+        }, 2000);
+
+        // Instrument selector
+        instrumentSelect.addEventListener('change', async (e) => {
+            statusDiv.className = 'status loading';
+            statusDiv.textContent = `Loading ${e.target.value}...`;
+
+            await audioPlayer.setInstrument(e.target.value);
+
+            statusDiv.className = 'status ready';
+            statusDiv.textContent = `✓ ${e.target.value} loaded!`;
+        });
+
+        // Create note buttons
+        const noteGrid = document.getElementById('noteGrid');
+        Object.keys(noteFrequencies).forEach(noteName => {
+            const btn = document.createElement('button');
+            btn.className = 'note-btn';
+            btn.textContent = noteName;
+            btn.onclick = () => playNote(noteFrequencies[noteName]);
+            noteGrid.appendChild(btn);
+        });
+
+        // Play a single note
+        window.playNote = (frequency) => {
+            audioPlayer.playNote(frequency, 0, 0.5);
+        };
+
+        // Play a C major scale
+        window.playScale = () => {
+            const scale = ['C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 'C5'];
+            scale.forEach((note, i) => {
+                setTimeout(() => {
+                    audioPlayer.playNote(noteFrequencies[note], 0, 0.5);
+                }, i * 500);
+            });
+        };
+
+        // Play "Twinkle Twinkle Little Star"
+        window.playTwinkleTwinkle = () => {
+            const melody = [
+                { note: 'C4', duration: 0.5 }, { note: 'C4', duration: 0.5 },
+                { note: 'G4', duration: 0.5 }, { note: 'G4', duration: 0.5 },
+                { note: 'A4', duration: 0.5 }, { note: 'A4', duration: 0.5 },
+                { note: 'G4', duration: 1.0 },
+                { note: 'F4', duration: 0.5 }, { note: 'F4', duration: 0.5 },
+                { note: 'E4', duration: 0.5 }, { note: 'E4', duration: 0.5 },
+                { note: 'D4', duration: 0.5 }, { note: 'D4', duration: 0.5 },
+                { note: 'C4', duration: 1.0 }
+            ];
+
+            let currentTime = 0;
+            melody.forEach(({ note, duration }) => {
+                setTimeout(() => {
+                    audioPlayer.playNote(noteFrequencies[note], 0, duration);
+                }, currentTime * 1000);
+                currentTime += duration;
+            });
+        };
+
+        // Play "Mary Had a Little Lamb"
+        window.playMaryHadALamb = () => {
+            const melody = [
+                { note: 'E4', duration: 0.5 }, { note: 'D4', duration: 0.5 },
+                { note: 'C4', duration: 0.5 }, { note: 'D4', duration: 0.5 },
+                { note: 'E4', duration: 0.5 }, { note: 'E4', duration: 0.5 },
+                { note: 'E4', duration: 1.0 },
+                { note: 'D4', duration: 0.5 }, { note: 'D4', duration: 0.5 },
+                { note: 'D4', duration: 1.0 },
+                { note: 'E4', duration: 0.5 }, { note: 'G4', duration: 0.5 },
+                { note: 'G4', duration: 1.0 }
+            ];
+
+            let currentTime = 0;
+            melody.forEach(({ note, duration }) => {
+                setTimeout(() => {
+                    audioPlayer.playNote(noteFrequencies[note], 0, duration);
+                }, currentTime * 1000);
+                currentTime += duration;
+            });
+        };
+
+        window.stopAudio = () => {
+            audioPlayer.stop();
+            // Reinitialize after stopping
+            setTimeout(() => {
+                audioPlayer = new AudioPlayer(instrumentSelect.value);
+            }, 100);
+        };
+    </script>
+</body>
+</html>

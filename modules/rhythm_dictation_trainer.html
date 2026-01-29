@@ -150,6 +150,23 @@
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
 
+    .instrument-select {
+      padding: 6px 10px;
+      font-size: 14px;
+      font-weight: bold;
+      border: 2px solid white;
+      border-radius: 8px;
+      background: white;
+      color: #2d3436;
+      cursor: pointer;
+      outline: none;
+      min-width: 120px;
+    }
+
+    .instrument-select:hover {
+      background: #f8f9fa;
+    }
+
     /* Staff Area */
     .staff-container {
       background: white;
@@ -769,6 +786,22 @@
       <button class="btn btn-options" id="optionsBtn">
         ⚙️ Options
       </button>
+
+      <div class="bpm-control" style="background: linear-gradient(135deg, #ff7675, #d63031);">
+        <span class="bpm-label">🎵 Instrument:</span>
+        <select id="instrumentSelect" class="instrument-select">
+          <option value="piano">Piano</option>
+          <option value="violin">Violin</option>
+          <option value="flute">Flute</option>
+          <option value="cello">Cello</option>
+          <option value="saxophone">Saxophone</option>
+          <option value="trumpet">Trumpet</option>
+          <option value="trombone">Trombone</option>
+          <option value="guitar">Guitar</option>
+          <option value="xylophone" selected>Xylophone</option>
+          <option value="harp">Harp</option>
+        </select>
+      </div>
     </div>
 
     <!-- Staff Area -->
@@ -916,7 +949,8 @@
     </div>
   </div>
 
-  <script>
+  <script type="module">
+    import { AudioPlayer } from './shared/AudioPlayer.js';
     // Rhythm definitions with asset paths
     const RHYTHMS = {
       // Simple rhythms
@@ -1045,64 +1079,19 @@
       revealed: false // Track if answer was revealed
     };
 
-    // Audio context for playing sustained tones
-    let audioContext = null;
+    // Audio player using Tone.js with real instrument samples
+    let audioPlayer = new AudioPlayer('xylophone');
 
-    // Initialize audio context
-    function initAudio() {
-      if (!audioContext) {
-        audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      }
-    }
-
-    // Play a sustained tone with specified duration
+    // Play a sustained tone with specified duration using the selected instrument
     function playSustainedTone(startTime, duration) {
-      initAudio();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      // Use a pleasant frequency (middle C)
-      oscillator.frequency.value = 523.25; // C5
-      oscillator.type = 'triangle'; // Warmer tone than sine
-
-      const now = audioContext.currentTime;
-      const start = now + startTime;
-      const end = start + duration;
-
-      // Quick attack
-      gainNode.gain.setValueAtTime(0, start);
-      gainNode.gain.linearRampToValueAtTime(0.2, start + 0.01);
-
-      // Sustain
-      gainNode.gain.setValueAtTime(0.2, end - 0.05);
-
-      // Quick release
-      gainNode.gain.linearRampToValueAtTime(0, end);
-
-      oscillator.start(start);
-      oscillator.stop(end);
+      // Use C5 (523.25 Hz) for rhythm playback
+      audioPlayer.playNote(523.25, startTime, duration);
     }
 
     // Play a short click sound (for rests/silence indicators)
     function playClick(time = 0) {
-      initAudio();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      oscillator.frequency.value = 800;
-      oscillator.type = 'sine';
-
-      gainNode.gain.setValueAtTime(0.3, audioContext.currentTime + time);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + time + 0.05);
-
-      oscillator.start(audioContext.currentTime + time);
-      oscillator.stop(audioContext.currentTime + time + 0.05);
+      // Use a higher pitch for click sound
+      audioPlayer.playNote(800, time, 0.05);
     }
 
     // Initialize UI
@@ -1158,6 +1147,12 @@
         state.customRules = prefs.customRules || { noRestStart: true, noTiTiEnd: true, noRestEnd: true, dontAcknowledgeCorrect: false };
         state.enabledRhythms = prefs.enabledRhythms || Object.keys(RHYTHMS);
         state.numBeats = parseInt(state.meter.split('/')[0]);
+
+        // Load saved instrument preference
+        if (prefs.instrument) {
+          document.getElementById('instrumentSelect').value = prefs.instrument;
+          audioPlayer.setInstrument(prefs.instrument);
+        }
       }
 
       // Update BPM UI
@@ -1183,7 +1178,8 @@
         visualAids: state.visualAids,
         bpm: state.bpm,
         customRules: state.customRules,
-        enabledRhythms: state.enabledRhythms
+        enabledRhythms: state.enabledRhythms,
+        instrument: document.getElementById('instrumentSelect').value
       }));
     }
 
@@ -2071,6 +2067,14 @@
         state.bpm = value;
         document.getElementById('bpmInput').value = value;
         savePreferences();
+      });
+
+      // Instrument selector
+      document.getElementById('instrumentSelect').addEventListener('change', async (e) => {
+        const instrument = e.target.value;
+        await audioPlayer.setInstrument(instrument);
+        savePreferences();
+        console.log(`Instrument changed to: ${instrument}`);
       });
 
       // Filter button

@@ -1,5 +1,5 @@
 {
-  "version": "2.10.2",
+  "version": "3.0.0",
   "lastUpdated": "2026-01-29",
-  "description": "Fix song configuration save/load to reset quantities properly"
+  "description": "Major audio upgrade: Tone.js with real instrument samples (10 instruments). Updated rhythm_dictation_trainer with instrument selector (default: xylophone). Requires local server and internet on first load."
 }
