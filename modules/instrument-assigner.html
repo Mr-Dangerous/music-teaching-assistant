@@ -159,7 +159,9 @@
       border-radius: 12px;
       padding: 15px;
       cursor: pointer;
-      transition: all 0.2s;
+      transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1),
+                  background 0.2s,
+                  box-shadow 0.2s;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       min-height: 80px;
       display: flex;
@@ -323,17 +325,26 @@
 
     .instrument-controls {
       display: flex;
-      gap: 5px;
+      gap: 4px;
       align-items: center;
       margin-top: auto;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .priority-star {
+      font-size: 16px;
+      cursor: pointer;
+      user-select: none;
+      padding: 2px;
     }
 
     .qty-btn {
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       border: none;
-      border-radius: 6px;
-      font-size: 18px;
+      border-radius: 5px;
+      font-size: 16px;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.2s;
@@ -360,11 +371,11 @@
     }
 
     .toggle-btn {
-      width: 40px;
-      height: 28px;
+      width: 35px;
+      height: 24px;
       border: 2px solid #667eea;
-      border-radius: 6px;
-      font-size: 10px;
+      border-radius: 5px;
+      font-size: 9px;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.2s;
@@ -1103,29 +1114,16 @@
         };
         controls.appendChild(toggleBtn);
 
-        // Priority checkbox
-        const priorityLabel = document.createElement('label');
-        priorityLabel.style.cursor = 'pointer';
-        priorityLabel.style.fontSize = '20px';
-        priorityLabel.title = 'Priority: Assign this instrument first';
-        priorityLabel.onclick = (e) => e.stopPropagation();
-
-        const priorityCheckbox = document.createElement('input');
-        priorityCheckbox.type = 'checkbox';
-        priorityCheckbox.checked = instrument.priority || false;
-        priorityCheckbox.style.display = 'none';
-        priorityCheckbox.onchange = (e) => {
+        // Priority star (simplified)
+        const priorityIcon = document.createElement('span');
+        priorityIcon.className = 'priority-star';
+        priorityIcon.textContent = instrument.priority ? '⭐' : '☆';
+        priorityIcon.title = 'Priority: Assign this instrument first';
+        priorityIcon.onclick = (e) => {
           e.stopPropagation();
           togglePriority(index);
         };
-
-        const priorityIcon = document.createElement('span');
-        priorityIcon.textContent = instrument.priority ? '⭐' : '☆';
-        priorityIcon.style.cursor = 'pointer';
-
-        priorityLabel.appendChild(priorityCheckbox);
-        priorityLabel.appendChild(priorityIcon);
-        controls.appendChild(priorityLabel);
+        controls.appendChild(priorityIcon);
 
         card.appendChild(controls);
         palette.appendChild(card);
@@ -1651,6 +1649,20 @@
     // SORT BY INSTRUMENT
     // ========================================
     function toggleSort() {
+      const display = document.getElementById('assignmentDisplay');
+      const cards = Array.from(display.querySelectorAll('.student-card'));
+
+      // Capture current positions
+      const positions = new Map();
+      cards.forEach(card => {
+        const rect = card.getBoundingClientRect();
+        positions.set(card.dataset.studentId, {
+          top: rect.top,
+          left: rect.left
+        });
+      });
+
+      // Toggle sort mode
       appState.sortedByInstrument = !appState.sortedByInstrument;
       const btn = document.getElementById('sortBtn');
 
@@ -1662,7 +1674,34 @@
         btn.style.background = '';
       }
 
+      // Re-render in new order
       renderStudentRoster();
+
+      // Animate cards to new positions
+      requestAnimationFrame(() => {
+        const newCards = Array.from(display.querySelectorAll('.student-card'));
+
+        newCards.forEach(card => {
+          const studentId = card.dataset.studentId;
+          const oldPos = positions.get(studentId);
+
+          if (oldPos) {
+            const newRect = card.getBoundingClientRect();
+            const deltaX = oldPos.left - newRect.left;
+            const deltaY = oldPos.top - newRect.top;
+
+            // Start from old position
+            card.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+            card.style.transition = 'none';
+
+            // Animate to new position
+            requestAnimationFrame(() => {
+              card.style.transition = 'transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1)';
+              card.style.transform = '';
+            });
+          }
+        });
+      });
     }
 
     // ========================================

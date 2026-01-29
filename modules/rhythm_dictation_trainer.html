@@ -1084,14 +1084,14 @@
 
     // Play a sustained tone with specified duration using the selected instrument
     function playSustainedTone(startTime, duration) {
-      // Use C5 (523.25 Hz) for rhythm playback
-      audioPlayer.playNote(523.25, startTime, duration);
+      // Use D3 (146.83 Hz) for rhythm playback - safe for all instrument ranges including trombone
+      audioPlayer.playNote(146.83, startTime, duration);
     }
 
     // Play a short click sound (for rests/silence indicators)
     function playClick(time = 0) {
-      // Use a higher pitch for click sound
-      audioPlayer.playNote(800, time, 0.05);
+      // Use E3 (164.81 Hz) for click sound - slightly higher than rhythm tone, safe for all instruments
+      audioPlayer.playNote(164.81, time, 0.05);
     }
 
     // Initialize UI

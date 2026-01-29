@@ -1,5 +1,5 @@
 {
-  "version": "3.0.2",
+  "version": "3.0.3",
   "lastUpdated": "2026-01-29",
-  "description": "Fix: Wait for instrument samples to load before playback (prevents buffer error when switching instruments)"
+  "description": "Fix: Use D3/E3 notes for rhythm playback to support all instrument ranges (trombone, guitar, saxophone now work)"
 }
