@@ -135,6 +135,7 @@
       overflow-y: auto;
       display: flex;
       flex-direction: column;
+      -webkit-overflow-scrolling: touch; /* Smooth touch scrolling on iOS */
     }
 
     .column h2 {
@@ -250,15 +251,17 @@
     #instrumentPalette {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
+      gap: 15px;
       overflow-y: auto;
       flex: 1;
+      padding: 10px; /* Extra padding for touch scrolling area */
+      -webkit-overflow-scrolling: touch;
     }
 
     .instrument-card {
       background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
       border-radius: 12px;
-      padding: 12px;
+      padding: 15px;
       cursor: grab;
       transition: all 0.2s;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -266,9 +269,10 @@
       flex-direction: column;
       align-items: center;
       text-align: center;
-      min-height: 140px;
+      min-height: 150px;
       outline: none;
       position: relative;
+      touch-action: manipulation; /* Improve touch response */
     }
 
     .instrument-card:focus {
@@ -1508,16 +1512,54 @@
 
         if (instrumentCard && studentCard) {
           await createFlyingInstrument(instrument.icon, instrumentCard, studentCard);
+
+          // Update this student's card immediately after animation
+          updateStudentCard(student.id);
         }
 
         // Small delay between animations
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      renderStudentRoster();
+      // Final update to refresh everything
       renderInstrumentPalette();
-      updateAssignmentDisplay();
       notifyParent();
+    }
+
+    // Helper function to update a single student card
+    function updateStudentCard(studentId) {
+      const studentCard = document.querySelector(`.student-card[data-student-id="${studentId}"]`);
+      if (!studentCard) return;
+
+      const student = appState.students.find(s => s.id === studentId);
+      if (!student) return;
+
+      const assignedInstrument = appState.assignments[studentId];
+
+      // Update card styling
+      if (assignedInstrument) {
+        studentCard.classList.add('has-instrument');
+        studentCard.setAttribute('aria-label', `${student.name}, assigned ${assignedInstrument}. Press Enter to remove.`);
+      } else {
+        studentCard.classList.remove('has-instrument');
+        studentCard.setAttribute('aria-label', `${student.name}, no instrument assigned. Drop instrument here.`);
+      }
+
+      // Update card content
+      studentCard.innerHTML = '';
+
+      const nameDiv = document.createElement('div');
+      nameDiv.className = 'student-name';
+      nameDiv.textContent = student.name;
+      studentCard.appendChild(nameDiv);
+
+      if (assignedInstrument) {
+        const instrumentDiv = document.createElement('div');
+        instrumentDiv.className = 'student-instrument';
+        const instrument = appState.instruments.find(i => i.name === assignedInstrument);
+        instrumentDiv.textContent = instrument ? `${instrument.icon} ${assignedInstrument}` : assignedInstrument;
+        studentCard.appendChild(instrumentDiv);
+      }
     }
 
     // ========================================

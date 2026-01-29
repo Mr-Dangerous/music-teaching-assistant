@@ -1,5 +1,5 @@
 {
-  "version": "2.10.0",
+  "version": "2.10.1",
   "lastUpdated": "2026-01-29",
-  "description": "Major Instrument Assigner improvements: 2-column layout, flying animations, show/hide disabled, form support"
+  "description": "Instrument Assigner: Improve touch scrolling and real-time assignment updates"
 }
