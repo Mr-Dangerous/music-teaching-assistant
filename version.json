@@ -1,5 +1,5 @@
 {
-  "version": "2.9.9",
+  "version": "2.9.10",
   "lastUpdated": "2026-01-29",
-  "description": "Add debug logging to troubleshoot instrument assigner context"
+  "description": "Fix practice mode to include class roster for instrument assigner"
 }

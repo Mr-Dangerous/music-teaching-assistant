@@ -2362,15 +2362,44 @@ class TeachingAssistantApp {
     // Update task name
     document.getElementById('current-task-name').textContent = `Task: ${taskData.question}`;
 
-    // Load the module in practice mode (no student context)
+    // Load the module in practice mode (no specific student, but with class roster)
     const container = document.getElementById('task-image-container');
+
+    // Get all students from current class/combined classes for modules that need roster
+    let classStudents = [];
+    if (this.selectedClasses.size > 0) {
+      // Combined classes mode
+      classStudents = this.students
+        .filter(s => this.selectedClasses.has(s.class))
+        .map(s => ({
+          id: s.student_id,
+          name: s.name,
+          grade: s.grade,
+          class: s.class,
+          present: !this.sessionAbsentStudents.has(s.student_id)
+        }));
+    } else if (this.selectedClass) {
+      // Single class mode
+      classStudents = this.students
+        .filter(s => s.class === this.selectedClass)
+        .map(s => ({
+          id: s.student_id,
+          name: s.name,
+          grade: s.grade,
+          class: s.class,
+          present: !this.sessionAbsentStudents.has(s.student_id)
+        }));
+    }
+
     const context = {
       studentId: 'practice',
       taskId: taskData.task_id,
       grade: 'practice',
       studentName: 'Practice Mode',
+      class: this.selectedClass || Array.from(this.selectedClasses).join(', '),
       question: taskData.question,
-      existingResponse: null
+      existingResponse: null,
+      classStudents: classStudents  // Full class roster for modules that need it
     };
 
     this.moduleLoader.loadModule(
