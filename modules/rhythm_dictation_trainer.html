@@ -1082,16 +1082,55 @@
     // Audio player using Tone.js with real instrument samples
     let audioPlayer = new AudioPlayer('xylophone');
 
+    // Get appropriate note frequency for the current instrument
+    function getRhythmNote() {
+      const instrument = document.getElementById('instrumentSelect').value;
+
+      // Instruments that sound good in lower register (D3)
+      const lowerRegisterInstruments = ['cello', 'piano', 'guitar', 'saxophone'];
+
+      // Trombone has limited range, use its highest comfortable note
+      if (instrument === 'trombone') {
+        return 174.61; // F3 - highest note in trombone range
+      }
+
+      // Lower register instruments use D3
+      if (lowerRegisterInstruments.includes(instrument)) {
+        return 146.83; // D3
+      }
+
+      // Higher register instruments (violin, flute, trumpet, xylophone, harp) use D4
+      return 293.66; // D4
+    }
+
+    function getClickNote() {
+      const instrument = document.getElementById('instrumentSelect').value;
+
+      // Instruments that sound good in lower register
+      const lowerRegisterInstruments = ['cello', 'piano', 'guitar', 'saxophone'];
+
+      // Trombone: stay in its range
+      if (instrument === 'trombone') {
+        return 174.61; // F3 (same as rhythm note for trombone)
+      }
+
+      // Lower register instruments use E3 (slightly higher than D3)
+      if (lowerRegisterInstruments.includes(instrument)) {
+        return 164.81; // E3
+      }
+
+      // Higher register instruments use E4 (slightly higher than D4)
+      return 329.63; // E4
+    }
+
     // Play a sustained tone with specified duration using the selected instrument
     function playSustainedTone(startTime, duration) {
-      // Use D3 (146.83 Hz) for rhythm playback - safe for all instrument ranges including trombone
-      audioPlayer.playNote(146.83, startTime, duration);
+      audioPlayer.playNote(getRhythmNote(), startTime, duration);
     }
 
     // Play a short click sound (for rests/silence indicators)
     function playClick(time = 0) {
-      // Use E3 (164.81 Hz) for click sound - slightly higher than rhythm tone, safe for all instruments
-      audioPlayer.playNote(164.81, time, 0.05);
+      audioPlayer.playNote(getClickNote(), time, 0.05);
     }
 
     // Initialize UI
@@ -2271,6 +2310,12 @@
 
     // Initialize on load
     init();
+
+    // Expose functions to window for inline onclick handlers (needed for ES6 modules)
+    window.closeFilterModal = closeFilterModal;
+    window.closeOptionsModal = closeOptionsModal;
+    window.closeCustomRulesModal = closeCustomRulesModal;
+    window.removeFromCell = removeFromCell;
   </script>
 </body>
 </html>
