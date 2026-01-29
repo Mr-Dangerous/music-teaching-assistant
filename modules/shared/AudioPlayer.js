@@ -188,8 +188,22 @@ export class AudioPlayer {
             this.instrument = new this.Tone.Sampler({
                 urls: config.urls,
                 baseUrl: config.baseUrl,
-                onload: () => {
-                    console.log(`${instrumentName} loaded successfully`);
+                onload: async () => {
+                    console.log(`${instrumentName} samples downloaded, waiting for buffers to decode...`);
+
+                    // Wait for all Tone.js buffers to be fully decoded
+                    await this.Tone.loaded();
+
+                    // Pre-warm the instrument with a very quiet note to eliminate first-note latency
+                    // This ensures the audio graph is fully initialized
+                    const testNote = Object.keys(config.urls)[0]; // Use first available note
+                    if (testNote) {
+                        this.instrument.triggerAttackRelease(testNote, 0.001, undefined, 0.001);
+                        // Wait a tiny bit for the warm-up to process
+                        await new Promise(r => setTimeout(r, 50));
+                    }
+
+                    console.log(`${instrumentName} ready for playback`);
                     this.instrumentName = instrumentName;
                     resolve();
                 },

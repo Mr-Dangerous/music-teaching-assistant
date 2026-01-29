@@ -1,5 +1,5 @@
 {
-  "version": "3.0.3",
+  "version": "3.0.4",
   "lastUpdated": "2026-01-29",
-  "description": "Fix: Use D3/E3 notes for rhythm playback to support all instrument ranges (trombone, guitar, saxophone now work)"
+  "description": "Fix: Eliminate first-pattern audio delay by waiting for buffer decode and pre-warming instrument"
 }
