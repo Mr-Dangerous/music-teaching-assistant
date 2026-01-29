@@ -1,5 +1,5 @@
 {
-  "version": "3.0.6",
+  "version": "3.0.7",
   "lastUpdated": "2026-01-29",
-  "description": "Increase xylophone, violin, and flute by one octave (D5/E5) for better sound"
+  "description": "Fix: Expose toggleRhythmFilter to window so rhythm filters work"
 }
