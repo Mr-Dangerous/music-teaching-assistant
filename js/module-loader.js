@@ -23,7 +23,7 @@ class ModuleLoader {
     iframe.style.width = '100%';
     iframe.style.height = '100%';
     iframe.style.border = 'none';
-    iframe.sandbox = 'allow-scripts allow-same-origin allow-fullscreen';
+    iframe.sandbox = 'allow-scripts allow-same-origin allow-fullscreen allow-forms';
     iframe.allowFullscreen = true;
 
     return new Promise((resolve, reject) => {

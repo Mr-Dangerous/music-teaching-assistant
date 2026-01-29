@@ -248,23 +248,27 @@
 
     /* Instrument palette (right column) */
     #instrumentPalette {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      overflow-y: auto;
+      flex: 1;
     }
 
     .instrument-card {
       background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
       border-radius: 12px;
-      padding: 15px;
+      padding: 12px;
       cursor: grab;
       transition: all 0.2s;
       box-shadow: 0 2px 4px rgba(0,0,0,0.1);
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 12px;
-      min-height: 80px;
+      text-align: center;
+      min-height: 140px;
       outline: none;
+      position: relative;
     }
 
     .instrument-card:focus {
@@ -277,6 +281,11 @@
     }
 
     .instrument-card.disabled {
+      display: none; /* Hide disabled instruments by default */
+    }
+
+    .instrument-card.disabled.show-all {
+      display: flex; /* Show when "Show All" is active */
       opacity: 0.4;
       cursor: not-allowed;
       filter: grayscale(100%);
@@ -288,42 +297,39 @@
     }
 
     .instrument-icon {
-      font-size: 40px;
-      min-width: 50px;
-      text-align: center;
-    }
-
-    .instrument-info {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: 5px;
+      font-size: 48px;
+      margin-bottom: 8px;
     }
 
     .instrument-name {
-      font-size: 18px;
+      font-size: 14px;
       font-weight: bold;
       color: #333;
+      margin-bottom: 4px;
+      word-wrap: break-word;
+      max-width: 100%;
     }
 
     .instrument-quantity {
-      font-size: 16px;
+      font-size: 13px;
       color: #666;
       font-weight: 600;
+      margin-bottom: 8px;
     }
 
     .instrument-controls {
       display: flex;
-      gap: 8px;
+      gap: 5px;
       align-items: center;
+      margin-top: auto;
     }
 
     .qty-btn {
-      width: 45px;
-      height: 45px;
+      width: 32px;
+      height: 32px;
       border: none;
-      border-radius: 8px;
-      font-size: 24px;
+      border-radius: 6px;
+      font-size: 18px;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.2s;
@@ -350,11 +356,11 @@
     }
 
     .toggle-btn {
-      width: 50px;
-      height: 40px;
+      width: 40px;
+      height: 28px;
       border: 2px solid #667eea;
-      border-radius: 8px;
-      font-size: 12px;
+      border-radius: 6px;
+      font-size: 10px;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.2s;
@@ -366,6 +372,29 @@
       background: #11998e;
       color: white;
       border-color: #11998e;
+    }
+
+    #showAllBtn {
+      padding: 12px;
+      font-size: 14px;
+      font-weight: bold;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      margin-top: 10px;
+    }
+
+    #showAllBtn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    }
+
+    #showAllBtn.active {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
     }
 
     #addInstrumentBtn {
@@ -498,6 +527,30 @@
     .column::-webkit-scrollbar-thumb:hover {
       background: #764ba2;
     }
+
+    /* Flying animation */
+    @keyframes flyToStudent {
+      0% {
+        transform: translate(0, 0) scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: translate(var(--fly-x), var(--fly-y)) scale(1.5);
+        opacity: 0.8;
+      }
+      100% {
+        transform: translate(var(--fly-x), var(--fly-y)) scale(0.5);
+        opacity: 0;
+      }
+    }
+
+    .flying-instrument {
+      position: fixed;
+      font-size: 48px;
+      pointer-events: none;
+      z-index: 9999;
+      animation: flyToStudent 0.8s ease-out forwards;
+    }
   </style>
 </head>
 <body>
@@ -525,6 +578,7 @@
     <div class="column">
       <h2>Instruments</h2>
       <div id="instrumentPalette"></div>
+      <button id="showAllBtn">👁️ Show All</button>
       <button id="addInstrumentBtn">➕ Add Instrument</button>
     </div>
   </div>
@@ -586,7 +640,8 @@
       assignments: {}, // studentId -> instrumentName
       previousAssignments: {}, // For random assignment memory
       configurations: [], // Saved song configurations
-      currentConfigName: ''
+      currentConfigName: '',
+      showAllInstruments: false // Toggle for showing disabled instruments
     };
 
     let moduleContext = null;
@@ -905,8 +960,12 @@
         card.className = 'instrument-card';
         if (!instrument.enabled) {
           card.classList.add('disabled');
+          if (appState.showAllInstruments) {
+            card.classList.add('show-all');
+          }
         }
         card.dataset.instrumentIndex = index;
+        card.dataset.instrumentName = instrument.name;
         card.draggable = instrument.enabled;
         card.tabIndex = instrument.enabled ? 0 : -1;
         card.role = 'button';
@@ -920,21 +979,17 @@
         icon.textContent = instrument.icon;
         card.appendChild(icon);
 
-        // Info
-        const info = document.createElement('div');
-        info.className = 'instrument-info';
-
+        // Name
         const name = document.createElement('div');
         name.className = 'instrument-name';
         name.textContent = instrument.name;
-        info.appendChild(name);
+        card.appendChild(name);
 
+        // Quantity
         const quantity = document.createElement('div');
         quantity.className = 'instrument-quantity';
-        quantity.textContent = `${available} / ${instrument.tempQuantity} available`;
-        info.appendChild(quantity);
-
-        card.appendChild(info);
+        quantity.textContent = `${available} / ${instrument.tempQuantity}`;
+        card.appendChild(quantity);
 
         // Controls
         const controls = document.createElement('div');
@@ -1076,6 +1131,9 @@
       // Add instrument button
       document.getElementById('addInstrumentBtn').addEventListener('click', showAddInstrumentModal);
 
+      // Show all button
+      document.getElementById('showAllBtn').addEventListener('click', toggleShowAll);
+
       // Save/Load configuration
       document.getElementById('saveConfigBtn').addEventListener('click', showSaveConfigModal);
       document.getElementById('loadConfigBtn').addEventListener('click', loadConfiguration);
@@ -1085,6 +1143,19 @@
       document.getElementById('addInstrumentForm').addEventListener('submit', handleAddInstrument);
       document.getElementById('cancelSaveBtn').addEventListener('click', hideSaveConfigModal);
       document.getElementById('confirmSaveBtn').addEventListener('click', handleSaveConfiguration);
+    }
+
+    function toggleShowAll() {
+      appState.showAllInstruments = !appState.showAllInstruments;
+      const btn = document.getElementById('showAllBtn');
+      if (appState.showAllInstruments) {
+        btn.classList.add('active');
+        btn.textContent = '👁️ Hide Disabled';
+      } else {
+        btn.classList.remove('active');
+        btn.textContent = '👁️ Show All';
+      }
+      renderInstrumentPalette();
     }
 
     // ========================================
@@ -1338,9 +1409,39 @@
     }
 
     // ========================================
+    // FLYING ANIMATION
+    // ========================================
+    async function createFlyingInstrument(instrumentIcon, fromElement, toElement) {
+      const flying = document.createElement('div');
+      flying.className = 'flying-instrument';
+      flying.textContent = instrumentIcon;
+
+      const fromRect = fromElement.getBoundingClientRect();
+      const toRect = toElement.getBoundingClientRect();
+
+      flying.style.left = fromRect.left + fromRect.width / 2 + 'px';
+      flying.style.top = fromRect.top + fromRect.height / 2 + 'px';
+
+      const deltaX = toRect.left + toRect.width / 2 - (fromRect.left + fromRect.width / 2);
+      const deltaY = toRect.top + toRect.height / 2 - (fromRect.top + fromRect.height / 2);
+
+      flying.style.setProperty('--fly-x', deltaX + 'px');
+      flying.style.setProperty('--fly-y', deltaY + 'px');
+
+      document.body.appendChild(flying);
+
+      return new Promise(resolve => {
+        setTimeout(() => {
+          flying.remove();
+          resolve();
+        }, 800);
+      });
+    }
+
+    // ========================================
     // RANDOM ASSIGNMENT
     // ========================================
-    function randomAssignment() {
+    async function randomAssignment() {
       // Get unassigned students
       const unassignedStudents = appState.students.filter(
         student => !appState.assignments[student.id]
@@ -1363,7 +1464,9 @@
         return;
       }
 
-      // Assign randomly with memory
+      // Build assignment list first
+      const assignmentQueue = [];
+
       unassignedStudents.forEach(student => {
         // Get current available counts
         const instrumentPool = availableInstruments.filter(inst => {
@@ -1391,10 +1494,25 @@
           selectedInstrument = instrumentPool[Math.floor(Math.random() * instrumentPool.length)];
         }
 
-        // Assign
+        assignmentQueue.push({ student, instrument: selectedInstrument });
+
+        // Temporarily assign to update counts
         appState.assignments[student.id] = selectedInstrument.name;
         appState.previousAssignments[student.id] = selectedInstrument.name;
       });
+
+      // Animate assignments one by one
+      for (const { student, instrument } of assignmentQueue) {
+        const instrumentCard = document.querySelector(`.instrument-card[data-instrument-index="${appState.instruments.indexOf(instrument)}"]`);
+        const studentCard = document.querySelector(`.student-card[data-student-id="${student.id}"]`);
+
+        if (instrumentCard && studentCard) {
+          await createFlyingInstrument(instrument.icon, instrumentCard, studentCard);
+        }
+
+        // Small delay between animations
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
 
       renderStudentRoster();
       renderInstrumentPalette();

@@ -1,5 +1,5 @@
 {
-  "version": "2.9.11",
+  "version": "2.10.0",
   "lastUpdated": "2026-01-29",
-  "description": "Remove debug logging after fixing practice mode issue"
+  "description": "Major Instrument Assigner improvements: 2-column layout, flying animations, show/hide disabled, form support"
 }
