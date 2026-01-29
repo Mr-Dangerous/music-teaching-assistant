@@ -1947,13 +1947,38 @@
         }
       }
 
-      // Compare and find wrong/correct answers
+      // Normalize student answer: merge consecutive quarter rests into half rests
+      const normalizedStudentAnswer = [...state.studentAnswer];
+      const mergedCells = []; // Track which cells were merged for UI update
+      for (let i = 0; i < normalizedStudentAnswer.length - 1; i++) {
+        // Check if current and next cell are both quarter rests
+        if (normalizedStudentAnswer[i] === 'quarter-rest' && normalizedStudentAnswer[i + 1] === 'quarter-rest') {
+          // Replace first with half-rest, set second to null (sustained)
+          normalizedStudentAnswer[i] = 'half-rest';
+          normalizedStudentAnswer[i + 1] = null;
+          mergedCells.push(i);
+          i++; // Skip the next cell since we just processed it
+        }
+      }
+
+      // Apply the normalization to the actual student answer and update UI
+      if (mergedCells.length > 0) {
+        console.log('🔄 Auto-merged consecutive quarter rests into half rests at positions:', mergedCells);
+        state.studentAnswer = normalizedStudentAnswer;
+        // Update the beat cells to show the merged half rests
+        mergedCells.forEach(cellIndex => {
+          updateBeatCell(cellIndex);
+          updateBeatCell(cellIndex + 1); // Update the sustained cell too
+        });
+      }
+
+      // Compare and find wrong/correct answers (using normalized version)
       const wrongCells = [];
       const correctCells = [];
       for (let i = 0; i < state.numBeats; i++) {
-        if (state.studentAnswer[i] !== correctAnswer[i]) {
+        if (normalizedStudentAnswer[i] !== correctAnswer[i]) {
           wrongCells.push(i);
-        } else if (state.studentAnswer[i] !== null) {
+        } else if (normalizedStudentAnswer[i] !== null) {
           // Only mark as correct if there's actually an answer (not a sustained continuation)
           correctCells.push(i);
         }

@@ -1,5 +1,5 @@
 {
-  "version": "3.0.7",
+  "version": "3.1.0",
   "lastUpdated": "2026-01-29",
-  "description": "Fix: Expose toggleRhythmFilter to window so rhythm filters work"
+  "description": "Feature: Auto-merge consecutive quarter rests into half rests when checking answers"
 }
