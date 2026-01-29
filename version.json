@@ -1,5 +1,5 @@
 {
-  "version": "2.10.1",
+  "version": "2.10.2",
   "lastUpdated": "2026-01-29",
-  "description": "Instrument Assigner: Improve touch scrolling and real-time assignment updates"
+  "description": "Fix song configuration save/load to reset quantities properly"
 }

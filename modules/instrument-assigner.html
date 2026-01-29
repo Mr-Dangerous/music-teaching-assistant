@@ -1627,11 +1627,10 @@
       }
 
       // Create configuration object
+      // Only save which instruments are enabled/disabled (not assignments or quantities)
       const configData = {
-        assignments: { ...appState.assignments },
         instrumentStates: appState.instruments.map(inst => ({
           name: inst.name,
-          tempQuantity: inst.tempQuantity,
           enabled: inst.enabled
         }))
       };
@@ -1665,14 +1664,16 @@
       const configName = select.value;
 
       if (!configName) {
-        // New configuration - reset
+        // New configuration - reset everything
         appState.currentConfigName = '';
-        // Reset temp quantities to max
+        appState.assignments = {};
         appState.instruments.forEach(inst => {
           inst.tempQuantity = inst.quantity;
           inst.enabled = true;
         });
+        renderStudentRoster();
         renderInstrumentPalette();
+        updateAssignmentDisplay();
         notifyParent();
         return;
       }
@@ -1684,15 +1685,20 @@
         return;
       }
 
-      // Load assignments
-      appState.assignments = { ...config.data.assignments };
+      // Clear all assignments (fresh start for new class)
+      appState.assignments = {};
 
-      // Load instrument states
+      // Reset all instruments to max quantity and apply enabled/disabled states
+      appState.instruments.forEach(inst => {
+        inst.tempQuantity = inst.quantity; // Reset to maximum
+        inst.enabled = true; // Default to enabled
+      });
+
+      // Apply saved instrument states (enabled/disabled only)
       if (config.data.instrumentStates) {
         config.data.instrumentStates.forEach(savedState => {
           const instrument = appState.instruments.find(i => i.name === savedState.name);
           if (instrument) {
-            instrument.tempQuantity = savedState.tempQuantity;
             instrument.enabled = savedState.enabled;
           }
         });
