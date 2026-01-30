@@ -1,5 +1,5 @@
 {
-  "version": "3.3.1",
+  "version": "3.4.0",
   "lastUpdated": "2026-01-30",
-  "description": "Seating chart: Update student roster buttons when dragging students to new colors on chart"
+  "description": "Seating chart: Fixed auto-spacing and added smooth drag animations with ghost preview"
 }

@@ -4291,6 +4291,7 @@ class TeachingAssistantApp {
 
   /**
    * Distribute students evenly across empty spots on the seating chart
+   * Also saves their positions to manualPositions so they don't move on re-render
    */
   distributeStudentsOnChart(students, spots) {
     if (students.length === 0 || spots.length === 0) return;
@@ -4307,6 +4308,10 @@ class TeachingAssistantApp {
           spot.dataset.studentId = students[i].student_id;
           spot.innerHTML = `<span class="seating-chart-student-name">${this.getFirstNameOnly(students[i].name)}</span>`;
           spot.draggable = true;
+
+          // Save manual position so student stays in this spot
+          const position = spot.dataset.position;
+          this.manualPositions.set(students[i].student_id, position);
         }
       });
     } else {
@@ -4322,6 +4327,10 @@ class TeachingAssistantApp {
           spot.dataset.studentId = student.student_id;
           spot.innerHTML = `<span class="seating-chart-student-name">${this.getFirstNameOnly(student.name)}</span>`;
           spot.draggable = true;
+
+          // Save manual position so student stays in this spot
+          const position = spot.dataset.position;
+          this.manualPositions.set(student.student_id, position);
         }
       });
     }
@@ -4340,11 +4349,15 @@ class TeachingAssistantApp {
         spot.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', spot.dataset.studentId);
+
+        // Create ghost element
+        this.createDragGhost(spot, e.clientX, e.clientY);
       });
 
       // Mouse drag end
       spot.addEventListener('dragend', (e) => {
         spot.classList.remove('dragging');
+        this.removeDragGhost();
         this.seatingChartDraggedSpot = null;
       });
 
@@ -4352,6 +4365,11 @@ class TeachingAssistantApp {
       spot.addEventListener('touchstart', (e) => {
         this.seatingChartDraggedSpot = spot;
         spot.classList.add('dragging');
+
+        // Create ghost element for touch
+        const touch = e.touches[0];
+        this.createDragGhost(spot, touch.clientX, touch.clientY);
+
         e.preventDefault();
       }, { passive: false });
     });
@@ -4390,6 +4408,47 @@ class TeachingAssistantApp {
       document.addEventListener('touchend', this.handleSeatingChartTouchEnd.bind(this), { passive: false });
       this.seatingChartTouchHandlersAdded = true;
     }
+
+    // Add global mouse move handler for ghost
+    if (!this.seatingChartMouseHandlerAdded) {
+      document.addEventListener('mousemove', (e) => {
+        if (this.seatingChartDragGhost) {
+          this.seatingChartDragGhost.style.left = (e.clientX - 40) + 'px';
+          this.seatingChartDragGhost.style.top = (e.clientY - 30) + 'px';
+        }
+      });
+      this.seatingChartMouseHandlerAdded = true;
+    }
+  }
+
+  /**
+   * Create drag ghost element
+   */
+  createDragGhost(spot, x, y) {
+    // Remove any existing ghost
+    this.removeDragGhost();
+
+    const ghost = document.createElement('div');
+    ghost.className = 'seating-chart-drag-ghost';
+    ghost.id = 'seating-chart-drag-ghost';
+    ghost.textContent = spot.textContent;
+
+    document.body.appendChild(ghost);
+    this.seatingChartDragGhost = ghost;
+
+    // Position ghost at cursor/finger
+    ghost.style.left = (x - 40) + 'px';
+    ghost.style.top = (y - 30) + 'px';
+  }
+
+  /**
+   * Remove drag ghost element
+   */
+  removeDragGhost() {
+    if (this.seatingChartDragGhost) {
+      this.seatingChartDragGhost.remove();
+      this.seatingChartDragGhost = null;
+    }
   }
 
   /**
@@ -4399,6 +4458,13 @@ class TeachingAssistantApp {
     if (!this.seatingChartDraggedSpot) return;
 
     const touch = e.touches[0];
+
+    // Move ghost element
+    if (this.seatingChartDragGhost) {
+      this.seatingChartDragGhost.style.left = (touch.clientX - 40) + 'px';
+      this.seatingChartDragGhost.style.top = (touch.clientY - 30) + 'px';
+    }
+
     const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
 
     // Remove drag-over from all spots
@@ -4430,6 +4496,9 @@ class TeachingAssistantApp {
 
     this.seatingChartDraggedSpot.classList.remove('dragging');
 
+    // Remove ghost
+    this.removeDragGhost();
+
     // Remove drag-over from all spots
     const allSpots = document.querySelectorAll('.seating-chart-student-spot');
     allSpots.forEach(s => s.classList.remove('drag-over'));
@@ -4456,6 +4525,36 @@ class TeachingAssistantApp {
     // Extract colors from positions (e.g., "red_3" -> "red")
     const color1 = pos1.split('_')[0];
     const color2 = pos2.split('_')[0];
+
+    // Determine if this is a swap or a move
+    const isSwap = student2Id !== undefined;
+
+    // Add animation classes
+    if (isSwap) {
+      // Determine swap direction
+      const rect1 = spot1.getBoundingClientRect();
+      const rect2 = spot2.getBoundingClientRect();
+
+      if (rect1.left < rect2.left) {
+        spot1.classList.add('swap-right');
+        spot2.classList.add('swap-left');
+      } else {
+        spot1.classList.add('swap-left');
+        spot2.classList.add('swap-right');
+      }
+    } else {
+      // Just moving to empty spot
+      spot1.classList.add('moving');
+    }
+
+    // Wait for animation to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Remove animation classes
+    spot1.classList.remove('swap-left', 'swap-right', 'moving');
+    if (spot2) {
+      spot2.classList.remove('swap-left', 'swap-right');
+    }
 
     // Update manual positions
     if (student1Id) {
