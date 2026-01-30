@@ -1,5 +1,5 @@
 {
-  "version": "3.2.0",
+  "version": "3.3.0",
   "lastUpdated": "2026-01-30",
-  "description": "Global seating chart overlay: Display seating chart over any module/screen with drag-and-drop functionality"
+  "description": "Exclude half-rest from random pattern generation in rhythm dictation trainer"
 }

@@ -1446,6 +1446,9 @@
           RHYTHMS[id].duration <= beatsRemaining
         );
 
+        // Exclude half-rest from random generation
+        fitting = fitting.filter(id => id !== 'half-rest');
+
         // Apply custom rules
         if (isFirstBeat() && state.customRules.noRestStart) {
           // Filter out rests (anything with no clicks)
