@@ -4020,10 +4020,17 @@ class TeachingAssistantApp {
    * Show seating chart overlay
    */
   showSeatingChartOverlay() {
+    console.log('showSeatingChartOverlay called');
     const overlay = document.getElementById('seating-chart-overlay');
-    if (!overlay) return;
+    console.log('Overlay element:', overlay);
+    if (!overlay) {
+      console.error('Seating chart overlay element not found!');
+      return;
+    }
 
+    console.log('Setting overlay display to flex');
     overlay.style.display = 'flex';
+    console.log('Calling renderSeatingChart');
     this.renderSeatingChart();
 
     // Add ESC key handler
@@ -4033,6 +4040,7 @@ class TeachingAssistantApp {
       }
     };
     document.addEventListener('keydown', this.seatingChartEscHandler);
+    console.log('Seating chart overlay shown');
   }
 
   /**
@@ -4055,6 +4063,7 @@ class TeachingAssistantApp {
    * Render the seating chart
    */
   renderSeatingChart() {
+    console.log('renderSeatingChart called');
     const COLORS = ['red', 'orange', 'green', 'blue', 'purple'];
     const SPOTS_PER_ROW = 6;
     const TOTAL_STOOLS = 8;
@@ -4064,7 +4073,12 @@ class TeachingAssistantApp {
     const rug = document.getElementById('seating-chart-rug');
     const stoolsContainer = document.getElementById('seating-chart-stools-container');
 
-    if (!rug || !stoolsContainer) return;
+    console.log('Rug element:', rug);
+    console.log('Stools container:', stoolsContainer);
+    if (!rug || !stoolsContainer) {
+      console.error('Rug or stools container not found!');
+      return;
+    }
 
     rug.innerHTML = '';
     stoolsContainer.innerHTML = '';
