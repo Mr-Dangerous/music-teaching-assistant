@@ -1,5 +1,5 @@
 {
-  "version": "3.4.0",
+  "version": "3.4.1",
   "lastUpdated": "2026-01-30",
-  "description": "Seating chart: Fixed auto-spacing and added smooth drag animations with ghost preview"
+  "description": "Seating chart: Cards now actually glide smoothly to new positions over 2 seconds"
 }

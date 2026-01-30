@@ -2614,3 +2614,15 @@ body.snow-theme .app-header {
   50% { transform: scale(1.2); opacity: 0.7; }
   100% { opacity: 1; }
 }
+
+/* Animated clone for smooth position transitions */
+.seating-chart-animated-clone {
+  will-change: left, top;
+}
+
+/* Remove old bubble animations, replaced with actual movement */
+.seating-chart-student-spot.swap-left,
+.seating-chart-student-spot.swap-right,
+.seating-chart-student-spot.moving {
+  animation: none;
+}

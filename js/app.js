@@ -4514,7 +4514,7 @@ class TeachingAssistantApp {
   }
 
   /**
-   * Swap two students' positions on the seating chart
+   * Swap two students' positions on the seating chart with smooth animation
    */
   async swapSeatingChartStudents(spot1, spot2) {
     const student1Id = spot1.dataset.studentId;
@@ -4526,35 +4526,48 @@ class TeachingAssistantApp {
     const color1 = pos1.split('_')[0];
     const color2 = pos2.split('_')[0];
 
+    // Get current positions before any changes
+    const rect1 = spot1.getBoundingClientRect();
+    const rect2 = spot2.getBoundingClientRect();
+    const student1Name = spot1.textContent;
+    const student2Name = student2Id ? spot2.textContent : null;
+
     // Determine if this is a swap or a move
     const isSwap = student2Id !== undefined;
 
-    // Add animation classes
-    if (isSwap) {
-      // Determine swap direction
-      const rect1 = spot1.getBoundingClientRect();
-      const rect2 = spot2.getBoundingClientRect();
+    // Create animated clones
+    const clone1 = this.createAnimatedClone(spot1, rect1);
+    const clone2 = isSwap ? this.createAnimatedClone(spot2, rect2) : null;
 
-      if (rect1.left < rect2.left) {
-        spot1.classList.add('swap-right');
-        spot2.classList.add('swap-left');
-      } else {
-        spot1.classList.add('swap-left');
-        spot2.classList.add('swap-right');
-      }
-    } else {
-      // Just moving to empty spot
-      spot1.classList.add('moving');
+    // Hide original spots during animation
+    spot1.style.opacity = '0';
+    if (isSwap) spot2.style.opacity = '0';
+
+    // Wait a frame for clones to be positioned
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    // Animate clone1 to spot2's position
+    clone1.style.transition = 'all 2s cubic-bezier(0.4, 0.0, 0.2, 1)';
+    clone1.style.left = rect2.left + 'px';
+    clone1.style.top = rect2.top + 'px';
+
+    if (isSwap && clone2) {
+      // Animate clone2 to spot1's position
+      clone2.style.transition = 'all 2s cubic-bezier(0.4, 0.0, 0.2, 1)';
+      clone2.style.left = rect1.left + 'px';
+      clone2.style.top = rect1.top + 'px';
     }
 
     // Wait for animation to complete
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // Remove animation classes
-    spot1.classList.remove('swap-left', 'swap-right', 'moving');
-    if (spot2) {
-      spot2.classList.remove('swap-left', 'swap-right');
-    }
+    // Clean up clones
+    clone1.remove();
+    if (clone2) clone2.remove();
+
+    // Restore opacity
+    spot1.style.opacity = '';
+    if (isSwap) spot2.style.opacity = '';
 
     // Update manual positions
     if (student1Id) {
@@ -4594,6 +4607,41 @@ class TeachingAssistantApp {
 
     // Save changes to CSV
     await this.saveSeatingCharts();
+  }
+
+  /**
+   * Create an animated clone of a student spot for smooth transitions
+   */
+  createAnimatedClone(spot, rect) {
+    const clone = document.createElement('div');
+    clone.className = 'seating-chart-student-spot occupied seating-chart-animated-clone';
+    clone.innerHTML = spot.innerHTML;
+
+    // Copy computed styles
+    const computedStyle = window.getComputedStyle(spot);
+    clone.style.width = rect.width + 'px';
+    clone.style.height = rect.height + 'px';
+    clone.style.fontSize = computedStyle.fontSize;
+    clone.style.fontWeight = computedStyle.fontWeight;
+    clone.style.color = computedStyle.color;
+    clone.style.background = computedStyle.background;
+    clone.style.border = computedStyle.border;
+    clone.style.borderRadius = computedStyle.borderRadius;
+    clone.style.textShadow = computedStyle.textShadow;
+
+    // Position absolutely at current location
+    clone.style.position = 'fixed';
+    clone.style.left = rect.left + 'px';
+    clone.style.top = rect.top + 'px';
+    clone.style.zIndex = '10001';
+    clone.style.pointerEvents = 'none';
+    clone.style.display = 'flex';
+    clone.style.alignItems = 'center';
+    clone.style.justifyContent = 'center';
+    clone.style.boxShadow = '0 8px 24px rgba(0,0,0,0.4)';
+
+    document.body.appendChild(clone);
+    return clone;
   }
 
   /**
