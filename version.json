@@ -1,5 +1,5 @@
 {
-  "version": "3.6.0",
+  "version": "3.6.1",
   "lastUpdated": "2026-01-30",
-  "description": "Add Edit Student List module for managing student roster from within the app"
+  "description": "Fix delete button and add editable grade/class fields in Edit Student List"
 }

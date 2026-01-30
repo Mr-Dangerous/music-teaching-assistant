@@ -75,7 +75,7 @@
       font-size: clamp(14px, 2.5vw, 18px);
     }
 
-    .form-input {
+    .form-input, .form-select {
       padding: 12px;
       border: 2px solid #cbd5e1;
       border-radius: 8px;
@@ -83,7 +83,7 @@
       font-family: inherit;
     }
 
-    .form-input:focus {
+    .form-input:focus, .form-select:focus {
       outline: none;
       border-color: #3b82f6;
     }
@@ -163,6 +163,39 @@
     .students-table tbody td:last-child {
       border-right: 1px solid #e2e8f0;
       border-radius: 0 10px 10px 0;
+    }
+
+    .editable-cell {
+      cursor: pointer;
+      position: relative;
+    }
+
+    .editable-cell:hover {
+      background: #fef3c7;
+    }
+
+    .editable-cell::after {
+      content: '✏️';
+      position: absolute;
+      right: 5px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 12px;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .editable-cell:hover::after {
+      opacity: 0.5;
+    }
+
+    .cell-select {
+      width: 100%;
+      padding: 8px;
+      border: 2px solid #3b82f6;
+      border-radius: 6px;
+      font-size: clamp(14px, 2.5vw, 18px);
+      font-family: inherit;
     }
 
     .delete-button {
@@ -259,12 +292,16 @@
         <input type="text" id="new-student-name" class="form-input" placeholder="Enter student name">
 
         <label class="form-label">Grade:</label>
-        <input type="text" id="new-student-grade" class="form-input" disabled>
+        <select id="new-student-grade" class="form-select">
+          <option value="">Select grade...</option>
+        </select>
 
         <label class="form-label">Class:</label>
-        <input type="text" id="new-student-class" class="form-input" disabled>
+        <select id="new-student-class" class="form-select">
+          <option value="">Select class...</option>
+        </select>
       </div>
-      <button class="add-button" id="add-button">Add Student to This Class</button>
+      <button class="add-button" id="add-button">Add Student</button>
     </div>
 
     <table class="students-table">
@@ -290,6 +327,8 @@
     let allStudents = [];
     let currentClassName = '';
     let currentGrade = '';
+    let availableGrades = new Set();
+    let availableClasses = new Set();
 
     // Required: Define the TaskModule interface
     window.TaskModule = {
@@ -336,14 +375,22 @@
       allStudents = data.students || [];
       currentClassName = data.className || '';
 
+      // Extract unique grades and classes
+      availableGrades.clear();
+      availableClasses.clear();
+      allStudents.forEach(s => {
+        if (s.grade) availableGrades.add(s.grade);
+        if (s.class) availableClasses.add(s.class);
+      });
+
       // Get grade from first student in class
       const classStudents = getClassStudents();
       currentGrade = classStudents.length > 0 ? classStudents[0].grade : '';
 
       // Update UI
       updateClassInfo();
+      updateGradeClassSelectors();
       updateStudentTable();
-      updateAddForm();
       suggestStudentId();
     }
 
@@ -367,6 +414,32 @@
       classInfo.textContent = `${currentClassName} (${classStudents.length} student${classStudents.length !== 1 ? 's' : ''})`;
     }
 
+    // Update grade and class selectors
+    function updateGradeClassSelectors() {
+      const gradeSelect = document.getElementById('new-student-grade');
+      const classSelect = document.getElementById('new-student-class');
+
+      // Populate grade selector
+      gradeSelect.innerHTML = '<option value="">Select grade...</option>';
+      Array.from(availableGrades).sort().forEach(grade => {
+        const option = document.createElement('option');
+        option.value = grade;
+        option.textContent = grade;
+        if (grade === currentGrade) option.selected = true;
+        gradeSelect.appendChild(option);
+      });
+
+      // Populate class selector
+      classSelect.innerHTML = '<option value="">Select class...</option>';
+      Array.from(availableClasses).sort().forEach(className => {
+        const option = document.createElement('option');
+        option.value = className;
+        option.textContent = className;
+        if (className === currentClassName) option.selected = true;
+        classSelect.appendChild(option);
+      });
+    }
+
     // Update student table
     function updateStudentTable() {
       const tbody = document.getElementById('students-tbody');
@@ -386,25 +459,93 @@
       });
 
       tbody.innerHTML = classStudents.map(student => `
-        <tr>
+        <tr data-student-id="${escapeAttr(student.student_id)}">
           <td>${escapeHtml(student.student_id)}</td>
           <td>${escapeHtml(student.name)}</td>
-          <td>${escapeHtml(student.grade)}</td>
-          <td>${escapeHtml(student.class)}</td>
+          <td class="editable-cell" data-field="grade">${escapeHtml(student.grade)}</td>
+          <td class="editable-cell" data-field="class">${escapeHtml(student.class)}</td>
           <td>
-            <button class="delete-button" onclick="deleteStudent('${escapeHtml(student.student_id)}')">
+            <button class="delete-button" data-action="delete">
               <span class="trash-icon">🗑️</span>
               Delete
             </button>
           </td>
         </tr>
       `).join('');
+
+      // Add event delegation for delete buttons and editable cells
+      tbody.addEventListener('click', handleTableClick);
     }
 
-    // Update add form with class/grade info
-    function updateAddForm() {
-      document.getElementById('new-student-grade').value = currentGrade;
-      document.getElementById('new-student-class').value = currentClassName;
+    // Handle clicks on table (event delegation)
+    function handleTableClick(e) {
+      const target = e.target.closest('[data-action], .editable-cell');
+      if (!target) return;
+
+      const row = target.closest('tr');
+      const studentId = row.dataset.studentId;
+
+      // Handle delete button
+      if (target.dataset.action === 'delete') {
+        deleteStudent(studentId);
+        return;
+      }
+
+      // Handle editable cell
+      if (target.classList.contains('editable-cell')) {
+        const field = target.dataset.field;
+        editStudentField(studentId, field, target);
+      }
+    }
+
+    // Edit student field (grade or class)
+    function editStudentField(studentId, field, cell) {
+      const student = allStudents.find(s => s.student_id === studentId);
+      if (!student) return;
+
+      const currentValue = student[field];
+      const options = field === 'grade' ? Array.from(availableGrades) : Array.from(availableClasses);
+
+      // Create select element
+      const select = document.createElement('select');
+      select.className = 'cell-select';
+
+      options.sort().forEach(value => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        if (value === currentValue) option.selected = true;
+        select.appendChild(option);
+      });
+
+      // Replace cell content
+      const originalContent = cell.innerHTML;
+      cell.innerHTML = '';
+      cell.appendChild(select);
+      select.focus();
+
+      // Handle save/cancel
+      const save = () => {
+        const newValue = select.value;
+        if (newValue && newValue !== currentValue) {
+          student[field] = newValue;
+          saveStudentsToParent();
+        }
+        cell.innerHTML = originalContent;
+        updateStudentTable();
+      };
+
+      const cancel = () => {
+        cell.innerHTML = originalContent;
+        updateStudentTable();
+      };
+
+      select.addEventListener('change', save);
+      select.addEventListener('blur', cancel);
+      select.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') save();
+        if (e.key === 'Escape') cancel();
+      });
     }
 
     // Suggest an unused student ID
@@ -421,8 +562,8 @@
     document.getElementById('add-button').addEventListener('click', () => {
       const studentId = document.getElementById('new-student-id').value.trim();
       const studentName = document.getElementById('new-student-name').value.trim();
-      const grade = currentGrade;
-      const className = currentClassName;
+      const grade = document.getElementById('new-student-grade').value;
+      const className = document.getElementById('new-student-class').value;
 
       // Validate
       if (!studentName) {
@@ -432,6 +573,16 @@
 
       if (!studentId) {
         showMessage('Please enter a student ID.', 'error');
+        return;
+      }
+
+      if (!grade) {
+        showMessage('Please select a grade.', 'error');
+        return;
+      }
+
+      if (!className) {
+        showMessage('Please select a class.', 'error');
         return;
       }
 
@@ -463,7 +614,10 @@
 
     // Delete student
     function deleteStudent(studentId) {
-      if (!confirm(`Are you sure you want to delete student ${studentId}? This cannot be undone.`)) {
+      const student = allStudents.find(s => s.student_id === studentId);
+      if (!student) return;
+
+      if (!confirm(`Are you sure you want to delete ${student.name} (ID: ${studentId})? This cannot be undone.`)) {
         return;
       }
 
@@ -502,6 +656,11 @@
       const div = document.createElement('div');
       div.textContent = text;
       return div.innerHTML;
+    }
+
+    // Escape attribute values
+    function escapeAttr(text) {
+      return String(text).replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
   </script>
 </body>
