@@ -1,5 +1,5 @@
 {
-  "version": "3.4.1",
+  "version": "3.4.2",
   "lastUpdated": "2026-01-30",
-  "description": "Seating chart: Cards now actually glide smoothly to new positions over 2 seconds"
+  "description": "Fix rhythm dictation trainer reveal button to check beat duration instead of cell count"
 }

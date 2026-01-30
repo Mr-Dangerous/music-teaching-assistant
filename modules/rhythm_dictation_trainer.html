@@ -1858,12 +1858,26 @@
 
     // Update reveal button enabled/disabled state
     function updateRevealButton() {
-      const allFilled = state.studentAnswer.every(cell => cell !== null);
+      // Calculate total duration of student's answer (accounts for sustained notes)
+      let totalDuration = 0;
+      for (let i = 0; i < state.studentAnswer.length; i++) {
+        const rhythmId = state.studentAnswer[i];
+        if (rhythmId !== null) {
+          const rhythm = RHYTHMS[rhythmId];
+          totalDuration += rhythm.duration;
+          // Skip sustained beats
+          if (rhythm.sustained) {
+            i += rhythm.duration - 1;
+          }
+        }
+      }
+
+      const allBeatsPlaced = totalDuration === state.numBeats;
       const hasPattern = state.pattern.length > 0;
       const revealBtn = document.getElementById('revealBtn');
 
       if (revealBtn) {
-        revealBtn.disabled = !(allFilled && hasPattern && state.mode === 'random');
+        revealBtn.disabled = !(allBeatsPlaced && hasPattern && state.mode === 'random');
       }
     }
 
