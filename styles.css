@@ -2178,3 +2178,381 @@ body.snow-theme .app-header {
     opacity: 1;
   }
 }
+
+/* ===================================
+   Seating Chart Overlay Styles
+   =================================== */
+
+/* Overlay container */
+.seating-chart-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seating-chart-overlay-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
+}
+
+.seating-chart-overlay-content {
+  position: relative;
+  width: 95%;
+  height: 95%;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+.seating-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.seating-chart-header h2 {
+  color: white;
+  font-size: clamp(24px, 3vw, 32px);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  margin: 0;
+}
+
+.seating-chart-close-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 28px;
+  font-weight: bold;
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.seating-chart-close-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.seating-chart-error-banner {
+  background: #fef3c7;
+  border: 2px solid #f59e0b;
+  color: #78350f;
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  font-size: clamp(16px, 2vw, 20px);
+  font-weight: 600;
+  display: none;
+  width: 85%;
+}
+
+.seating-chart-error-banner.show {
+  display: block;
+}
+
+.seating-chart-classroom-container {
+  position: relative;
+  width: 85%;
+  max-width: 85%;
+  height: 90%;
+  display: flex;
+  flex-direction: column;
+  transform: scale(0.95);
+  transform-origin: top center;
+}
+
+/* Teacher area */
+.seating-chart-teacher-area {
+  background: linear-gradient(135deg, #374151 0%, #1f2937 100%);
+  border-radius: 10px 10px 0 0;
+  padding: 12px;
+  text-align: center;
+  color: white;
+  font-weight: 700;
+  font-size: clamp(18px, 2.5vw, 24px);
+  border: 2px solid #4b5563;
+  border-bottom: none;
+  flex-shrink: 0;
+}
+
+/* The rug */
+.seating-chart-rug {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 15px;
+  background: linear-gradient(135deg, #8b7355 0%, #6b5344 100%);
+  border-radius: 0 0 10px 10px;
+  border: 4px solid #5d4037;
+  position: relative;
+  flex: 1;
+}
+
+/* Color rows */
+.seating-chart-color-row {
+  display: flex;
+  justify-content: space-evenly;
+  align-items: center;
+  flex: 1;
+  min-height: 40px;
+  border-radius: 8px;
+  padding: 5px 10px;
+  position: relative;
+}
+
+.seating-chart-color-row[data-color="red"] {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.seating-chart-color-row[data-color="orange"] {
+  background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+}
+
+.seating-chart-color-row[data-color="green"] {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.seating-chart-color-row[data-color="blue"] {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.seating-chart-color-row[data-color="purple"] {
+  background: linear-gradient(135deg, #a855f7 0%, #9333ea 100%);
+}
+
+/* Student spots */
+.seating-chart-student-spot {
+  width: 15%;
+  max-width: 130px;
+  min-width: 60px;
+  height: 90%;
+  max-height: 85px;
+  min-height: 60px;
+  background: rgba(255, 255, 255, 0.25);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(18px, 2.5vw, 26px);
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 2px 3px rgba(0,0,0,0.4);
+  text-align: center;
+  padding: 6px;
+  border: 3px solid rgba(255,255,255,0.5);
+  transition: all 0.2s;
+  overflow: hidden;
+}
+
+.seating-chart-student-spot.occupied {
+  background: rgba(255, 255, 255, 0.9);
+  color: #1f2937;
+  text-shadow: none;
+  border-color: white;
+  cursor: move;
+  user-select: none;
+}
+
+.seating-chart-student-spot.empty {
+  opacity: 0.6;
+}
+
+.seating-chart-student-spot.drag-over {
+  background: rgba(251, 191, 36, 0.5);
+  transform: scale(1.05);
+  border-color: #fbbf24;
+}
+
+.seating-chart-student-spot.dragging {
+  opacity: 0.5;
+  border: 3px dashed white;
+}
+
+/* Stools container */
+.seating-chart-stools-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+.seating-chart-stool {
+  position: absolute;
+  min-width: 80px;
+  min-height: 70px;
+  background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(16px, 2vw, 20px);
+  font-weight: 700;
+  color: #1f2937;
+  text-align: center;
+  padding: 8px;
+  border: 3px solid #92400e;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  pointer-events: auto;
+}
+
+.seating-chart-stool.occupied {
+  background: linear-gradient(135deg, #fde68a 0%, #fbbf24 100%);
+}
+
+.seating-chart-stool.empty {
+  opacity: 0.5;
+}
+
+.seating-chart-stool .stool-icon {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  font-size: 14px;
+}
+
+.seating-chart-chair {
+  position: absolute;
+  min-width: 80px;
+  min-height: 70px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(16px, 2vw, 20px);
+  font-weight: 700;
+  color: white;
+  text-align: center;
+  padding: 8px;
+  border: 3px solid #4c1d95;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  pointer-events: auto;
+}
+
+.seating-chart-chair.occupied {
+  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+}
+
+.seating-chart-chair.empty {
+  opacity: 0.5;
+}
+
+.seating-chart-chair .chair-icon {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  font-size: 14px;
+}
+
+.seating-chart-furniture-color-dot {
+  position: absolute;
+  bottom: 5px;
+  right: 5px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.3);
+}
+
+.seating-chart-furniture-color-dot[data-color="red"] { background: #ef4444; }
+.seating-chart-furniture-color-dot[data-color="orange"] { background: #f97316; }
+.seating-chart-furniture-color-dot[data-color="green"] { background: #22c55e; }
+.seating-chart-furniture-color-dot[data-color="blue"] { background: #3b82f6; }
+.seating-chart-furniture-color-dot[data-color="purple"] { background: #a855f7; }
+
+/* Legend */
+.seating-chart-legend {
+  display: flex;
+  gap: 16px;
+  margin-top: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.seating-chart-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: white;
+  font-size: clamp(16px, 2vw, 20px);
+  font-weight: 600;
+}
+
+.seating-chart-legend-color {
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: 3px solid white;
+}
+
+/* Refresh button */
+.seating-chart-refresh-btn {
+  margin-top: 10px;
+  padding: 14px 28px;
+  min-height: 60px;
+  min-width: 160px;
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: clamp(16px, 2vw, 20px);
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.seating-chart-refresh-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.seating-chart-student-name {
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+/* Show seating chart button */
+.btn-seating-chart {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border: 2px solid #1d4ed8;
+  color: white;
+  font-weight: 600;
+  padding: 8px 16px;
+  min-height: 50px;
+  margin-top: 8px;
+  width: 100%;
+}
+
+.btn-seating-chart:hover {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+}

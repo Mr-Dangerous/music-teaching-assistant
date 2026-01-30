@@ -56,6 +56,7 @@
         </div>
         <button id="assign-seats-btn" class="btn btn-seat-assign">Assign Seats</button>
         <button id="clear-seats-btn" class="btn btn-seat-clear">Clear</button>
+        <button id="show-seating-chart-btn" class="btn btn-seating-chart">📋 Seating Chart</button>
         </div>
       </div>
     </div>
@@ -310,6 +311,41 @@
       return false;
     });
   </script>
+
+  <!-- Seating Chart Overlay -->
+  <div id="seating-chart-overlay" class="seating-chart-overlay" style="display: none;">
+    <div class="seating-chart-overlay-backdrop"></div>
+    <div class="seating-chart-overlay-content">
+      <div class="seating-chart-header">
+        <h2 id="seating-chart-title">Class Seating Chart</h2>
+        <button id="seating-chart-close-btn" class="seating-chart-close-btn" title="Close (ESC)">✕</button>
+      </div>
+      <div class="seating-chart-error-banner" id="seating-chart-error-banner" role="alert" aria-live="polite"></div>
+
+      <main class="seating-chart-classroom-container" role="main" aria-label="Classroom seating arrangement">
+        <div class="seating-chart-teacher-area">👩‍🏫 TEACHER / FRONT OF ROOM</div>
+        <div class="seating-chart-rug" id="seating-chart-rug" role="region" aria-label="Floor seating rug with color-coded rows" tabindex="0">
+          <!-- Color rows will be generated here -->
+        </div>
+        <div class="seating-chart-stools-container" id="seating-chart-stools-container" aria-label="Special seating (stools and chairs)">
+          <!-- Stools and chairs will be positioned here -->
+        </div>
+      </main>
+
+      <nav class="seating-chart-legend" aria-label="Seating legend">
+        <div class="seating-chart-legend-item">
+          <div class="seating-chart-legend-color" style="background: linear-gradient(135deg, #fbbf24, #d97706);"></div>
+          <span>Stool</span>
+        </div>
+        <div class="seating-chart-legend-item">
+          <div class="seating-chart-legend-color" style="background: linear-gradient(135deg, #8b5cf6, #6d28d9);"></div>
+          <span>Chair</span>
+        </div>
+      </nav>
+
+      <button class="seating-chart-refresh-btn" id="seating-chart-refresh-btn" aria-label="Refresh seating chart">🔄 Refresh Seating</button>
+    </div>
+  </div>
 
   <!-- Presentation Fullscreen Overlay -->
   <div id="presentation-fullscreen-overlay" tabindex="0">
