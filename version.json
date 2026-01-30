@@ -1,5 +1,5 @@
 {
-  "version": "3.3.0",
+  "version": "3.3.1",
   "lastUpdated": "2026-01-30",
-  "description": "Exclude half-rest from random pattern generation in rhythm dictation trainer"
+  "description": "Seating chart: Update student roster buttons when dragging students to new colors on chart"
 }

@@ -4453,16 +4453,42 @@ class TeachingAssistantApp {
     const pos1 = spot1.dataset.position;
     const pos2 = spot2.dataset.position;
 
+    // Extract colors from positions (e.g., "red_3" -> "red")
+    const color1 = pos1.split('_')[0];
+    const color2 = pos2.split('_')[0];
+
     // Update manual positions
     if (student1Id) {
       this.manualPositions.set(student1Id, pos2);
+      // Update seat assignment to new color
+      this.seatAssignments.set(student1Id, color2);
     }
     if (student2Id) {
       this.manualPositions.set(student2Id, pos1);
+      // Update seat assignment to new color
+      this.seatAssignments.set(student2Id, color1);
     } else if (student1Id) {
       // Moving to empty spot
       this.manualPositions.set(student1Id, pos2);
+      this.seatAssignments.set(student1Id, color2);
     }
+
+    // Update student roster buttons to show new colors
+    if (student1Id) {
+      const button1 = document.querySelector(`.student-roster-button[data-student-id="${student1Id}"]`);
+      if (button1) {
+        this.updateStudentButtonSeatDot(button1, color2, false);
+      }
+    }
+    if (student2Id) {
+      const button2 = document.querySelector(`.student-roster-button[data-student-id="${student2Id}"]`);
+      if (button2) {
+        this.updateStudentButtonSeatDot(button2, color1, false);
+      }
+    }
+
+    // Update palette counts
+    this.updateSeatPaletteCounts();
 
     // Re-render to show changes
     this.renderSeatingChart();
