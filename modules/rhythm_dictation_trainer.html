@@ -1072,7 +1072,7 @@
         noRestEnd: true,
         dontAcknowledgeCorrect: false
       },
-      enabledRhythms: Object.keys(RHYTHMS), // All rhythms enabled by default
+      enabledRhythms: Object.keys(RHYTHMS).filter(id => id !== 'half-rest'), // All rhythms except half-rest
       pattern: [], // Correct pattern (array of rhythm IDs)
       studentAnswer: [], // Student's answer (array of rhythm IDs or null)
       isPlaying: false,
@@ -1200,7 +1200,7 @@
         state.visualAids = prefs.visualAids !== false;
         state.bpm = prefs.bpm || 80;
         state.customRules = prefs.customRules || { noRestStart: true, noTiTiEnd: true, noRestEnd: true, dontAcknowledgeCorrect: false };
-        state.enabledRhythms = prefs.enabledRhythms || Object.keys(RHYTHMS);
+        state.enabledRhythms = (prefs.enabledRhythms || Object.keys(RHYTHMS)).filter(id => id !== 'half-rest');
         state.numBeats = parseInt(state.meter.split('/')[0]);
 
         // Load saved instrument preference
@@ -1361,8 +1361,8 @@
 
     // Get available rhythms based on enabled filters
     function getAvailableRhythms() {
-      // Simply return the enabled rhythms - no preset filtering
-      return state.enabledRhythms;
+      // Return enabled rhythms, excluding half-rest
+      return state.enabledRhythms.filter(id => id !== 'half-rest');
     }
 
     // Sync enabled rhythms to match a preset
@@ -1373,7 +1373,7 @@
       state.enabledRhythms = Object.keys(RHYTHMS).filter(rhythmId => {
         const rhythm = RHYTHMS[rhythmId];
         const rhythmPresetIndex = presetOrder.indexOf(rhythm.preset);
-        return rhythmPresetIndex <= maxPresetIndex;
+        return rhythmPresetIndex <= maxPresetIndex && rhythmId !== 'half-rest';
       });
 
       // Update filter checkboxes
@@ -1393,6 +1393,9 @@
       container.innerHTML = '';
 
       Object.keys(RHYTHMS).forEach(rhythmId => {
+        // Skip half-rest entirely
+        if (rhythmId === 'half-rest') return;
+
         const rhythm = RHYTHMS[rhythmId];
         const item = document.createElement('div');
         item.className = 'checkbox-item';

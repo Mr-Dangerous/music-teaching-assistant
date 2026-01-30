@@ -1,5 +1,5 @@
 {
-  "version": "3.4.4",
+  "version": "3.5.0",
   "lastUpdated": "2026-01-30",
-  "description": "Remove auto-merge of consecutive quarter rests into half rests"
+  "description": "Completely remove half-rest from rhythm dictation trainer interface"
 }
