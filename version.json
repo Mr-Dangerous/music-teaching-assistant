@@ -1,5 +1,5 @@
 {
-  "version": "3.4.2",
+  "version": "3.4.3",
   "lastUpdated": "2026-01-30",
-  "description": "Fix rhythm dictation trainer reveal button to check beat duration instead of cell count"
+  "description": "Add debug logging to reveal button logic to diagnose half note issue"
 }

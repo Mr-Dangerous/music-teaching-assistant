@@ -1865,9 +1865,11 @@
         if (rhythmId !== null) {
           const rhythm = RHYTHMS[rhythmId];
           totalDuration += rhythm.duration;
+          console.log(`Beat ${i}: ${rhythmId}, duration=${rhythm.duration}, sustained=${rhythm.sustained}, totalDuration=${totalDuration}`);
           // Skip sustained beats
           if (rhythm.sustained) {
             i += rhythm.duration - 1;
+            console.log(`  Skipping to i=${i+1} (after loop increment)`);
           }
         }
       }
@@ -1876,8 +1878,12 @@
       const hasPattern = state.pattern.length > 0;
       const revealBtn = document.getElementById('revealBtn');
 
+      console.log(`Reveal button check: totalDuration=${totalDuration}, numBeats=${state.numBeats}, allBeatsPlaced=${allBeatsPlaced}, hasPattern=${hasPattern}, mode=${state.mode}`);
+      console.log('Student answer:', state.studentAnswer);
+
       if (revealBtn) {
         revealBtn.disabled = !(allBeatsPlaced && hasPattern && state.mode === 'random');
+        console.log('Reveal button disabled:', revealBtn.disabled);
       }
     }
 
