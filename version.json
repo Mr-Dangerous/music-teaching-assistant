@@ -1,5 +1,5 @@
 {
-  "version": "3.4.3",
+  "version": "3.4.4",
   "lastUpdated": "2026-01-30",
-  "description": "Add debug logging to reveal button logic to diagnose half note issue"
+  "description": "Remove auto-merge of consecutive quarter rests into half rests"
 }
