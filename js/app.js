@@ -154,6 +154,12 @@ class TeachingAssistantApp {
       } else if (event.data.type === 'seatingchart:positionchange') {
         // Seating chart module is reporting position changes (drag-and-drop)
         this.handleSeatingChartPositionChange(event);
+      } else if (event.data.type === 'editstudents:request') {
+        // Edit student list module is requesting student data
+        this.handleEditStudentsRequest(event);
+      } else if (event.data.type === 'editstudents:save') {
+        // Edit student list module is saving updated student data
+        this.handleEditStudentsSave(event);
       } else if (event.data.type === 'saveBoomwhackerSong') {
         // Save boomwhacker song configuration
         this.saveBoomwhackerSong(event.data.songName, event.data.configJson);
@@ -504,6 +510,7 @@ class TeachingAssistantApp {
       'chord_progression_composer.html',
       'class_seating_chart.html',
       'dance_viewer.html',
+      'edit_student_list.html',
       'greig_boomwhacker_assignment.html',
       'instrument-assigner.html',
       'interval_trainer.html',
@@ -2727,6 +2734,97 @@ class TeachingAssistantApp {
     await this.saveSeatingCharts();
 
     console.log('Seating positions updated:', positions);
+  }
+
+  /**
+   * Handle request for student data from edit student list module
+   */
+  handleEditStudentsRequest(event) {
+    // Get class name from current selection
+    let className = this.selectedClass || '';
+
+    if (this.selectedClasses.size > 0) {
+      className = Array.from(this.selectedClasses).join(' + ');
+    }
+
+    // Send all students to module (module will filter by class)
+    const moduleIframe = document.querySelector('#task-image-container iframe');
+    if (moduleIframe && moduleIframe.contentWindow) {
+      moduleIframe.contentWindow.postMessage({
+        type: 'editstudents:data',
+        students: this.students,
+        className: className
+      }, '*');
+    }
+  }
+
+  /**
+   * Handle save request from edit student list module
+   */
+  async handleEditStudentsSave(event) {
+    try {
+      // Update students array with data from module
+      this.students = event.data.students || [];
+
+      // Convert students array to CSV
+      const csvContent = this.studentsToCSV();
+
+      // Save to file
+      await this.fileManager.saveStudents(csvContent);
+
+      // Notify module of success
+      const moduleIframe = document.querySelector('#task-image-container iframe');
+      if (moduleIframe && moduleIframe.contentWindow) {
+        moduleIframe.contentWindow.postMessage({
+          type: 'editstudents:saved'
+        }, '*');
+      }
+
+      console.log('Students saved successfully');
+
+      // Refresh student roster display if on student screen
+      if (this.currentScreen === 'student-select') {
+        this.showStudentScreen();
+      }
+    } catch (error) {
+      console.error('Failed to save students:', error);
+
+      // Notify module of error
+      const moduleIframe = document.querySelector('#task-image-container iframe');
+      if (moduleIframe && moduleIframe.contentWindow) {
+        moduleIframe.contentWindow.postMessage({
+          type: 'editstudents:error',
+          message: error.message
+        }, '*');
+      }
+    }
+  }
+
+  /**
+   * Convert students array to CSV string
+   */
+  studentsToCSV() {
+    const lines = ['student_id,name,grade,class'];
+
+    this.students.forEach(student => {
+      const row = [
+        student.student_id,
+        student.name,
+        student.grade,
+        student.class
+      ].map(field => {
+        // Escape fields containing commas, quotes, or newlines
+        const stringField = String(field);
+        if (stringField.includes(',') || stringField.includes('"') || stringField.includes('\n')) {
+          return `"${stringField.replace(/"/g, '""')}"`;
+        }
+        return stringField;
+      });
+
+      lines.push(row.join(','));
+    });
+
+    return lines.join('\n');
   }
 
   /**

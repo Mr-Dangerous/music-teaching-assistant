@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Edit Student List</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      padding: 20px;
+      min-height: 100vh;
+    }
+
+    h2 {
+      color: white;
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: clamp(24px, 4vw, 32px);
+      text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 15px;
+      padding: 25px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+
+    .class-info {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      text-align: center;
+      font-size: clamp(18px, 3vw, 24px);
+      font-weight: 600;
+    }
+
+    .add-student-section {
+      background: #f0f9ff;
+      border: 2px solid #3b82f6;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 25px;
+    }
+
+    .add-student-title {
+      font-size: clamp(18px, 3vw, 22px);
+      color: #1e40af;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 15px;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .form-label {
+      font-weight: 600;
+      color: #374151;
+      font-size: clamp(14px, 2.5vw, 18px);
+    }
+
+    .form-input {
+      padding: 12px;
+      border: 2px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: clamp(14px, 2.5vw, 18px);
+      font-family: inherit;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #3b82f6;
+    }
+
+    .form-input:disabled {
+      background: #f1f5f9;
+      color: #64748b;
+    }
+
+    .add-button {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 10px;
+      font-size: clamp(16px, 3vw, 20px);
+      font-weight: 600;
+      cursor: pointer;
+      width: 100%;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .add-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+    }
+
+    .add-button:active {
+      transform: translateY(0);
+    }
+
+    .students-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 0 10px;
+      margin-top: 10px;
+    }
+
+    .students-table thead th {
+      background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+      color: white;
+      padding: 15px;
+      text-align: left;
+      font-size: clamp(14px, 2.5vw, 18px);
+      font-weight: 600;
+    }
+
+    .students-table thead th:first-child {
+      border-radius: 10px 0 0 10px;
+    }
+
+    .students-table thead th:last-child {
+      border-radius: 0 10px 10px 0;
+    }
+
+    .students-table tbody tr {
+      background: #f8fafc;
+      transition: background 0.2s;
+    }
+
+    .students-table tbody tr:hover {
+      background: #e0e7ff;
+    }
+
+    .students-table tbody td {
+      padding: 15px;
+      border-top: 1px solid #e2e8f0;
+      border-bottom: 1px solid #e2e8f0;
+      font-size: clamp(14px, 2.5vw, 18px);
+    }
+
+    .students-table tbody td:first-child {
+      border-left: 1px solid #e2e8f0;
+      border-radius: 10px 0 0 10px;
+    }
+
+    .students-table tbody td:last-child {
+      border-right: 1px solid #e2e8f0;
+      border-radius: 0 10px 10px 0;
+    }
+
+    .delete-button {
+      background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: clamp(14px, 2.5vw, 16px);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: transform 0.2s;
+    }
+
+    .delete-button:hover {
+      transform: scale(1.05);
+    }
+
+    .delete-button:active {
+      transform: scale(0.95);
+    }
+
+    .trash-icon {
+      font-size: clamp(16px, 3vw, 20px);
+    }
+
+    .no-students {
+      text-align: center;
+      padding: 40px;
+      color: #64748b;
+      font-size: clamp(16px, 3vw, 20px);
+      font-style: italic;
+    }
+
+    .message {
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: clamp(14px, 2.5vw, 16px);
+      display: none;
+    }
+
+    .message.show {
+      display: block;
+    }
+
+    .message.success {
+      background: #d1fae5;
+      border: 2px solid #10b981;
+      color: #065f46;
+    }
+
+    .message.error {
+      background: #fee2e2;
+      border: 2px solid #ef4444;
+      color: #991b1b;
+    }
+
+    @media (max-width: 768px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .students-table {
+        font-size: 12px;
+      }
+
+      .students-table th,
+      .students-table td {
+        padding: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2>✏️ Edit Student List</h2>
+
+    <div class="class-info" id="class-info">
+      Loading class information...
+    </div>
+
+    <div class="message" id="message"></div>
+
+    <div class="add-student-section">
+      <div class="add-student-title">➕ Add New Student</div>
+      <div class="form-grid">
+        <label class="form-label">Student ID:</label>
+        <input type="text" id="new-student-id" class="form-input" placeholder="Auto-generated">
+
+        <label class="form-label">Student Name:</label>
+        <input type="text" id="new-student-name" class="form-input" placeholder="Enter student name">
+
+        <label class="form-label">Grade:</label>
+        <input type="text" id="new-student-grade" class="form-input" disabled>
+
+        <label class="form-label">Class:</label>
+        <input type="text" id="new-student-class" class="form-input" disabled>
+      </div>
+      <button class="add-button" id="add-button">Add Student to This Class</button>
+    </div>
+
+    <table class="students-table">
+      <thead>
+        <tr>
+          <th>Student ID</th>
+          <th>Name</th>
+          <th>Grade</th>
+          <th>Class</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="students-tbody">
+        <tr>
+          <td colspan="5" class="no-students">Loading students...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // Store all students from parent
+    let allStudents = [];
+    let currentClassName = '';
+    let currentGrade = '';
+
+    // Required: Define the TaskModule interface
+    window.TaskModule = {
+      init: function(context) {
+        console.log('Edit Student List initialized:', context);
+        requestStudentsFromParent();
+      },
+
+      getResponse: function() {
+        return 'edit_complete';
+      },
+
+      isComplete: function() {
+        return true;
+      },
+
+      reset: function() {
+        allStudents = [];
+      }
+    };
+
+    // Request student data from parent app
+    function requestStudentsFromParent() {
+      window.parent.postMessage({ type: 'editstudents:request' }, '*');
+    }
+
+    // Listen for messages from parent
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'taskmodule:init') {
+        window.TaskModule.init(event.data.context);
+      } else if (event.data.type === 'editstudents:data') {
+        handleStudentData(event.data);
+      } else if (event.data.type === 'editstudents:saved') {
+        showMessage('Students saved successfully!', 'success');
+        // Refresh the list
+        requestStudentsFromParent();
+      } else if (event.data.type === 'editstudents:error') {
+        showMessage('Error saving students: ' + event.data.message, 'error');
+      }
+    });
+
+    // Handle student data from parent
+    function handleStudentData(data) {
+      allStudents = data.students || [];
+      currentClassName = data.className || '';
+
+      // Get grade from first student in class
+      const classStudents = getClassStudents();
+      currentGrade = classStudents.length > 0 ? classStudents[0].grade : '';
+
+      // Update UI
+      updateClassInfo();
+      updateStudentTable();
+      updateAddForm();
+      suggestStudentId();
+    }
+
+    // Get students in current class(es)
+    function getClassStudents() {
+      if (!currentClassName) return allStudents;
+
+      // Handle combined classes (e.g., "Class A + Class B")
+      if (currentClassName.includes(' + ')) {
+        const classNames = currentClassName.split(' + ').map(c => c.trim());
+        return allStudents.filter(s => classNames.includes(s.class));
+      }
+
+      return allStudents.filter(s => s.class === currentClassName);
+    }
+
+    // Update class info display
+    function updateClassInfo() {
+      const classInfo = document.getElementById('class-info');
+      const classStudents = getClassStudents();
+      classInfo.textContent = `${currentClassName} (${classStudents.length} student${classStudents.length !== 1 ? 's' : ''})`;
+    }
+
+    // Update student table
+    function updateStudentTable() {
+      const tbody = document.getElementById('students-tbody');
+      const classStudents = getClassStudents();
+
+      if (classStudents.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="no-students">No students in this class. Add one above!</td></tr>';
+        return;
+      }
+
+      // Sort by student ID
+      classStudents.sort((a, b) => {
+        const aNum = parseInt(a.student_id);
+        const bNum = parseInt(b.student_id);
+        if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+        return a.student_id.localeCompare(b.student_id);
+      });
+
+      tbody.innerHTML = classStudents.map(student => `
+        <tr>
+          <td>${escapeHtml(student.student_id)}</td>
+          <td>${escapeHtml(student.name)}</td>
+          <td>${escapeHtml(student.grade)}</td>
+          <td>${escapeHtml(student.class)}</td>
+          <td>
+            <button class="delete-button" onclick="deleteStudent('${escapeHtml(student.student_id)}')">
+              <span class="trash-icon">🗑️</span>
+              Delete
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // Update add form with class/grade info
+    function updateAddForm() {
+      document.getElementById('new-student-grade').value = currentGrade;
+      document.getElementById('new-student-class').value = currentClassName;
+    }
+
+    // Suggest an unused student ID
+    function suggestStudentId() {
+      const existingIds = allStudents.map(s => parseInt(s.student_id)).filter(n => !isNaN(n));
+      const maxId = existingIds.length > 0 ? Math.max(...existingIds) : 0;
+      const suggestedId = (maxId + 1).toString();
+
+      document.getElementById('new-student-id').value = suggestedId;
+      document.getElementById('new-student-id').placeholder = `Suggested: ${suggestedId}`;
+    }
+
+    // Add new student
+    document.getElementById('add-button').addEventListener('click', () => {
+      const studentId = document.getElementById('new-student-id').value.trim();
+      const studentName = document.getElementById('new-student-name').value.trim();
+      const grade = currentGrade;
+      const className = currentClassName;
+
+      // Validate
+      if (!studentName) {
+        showMessage('Please enter a student name.', 'error');
+        return;
+      }
+
+      if (!studentId) {
+        showMessage('Please enter a student ID.', 'error');
+        return;
+      }
+
+      // Check for duplicate ID
+      if (allStudents.some(s => s.student_id === studentId)) {
+        showMessage('Student ID already exists. Please use a different ID.', 'error');
+        return;
+      }
+
+      // Add to local array
+      allStudents.push({
+        student_id: studentId,
+        name: studentName,
+        grade: grade,
+        class: className
+      });
+
+      // Save to parent
+      saveStudentsToParent();
+
+      // Clear form
+      document.getElementById('new-student-name').value = '';
+      suggestStudentId();
+
+      // Update table
+      updateStudentTable();
+      updateClassInfo();
+    });
+
+    // Delete student
+    function deleteStudent(studentId) {
+      if (!confirm(`Are you sure you want to delete student ${studentId}? This cannot be undone.`)) {
+        return;
+      }
+
+      // Remove from local array
+      allStudents = allStudents.filter(s => s.student_id !== studentId);
+
+      // Save to parent
+      saveStudentsToParent();
+
+      // Update table
+      updateStudentTable();
+      updateClassInfo();
+    }
+
+    // Save students to parent app
+    function saveStudentsToParent() {
+      window.parent.postMessage({
+        type: 'editstudents:save',
+        students: allStudents
+      }, '*');
+    }
+
+    // Show message
+    function showMessage(text, type) {
+      const message = document.getElementById('message');
+      message.textContent = text;
+      message.className = 'message show ' + type;
+
+      setTimeout(() => {
+        message.classList.remove('show');
+      }, 5000);
+    }
+
+    // Escape HTML to prevent XSS
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+  </script>
+</body>
+</html>

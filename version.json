@@ -1,5 +1,5 @@
 {
-  "version": "3.5.0",
+  "version": "3.6.0",
   "lastUpdated": "2026-01-30",
-  "description": "Completely remove half-rest from rhythm dictation trainer interface"
+  "description": "Add Edit Student List module for managing student roster from within the app"
 }

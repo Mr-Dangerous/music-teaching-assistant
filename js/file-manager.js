@@ -93,11 +93,29 @@ class FileManager {
 
     // If any file still wasn't loaded, prompt user to select them individually
     if (!studentsContent) {
-      studentsContent = await this.openFile('students', 'Step 1 of 2: Select STUDENTS.CSV (student roster with names, grades, classes)');
+      try {
+        studentsContent = await this.openFile('students', 'Step 1 of 2: Select STUDENTS.CSV (student roster with names, grades, classes) - Or press Cancel to create a new one');
+      } catch (error) {
+        if (error.message.includes('cancelled')) {
+          console.log('No students.csv selected - will create new one when students are added');
+          studentsContent = 'student_id,name,grade,class\n'; // Empty CSV with header
+        } else {
+          throw error;
+        }
+      }
     }
 
     if (!resultsContent) {
-      resultsContent = await this.openFile('results', 'Step 2 of 2: Select RESULTS.CSV (student responses to tasks)');
+      try {
+        resultsContent = await this.openFile('results', 'Step 2 of 2: Select RESULTS.CSV (student responses to tasks) - Or press Cancel to create a new one');
+      } catch (error) {
+        if (error.message.includes('cancelled')) {
+          console.log('No results.csv selected - will create new one when results are saved');
+          resultsContent = 'student_id,task_id,response,completed_date\n'; // Empty CSV with header
+        } else {
+          throw error;
+        }
+      }
     }
 
     // Remember the file handles
@@ -428,6 +446,19 @@ class FileManager {
       return await this.saveFileWithAPI(this.resultsFileHandle, csvContent);
     } else {
       return await this.saveFileWithFallback(this.resultsFileName || 'results.csv', csvContent);
+    }
+  }
+
+  /**
+   * Save students.csv file
+   * @param {string} csvContent - CSV text to save
+   * @returns {Promise<void>}
+   */
+  async saveStudents(csvContent) {
+    if (this.supportsFileSystemAccess && this.studentsFileHandle) {
+      return await this.saveFileWithAPI(this.studentsFileHandle, csvContent);
+    } else {
+      return await this.saveFileWithFallback(this.studentsFileName || 'students.csv', csvContent);
     }
   }
 
