@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html>
+<!--
+  INSTRUMENT ASSIGNER V2 MODULE
+
+  Advanced instrument assignment tool with:
+  - Student selection mode (intercepts student button clicks)
+  - 36 instrument slots (6x6 grid)
+  - Drag-and-drop slot reordering
+  - Visual grouping of like instruments
+  - Random fill for unassigned students
+  - PDF export
+  - Per-class song configurations
+
+  USAGE:
+  1. Click student from roster → click slot to assign
+  2. Right-click slot → assign instrument type
+  3. Drag slots to reorder and group visually
+  4. Use Random Fill to assign remaining students
+  5. Export to PDF for print
+
+  DATA STORAGE:
+  - Saves to data/instrument-assigner-v2.csv
+  - Format: class_id, song_title, config_json
+-->
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instrument Assigner V2</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      height: 100vh;
+      overflow: hidden;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      padding: 15px;
+    }
+
+    #container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      gap: 15px;
+    }
+
+    /* Header Controls */
+    #header {
+      background: white;
+      border-radius: 15px;
+      padding: 15px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    #song-title {
+      flex: 1;
+      min-width: 200px;
+      font-size: 24px;
+      font-weight: bold;
+      color: #667eea;
+      padding: 8px;
+      border: none;
+      border-bottom: 2px solid #667eea;
+      background: transparent;
+    }
+
+    #song-title:focus {
+      outline: none;
+      border-bottom-color: #764ba2;
+    }
+
+    .header-btn {
+      padding: 12px 20px;
+      font-size: 16px;
+      font-weight: bold;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .header-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .header-btn:active {
+      transform: translateY(0);
+    }
+
+    #create-btn {
+      background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+      color: white;
+    }
+
+    #load-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    #random-btn {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+    }
+
+    #export-btn {
+      background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+      color: white;
+    }
+
+    #close-btn {
+      background: linear-gradient(135deg, #757F9A 0%, #D7DDE8 100%);
+      color: #333;
+    }
+
+    /* Selected Student Display */
+    #selected-student-bar {
+      background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+      border-radius: 10px;
+      padding: 12px 20px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: bold;
+      color: #333;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      display: none;
+    }
+
+    #selected-student-bar.visible {
+      display: block;
+    }
+
+    /* Instrument Grid */
+    #grid-container {
+      flex: 1;
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      overflow: auto;
+    }
+
+    #instrument-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      max-width: 100%;
+      margin: 0 auto;
+    }
+
+    .instrument-slot {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      border: 2px solid #e0e7ff;
+      border-radius: 12px;
+      padding: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      min-height: 100px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      position: relative;
+    }
+
+    .instrument-slot:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+      border-color: #667eea;
+    }
+
+    .instrument-slot.has-student {
+      background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+      border-color: #38ef7d;
+    }
+
+    .instrument-slot.dragging {
+      opacity: 0.5;
+      transform: scale(0.95);
+    }
+
+    .instrument-slot.drag-over {
+      background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
+      border: 3px dashed #667eea;
+      transform: scale(1.08);
+    }
+
+    /* Visual grouping - same instrument border */
+    .instrument-slot.grouped {
+      border: 3px solid #f093fb;
+      box-shadow: 0 0 0 3px rgba(240, 147, 251, 0.3);
+    }
+
+    .slot-instrument {
+      font-size: 14px;
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 6px;
+    }
+
+    .instrument-slot.has-student .slot-instrument {
+      color: #11998e;
+    }
+
+    .slot-student {
+      font-size: 16px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    /* Instrument Menu Popup */
+    #instrument-menu {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      z-index: 1000;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+
+    #instrument-menu.hidden {
+      display: none;
+    }
+
+    #instrument-menu h3 {
+      margin-bottom: 15px;
+      color: #667eea;
+      text-align: center;
+    }
+
+    .instrument-menu-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+    }
+
+    .instrument-menu-btn {
+      padding: 15px;
+      font-size: 16px;
+      font-weight: bold;
+      border: 2px solid #e0e7ff;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .instrument-menu-btn:hover {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: white;
+      transform: scale(1.05);
+    }
+
+    .instrument-menu-close {
+      margin-top: 15px;
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #757F9A 0%, #D7DDE8 100%);
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* Song Selector Dialog */
+    #song-dialog {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+      z-index: 1000;
+      max-width: 500px;
+      width: 90%;
+    }
+
+    #song-dialog.hidden {
+      display: none;
+    }
+
+    #song-dialog h3 {
+      margin-bottom: 15px;
+      color: #667eea;
+      text-align: center;
+    }
+
+    #song-list {
+      max-height: 400px;
+      overflow-y: auto;
+      margin-bottom: 15px;
+    }
+
+    .song-item {
+      padding: 15px;
+      margin-bottom: 10px;
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      border: 2px solid #e0e7ff;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 16px;
+      font-weight: bold;
+    }
+
+    .song-item:hover {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: white;
+      transform: translateX(5px);
+    }
+
+    .song-dialog-close {
+      width: 100%;
+      padding: 12px;
+      background: linear-gradient(135deg, #757F9A 0%, #D7DDE8 100%);
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    /* Print View (for PDF export) */
+    #print-view {
+      position: fixed;
+      top: -10000px;
+      left: -10000px;
+      width: 1200px;
+      background: white;
+      padding: 40px;
+    }
+
+    #print-view h1 {
+      text-align: center;
+      color: #667eea;
+      margin-bottom: 30px;
+      font-size: 36px;
+    }
+
+    #print-view .print-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 15px;
+    }
+
+    #print-view .print-slot {
+      border: 2px solid #333;
+      border-radius: 10px;
+      padding: 15px;
+      min-height: 120px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    #print-view .print-slot.grouped {
+      border: 3px solid #f093fb;
+      background: #fef3f8;
+    }
+
+    #print-view .print-instrument {
+      font-size: 16px;
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+
+    #print-view .print-student {
+      font-size: 18px;
+      font-weight: 600;
+      color: #333;
+    }
+
+    /* Overlay */
+    #overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 999;
+      display: none;
+    }
+
+    #overlay.visible {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <!-- Header Controls -->
+    <div id="header">
+      <input type="text" id="song-title" placeholder="Song Title" value="New Song">
+      <button id="create-btn" class="header-btn">Create New</button>
+      <button id="load-btn" class="header-btn">Load Song</button>
+      <button id="random-btn" class="header-btn">Random Fill</button>
+      <button id="export-btn" class="header-btn">Export PDF</button>
+      <button id="close-btn" class="header-btn">Close</button>
+    </div>
+
+    <!-- Selected Student Display -->
+    <div id="selected-student-bar">
+      Click a slot to assign: <span id="selected-student-name"></span>
+    </div>
+
+    <!-- Instrument Grid -->
+    <div id="grid-container">
+      <div id="instrument-grid"></div>
+    </div>
+  </div>
+
+  <!-- Instrument Menu Popup -->
+  <div id="instrument-menu" class="hidden">
+    <h3>Select Instrument</h3>
+    <div class="instrument-menu-grid" id="instrument-menu-grid"></div>
+    <button class="instrument-menu-close" onclick="hideInstrumentMenu()">Cancel</button>
+  </div>
+
+  <!-- Song Selector Dialog -->
+  <div id="song-dialog" class="hidden">
+    <h3>Load Song</h3>
+    <div id="song-list"></div>
+    <button class="song-dialog-close" onclick="hideSongDialog()">Cancel</button>
+  </div>
+
+  <!-- Print View (for PDF export) -->
+  <div id="print-view"></div>
+
+  <!-- Overlay -->
+  <div id="overlay"></div>
+
+  <script>
+    // Module State
+    const moduleState = {
+      currentSong: {
+        title: 'New Song',
+        slots: [] // {position, instrument, studentId, studentName}
+      },
+      selectedStudent: null,
+      availableSongs: [],
+      classId: null,
+      classStudents: [], // All students in current class
+      promptCallbacks: {},
+      currentSlotForMenu: null
+    };
+
+    const INSTRUMENTS = [
+      'Xylophone',
+      'Egg Shaker',
+      'Recorder',
+      'Sandblock',
+      'Rhythm Stick',
+      'Frame Drum',
+      'Tubano Drum',
+      'Cymbal',
+      'Boomwhacker Set 1',
+      'Boomwhacker Set 2',
+      'Other'
+    ];
+
+    // TaskModule Interface
+    window.TaskModule = {
+      init(context) {
+        console.log('Instrument Assigner V2 initialized', context);
+
+        // Store class students for random fill
+        moduleState.classStudents = context.classStudents || [];
+
+        // Enable selection mode
+        window.parent.postMessage({
+          type: 'instrument-assigner-v2:enable-selection'
+        }, '*');
+
+        // Request songs for this class
+        window.parent.postMessage({
+          type: 'instrument-assigner-v2:load-songs'
+        }, '*');
+
+        // Initialize grid
+        initializeGrid();
+        setupEventListeners();
+
+        // Load existing response if available
+        if (context.existingResponse && context.existingResponse.trim()) {
+          try {
+            moduleState.currentSong = JSON.parse(context.existingResponse);
+            document.getElementById('song-title').value = moduleState.currentSong.title;
+            renderGrid();
+          } catch (e) {
+            console.error('Error loading existing response:', e);
+          }
+        }
+      },
+
+      getResponse() {
+        return JSON.stringify(moduleState.currentSong);
+      },
+
+      isComplete() {
+        return moduleState.currentSong.slots.length > 0;
+      },
+
+      reset() {
+        window.parent.postMessage({
+          type: 'instrument-assigner-v2:disable-selection'
+        }, '*');
+      }
+    };
+
+    // Message Handlers
+    window.addEventListener('message', (event) => {
+      if (event.data.type === 'taskmodule:init') {
+        window.TaskModule.init(event.data.context);
+      } else if (event.data.type === 'instrument-assigner-v2:student-selected') {
+        moduleState.selectedStudent = event.data.student;
+        highlightSelectedStudent(event.data.student.name);
+      } else if (event.data.type === 'instrument-assigner-v2:songs-data') {
+        moduleState.availableSongs = event.data.songs;
+        moduleState.classId = event.data.classId;
+      } else if (event.data.type === 'instrument-assigner-v2:prompt-result') {
+        const callback = moduleState.promptCallbacks[event.data.promptId];
+        if (callback) {
+          callback(event.data.result);
+          delete moduleState.promptCallbacks[event.data.promptId];
+        }
+      }
+    });
+
+    // Initialize Grid (36 slots)
+    function initializeGrid() {
+      const grid = document.getElementById('instrument-grid');
+      grid.innerHTML = '';
+
+      for (let i = 0; i < 36; i++) {
+        const slot = document.createElement('div');
+        slot.className = 'instrument-slot';
+        slot.dataset.position = i;
+        slot.draggable = true;
+        slot.innerHTML = `
+          <div class="slot-instrument">Empty</div>
+          <div class="slot-student"></div>
+        `;
+
+        // Left click: assign student
+        slot.addEventListener('click', () => handleSlotClick(i));
+
+        // Right click: show instrument menu
+        slot.addEventListener('contextmenu', (e) => {
+          e.preventDefault();
+          showInstrumentMenu(i);
+        });
+
+        // Drag/drop for reordering
+        setupDragDrop(slot);
+
+        grid.appendChild(slot);
+      }
+    }
+
+    // Render Grid (update visuals based on state)
+    function renderGrid() {
+      const grid = document.getElementById('instrument-grid');
+      const slots = grid.querySelectorAll('.instrument-slot');
+
+      // Clear all slots first
+      slots.forEach((slot, i) => {
+        const instrumentDiv = slot.querySelector('.slot-instrument');
+        const studentDiv = slot.querySelector('.slot-student');
+        instrumentDiv.textContent = 'Empty';
+        studentDiv.textContent = '';
+        slot.classList.remove('has-student', 'grouped');
+      });
+
+      // Fill in assigned slots
+      moduleState.currentSong.slots.forEach(slotData => {
+        const slot = slots[slotData.position];
+        if (slot) {
+          const instrumentDiv = slot.querySelector('.slot-instrument');
+          const studentDiv = slot.querySelector('.slot-student');
+
+          instrumentDiv.textContent = slotData.instrument || 'Empty';
+          studentDiv.textContent = slotData.studentName || '';
+
+          if (slotData.studentName) {
+            slot.classList.add('has-student');
+          }
+        }
+      });
+
+      // Detect and highlight groups
+      const groups = detectGroups();
+      groups.forEach(group => {
+        group.positions.forEach(pos => {
+          slots[pos].classList.add('grouped');
+        });
+      });
+    }
+
+    // Handle Slot Click (assign selected student)
+    function handleSlotClick(position) {
+      if (!moduleState.selectedStudent) {
+        showPrompt('Please select a student from the roster first');
+        return;
+      }
+
+      // Find or create slot
+      let slot = moduleState.currentSong.slots.find(s => s.position === position);
+      if (slot) {
+        slot.studentId = moduleState.selectedStudent.student_id;
+        slot.studentName = moduleState.selectedStudent.name;
+      } else {
+        moduleState.currentSong.slots.push({
+          position,
+          instrument: '',
+          studentId: moduleState.selectedStudent.student_id,
+          studentName: moduleState.selectedStudent.name
+        });
+      }
+
+      renderGrid();
+      autoSave();
+    }
+
+    // Show Instrument Menu
+    function showInstrumentMenu(position) {
+      moduleState.currentSlotForMenu = position;
+      const menu = document.getElementById('instrument-menu');
+      const grid = document.getElementById('instrument-menu-grid');
+
+      grid.innerHTML = '';
+      INSTRUMENTS.forEach(inst => {
+        const btn = document.createElement('button');
+        btn.className = 'instrument-menu-btn';
+        btn.textContent = inst;
+        btn.onclick = () => {
+          assignInstrument(position, inst);
+          hideInstrumentMenu();
+        };
+        grid.appendChild(btn);
+      });
+
+      // Add "Clear" option
+      const clearBtn = document.createElement('button');
+      clearBtn.className = 'instrument-menu-btn';
+      clearBtn.textContent = '🗑️ Clear Slot';
+      clearBtn.style.gridColumn = '1 / -1';
+      clearBtn.onclick = () => {
+        clearSlot(position);
+        hideInstrumentMenu();
+      };
+      grid.appendChild(clearBtn);
+
+      menu.classList.remove('hidden');
+      document.getElementById('overlay').classList.add('visible');
+    }
+
+    function hideInstrumentMenu() {
+      document.getElementById('instrument-menu').classList.add('hidden');
+      document.getElementById('overlay').classList.remove('visible');
+      moduleState.currentSlotForMenu = null;
+    }
+
+    // Assign Instrument to Slot
+    function assignInstrument(position, instrument) {
+      let slot = moduleState.currentSong.slots.find(s => s.position === position);
+      if (slot) {
+        slot.instrument = instrument;
+      } else {
+        moduleState.currentSong.slots.push({
+          position,
+          instrument,
+          studentId: '',
+          studentName: ''
+        });
+      }
+
+      renderGrid();
+      autoSave();
+    }
+
+    // Clear Slot
+    function clearSlot(position) {
+      moduleState.currentSong.slots = moduleState.currentSong.slots.filter(
+        s => s.position !== position
+      );
+      renderGrid();
+      autoSave();
+    }
+
+    // Drag-Drop for Reordering
+    function setupDragDrop(slotElement) {
+      slotElement.addEventListener('dragstart', (e) => {
+        e.dataTransfer.setData('text/plain', slotElement.dataset.position);
+        slotElement.classList.add('dragging');
+      });
+
+      slotElement.addEventListener('dragend', (e) => {
+        slotElement.classList.remove('dragging');
+      });
+
+      slotElement.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        slotElement.classList.add('drag-over');
+      });
+
+      slotElement.addEventListener('dragleave', (e) => {
+        slotElement.classList.remove('drag-over');
+      });
+
+      slotElement.addEventListener('drop', (e) => {
+        e.preventDefault();
+        slotElement.classList.remove('drag-over');
+
+        const fromPos = parseInt(e.dataTransfer.getData('text/plain'));
+        const toPos = parseInt(slotElement.dataset.position);
+
+        if (fromPos !== toPos) {
+          swapSlots(fromPos, toPos);
+        }
+      });
+    }
+
+    // Swap Two Slots
+    function swapSlots(pos1, pos2) {
+      const slot1 = moduleState.currentSong.slots.find(s => s.position === pos1);
+      const slot2 = moduleState.currentSong.slots.find(s => s.position === pos2);
+
+      if (slot1) slot1.position = pos2;
+      if (slot2) slot2.position = pos1;
+
+      renderGrid();
+      autoSave();
+    }
+
+    // Detect Visual Groups (adjacent same instruments)
+    function detectGroups() {
+      const groups = [];
+      const visited = new Set();
+
+      moduleState.currentSong.slots.forEach(slot => {
+        if (visited.has(slot.position) || !slot.instrument) return;
+
+        const positions = [slot.position];
+        visited.add(slot.position);
+
+        // BFS for adjacent same instruments
+        const queue = [slot.position];
+        while (queue.length > 0) {
+          const pos = queue.shift();
+          const row = Math.floor(pos / 6);
+          const col = pos % 6;
+
+          // Check 4 neighbors (up, down, left, right)
+          const neighbors = [];
+          if (col > 0) neighbors.push(pos - 1); // left
+          if (col < 5) neighbors.push(pos + 1); // right
+          if (row > 0) neighbors.push(pos - 6); // up
+          if (row < 5) neighbors.push(pos + 6); // down
+
+          neighbors.forEach(nPos => {
+            if (visited.has(nPos)) return;
+            const nSlot = moduleState.currentSong.slots.find(s => s.position === nPos);
+            if (nSlot && nSlot.instrument === slot.instrument) {
+              visited.add(nPos);
+              positions.push(nPos);
+              queue.push(nPos);
+            }
+          });
+        }
+
+        if (positions.length > 1) {
+          groups.push({ instrument: slot.instrument, positions });
+        }
+      });
+
+      return groups;
+    }
+
+    // Random Fill (unassigned students → empty slots)
+    function randomFill() {
+      // Find unassigned students
+      const assignedIds = new Set(moduleState.currentSong.slots.map(s => s.studentId).filter(id => id));
+      const unassigned = moduleState.classStudents.filter(s => !assignedIds.has(s.student_id));
+
+      if (unassigned.length === 0) {
+        showPrompt('All students are already assigned!');
+        return;
+      }
+
+      // Find empty positions
+      const emptyPositions = [];
+      for (let i = 0; i < 36; i++) {
+        if (!moduleState.currentSong.slots.find(s => s.position === i)) {
+          emptyPositions.push(i);
+        }
+      }
+
+      if (emptyPositions.length === 0) {
+        showPrompt('All slots are full!');
+        return;
+      }
+
+      // Shuffle unassigned students
+      const shuffled = [...unassigned].sort(() => Math.random() - 0.5);
+      const count = Math.min(shuffled.length, emptyPositions.length);
+
+      for (let i = 0; i < count; i++) {
+        moduleState.currentSong.slots.push({
+          position: emptyPositions[i],
+          instrument: '',
+          studentId: shuffled[i].student_id,
+          studentName: shuffled[i].name
+        });
+      }
+
+      renderGrid();
+      autoSave();
+      showPrompt(`Assigned ${count} students randomly!`);
+    }
+
+    // Export PDF
+    async function exportPDF() {
+      try {
+        const printContainer = createPrintView();
+        document.body.appendChild(printContainer);
+
+        // Capture with html2canvas
+        const canvas = await html2canvas(printContainer, {
+          scale: 2,
+          backgroundColor: '#ffffff'
+        });
+
+        // Create PDF
+        const { jsPDF } = window.jspdf;
+        const pdf = new jsPDF('landscape', 'mm', 'a4');
+        const imgData = canvas.toDataURL('image/png');
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.save(`${moduleState.currentSong.title.replace(/\s+/g, '_')}.pdf`);
+
+        document.body.removeChild(printContainer);
+        showPrompt('PDF exported successfully!');
+      } catch (error) {
+        console.error('PDF export error:', error);
+        showPrompt('Error exporting PDF: ' + error.message);
+      }
+    }
+
+    // Create Print View for PDF
+    function createPrintView() {
+      const container = document.createElement('div');
+      container.id = 'print-view-temp';
+      container.style.cssText = `
+        width: 1200px;
+        background: white;
+        padding: 40px;
+        position: fixed;
+        top: -10000px;
+        left: -10000px;
+      `;
+
+      const title = document.createElement('h1');
+      title.textContent = moduleState.currentSong.title;
+      title.style.cssText = `
+        text-align: center;
+        color: #667eea;
+        margin-bottom: 30px;
+        font-size: 36px;
+      `;
+      container.appendChild(title);
+
+      const grid = document.createElement('div');
+      grid.style.cssText = `
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 15px;
+      `;
+
+      const groups = detectGroups();
+      const groupedPositions = new Set();
+      groups.forEach(g => g.positions.forEach(p => groupedPositions.add(p)));
+
+      for (let i = 0; i < 36; i++) {
+        const slot = document.createElement('div');
+        slot.style.cssText = `
+          border: 2px solid #333;
+          border-radius: 10px;
+          padding: 15px;
+          min-height: 120px;
+          display: flex;
+          flex-direction: column;
+          justify-content: center;
+          align-items: center;
+          text-align: center;
+        `;
+
+        if (groupedPositions.has(i)) {
+          slot.style.border = '3px solid #f093fb';
+          slot.style.background = '#fef3f8';
+        }
+
+        const slotData = moduleState.currentSong.slots.find(s => s.position === i);
+
+        const instrumentDiv = document.createElement('div');
+        instrumentDiv.style.cssText = `
+          font-size: 16px;
+          font-weight: bold;
+          color: #667eea;
+          margin-bottom: 10px;
+        `;
+        instrumentDiv.textContent = slotData?.instrument || 'Empty';
+
+        const studentDiv = document.createElement('div');
+        studentDiv.style.cssText = `
+          font-size: 18px;
+          font-weight: 600;
+          color: #333;
+        `;
+        studentDiv.textContent = slotData?.studentName || '';
+
+        slot.appendChild(instrumentDiv);
+        slot.appendChild(studentDiv);
+        grid.appendChild(slot);
+      }
+
+      container.appendChild(grid);
+      return container;
+    }
+
+    // Create New Song
+    function createNewSong() {
+      requestPrompt('Enter new song title:', 'New Song', (result) => {
+        if (result && result.trim()) {
+          moduleState.currentSong = {
+            title: result.trim(),
+            slots: []
+          };
+          document.getElementById('song-title').value = moduleState.currentSong.title;
+          renderGrid();
+          autoSave();
+        }
+      });
+    }
+
+    // Load Song
+    function loadSong() {
+      if (moduleState.availableSongs.length === 0) {
+        showPrompt('No saved songs found for this class');
+        return;
+      }
+
+      const dialog = document.getElementById('song-dialog');
+      const list = document.getElementById('song-list');
+      list.innerHTML = '';
+
+      moduleState.availableSongs.forEach(song => {
+        const item = document.createElement('div');
+        item.className = 'song-item';
+        item.textContent = song.title;
+        item.onclick = () => {
+          moduleState.currentSong = song.config;
+          document.getElementById('song-title').value = moduleState.currentSong.title;
+          renderGrid();
+          hideSongDialog();
+          showPrompt(`Loaded: ${song.title}`);
+        };
+        list.appendChild(item);
+      });
+
+      dialog.classList.remove('hidden');
+      document.getElementById('overlay').classList.add('visible');
+    }
+
+    function hideSongDialog() {
+      document.getElementById('song-dialog').classList.add('hidden');
+      document.getElementById('overlay').classList.remove('visible');
+    }
+
+    // Auto-Save
+    function autoSave() {
+      // Update title from input
+      moduleState.currentSong.title = document.getElementById('song-title').value || 'New Song';
+
+      const configJson = JSON.stringify(moduleState.currentSong);
+
+      // Save to CSV via app.js
+      window.parent.postMessage({
+        type: 'instrument-assigner-v2:save',
+        songTitle: moduleState.currentSong.title,
+        configJson: configJson,
+        classId: moduleState.classId
+      }, '*');
+
+      // Send as TaskModule response
+      window.parent.postMessage({
+        type: 'taskmodule:response',
+        value: configJson,
+        isComplete: moduleState.currentSong.slots.length > 0
+      }, '*');
+    }
+
+    // Highlight Selected Student
+    function highlightSelectedStudent(name) {
+      const bar = document.getElementById('selected-student-bar');
+      const nameSpan = document.getElementById('selected-student-name');
+      nameSpan.textContent = name;
+      bar.classList.add('visible');
+    }
+
+    // Request Prompt from Parent (cross-iframe)
+    function requestPrompt(message, defaultValue, callback) {
+      const promptId = Date.now().toString();
+      moduleState.promptCallbacks[promptId] = callback;
+
+      window.parent.postMessage({
+        type: 'instrument-assigner-v2:request-prompt',
+        message: message,
+        defaultValue: defaultValue,
+        promptId: promptId
+      }, '*');
+    }
+
+    // Show Prompt (alert-style)
+    function showPrompt(message) {
+      requestPrompt(message, '', () => {});
+    }
+
+    // Close Module
+    function closeModule() {
+      window.parent.postMessage({
+        type: 'instrument-assigner-v2:disable-selection'
+      }, '*');
+      // The app will handle closing the module
+    }
+
+    // Setup Event Listeners
+    function setupEventListeners() {
+      document.getElementById('create-btn').addEventListener('click', createNewSong);
+      document.getElementById('load-btn').addEventListener('click', loadSong);
+      document.getElementById('random-btn').addEventListener('click', randomFill);
+      document.getElementById('export-btn').addEventListener('click', exportPDF);
+      document.getElementById('close-btn').addEventListener('click', closeModule);
+
+      // Auto-save on title change
+      document.getElementById('song-title').addEventListener('blur', autoSave);
+
+      // Close overlays on click
+      document.getElementById('overlay').addEventListener('click', () => {
+        hideInstrumentMenu();
+        hideSongDialog();
+      });
+    }
+  </script>
+</body>
+</html>

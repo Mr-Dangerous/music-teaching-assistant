@@ -570,6 +570,15 @@ body {
   box-shadow: 0 4px 12px rgba(236, 72, 153, 0.4);
 }
 
+.student-roster-button.selected-for-module {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+  border: 3px solid #ff6b6b;
+  transform: scale(1.05);
+  color: #1f2937;
+  font-weight: 700;
+  box-shadow: 0 4px 12px rgba(255, 215, 0, 0.6);
+}
+
 .student-roster-button.completed {
   background: linear-gradient(135deg, #6ee7b7 0%, #34d399 100%);
   border-color: #10b981;

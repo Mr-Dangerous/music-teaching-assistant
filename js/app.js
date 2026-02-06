@@ -21,6 +21,7 @@ class TeachingAssistantApp {
     this.selectedTask = null;  // Currently selected task ID
     this.currentResponse = '';
     this.practiceMode = false; // When true, operates without student context
+    this.studentSelectionMode = false; // When true, student clicks send to module instead of loading tasks
 
     // Module settings storage (per module path, session only)
     this.moduleSettings = {};
@@ -148,6 +149,28 @@ class TeachingAssistantApp {
       } else if (event.data.type === 'taskmodule:request-students') {
         // Module is requesting the current class's student list
         this.handleStudentListRequest(event);
+      } else if (event.data.type === 'instrument-assigner-v2:enable-selection') {
+        this.studentSelectionMode = true;
+      } else if (event.data.type === 'instrument-assigner-v2:disable-selection') {
+        this.studentSelectionMode = false;
+        document.querySelectorAll('.student-roster-button').forEach(btn => {
+          btn.classList.remove('selected-for-module');
+        });
+      } else if (event.data.type === 'instrument-assigner-v2:save') {
+        this.saveInstrumentAssignment(event.data);
+      } else if (event.data.type === 'instrument-assigner-v2:load-songs') {
+        this.loadInstrumentAssignments(event);
+      } else if (event.data.type === 'instrument-assigner-v2:request-prompt') {
+        const result = prompt(event.data.message, event.data.defaultValue || '');
+        const iframe = document.querySelector('#task-module-frame');
+        if (iframe && iframe.contentWindow) {
+          iframe.contentWindow.postMessage({
+            type: 'instrument-assigner-v2:prompt-result',
+            result: result,
+            promptId: event.data.promptId
+          }, '*');
+        }
+      }
       } else if (event.data.type === 'seatingchart:request') {
         // Seating chart module is requesting current seating data
         this.handleSeatingChartRequest(event);
@@ -1138,6 +1161,30 @@ class TeachingAssistantApp {
         if (button.classList.contains('absent')) {
           this.showNotification(`${student.name} is marked absent`, 'warning');
           return;
+        }
+
+        // If in student selection mode, send to module instead of loading task
+        if (this.studentSelectionMode) {
+          // Highlight selected button
+          studentList.querySelectorAll('.student-roster-button').forEach(btn => {
+            btn.classList.remove('selected-for-module');
+          });
+          button.classList.add('selected-for-module');
+
+          // Send to module
+          const iframe = document.querySelector('#task-module-frame');
+          if (iframe && iframe.contentWindow) {
+            iframe.contentWindow.postMessage({
+              type: 'instrument-assigner-v2:student-selected',
+              student: {
+                student_id: student.student_id,
+                name: student.name,
+                grade: student.grade,
+                class: student.class
+              }
+            }, '*');
+          }
+          return; // Don't proceed to displayStudentTask
         }
 
         // Remove active class from all buttons
@@ -4749,6 +4796,108 @@ class TeachingAssistantApp {
     if (!fullName) return '';
     const parts = fullName.trim().split(' ');
     return parts[0];
+  }
+
+  /**
+   * Save an instrument assignment for instrument-assigner-v2 module
+   */
+  async saveInstrumentAssignment(data) {
+    try {
+      if (!this.fileManager.folderHandle) {
+        throw new Error('No folder selected');
+      }
+
+      const { songTitle, configJson, classId } = data;
+
+      // Load existing CSV or create header
+      let csvLines = ['class_id,song_title,config_json'];
+      try {
+        const handle = await this.fileManager.folderHandle.getFileHandle('instrument-assigner-v2.csv');
+        const file = await handle.getFile();
+        csvLines = (await file.text()).trim().split('\n');
+      } catch (e) {
+        console.log('Creating new instrument-assigner-v2.csv');
+      }
+
+      // Find existing song for this class
+      const existingIndex = csvLines.findIndex((line, i) => {
+        if (i === 0) return false;
+        const match = line.match(/^([^,]+),([^,]+),/);
+        return match && match[1] === classId && match[2] === songTitle;
+      });
+
+      // Build CSV line (escape JSON quotes)
+      const escapedJson = configJson.replace(/"/g, '""');
+      const newLine = `${classId},${songTitle},"${escapedJson}"`;
+
+      if (existingIndex > 0) {
+        csvLines[existingIndex] = newLine;
+      } else {
+        csvLines.push(newLine);
+      }
+
+      // Save
+      const blob = new Blob([csvLines.join('\n')], { type: 'text/csv' });
+      await this.fileManager.saveFileToFolder('instrument-assigner-v2.csv', blob);
+
+      this.showNotification(`Song "${songTitle}" saved`, 'success');
+    } catch (error) {
+      this.showNotification(`Error saving: ${error.message}`, 'error');
+    }
+  }
+
+  /**
+   * Load instrument assignments for instrument-assigner-v2 module
+   */
+  async loadInstrumentAssignments(event) {
+    try {
+      if (!this.fileManager.folderHandle) return;
+
+      // Determine class ID (sorted comma-separated for multi-class)
+      let classId;
+      if (this.selectedClasses.size > 0) {
+        classId = Array.from(this.selectedClasses).sort().join('+');
+      } else {
+        classId = this.selectedClass;
+      }
+
+      // Load CSV
+      const handle = await this.fileManager.folderHandle.getFileHandle('instrument-assigner-v2.csv');
+      const file = await handle.getFile();
+      const lines = (await file.text()).trim().split('\n');
+
+      // Parse songs for this class
+      const songs = [];
+      for (let i = 1; i < lines.length; i++) {
+        const match = lines[i].match(/^([^,]+),([^,]+),"(.+)"$/);
+        if (match && match[1] === classId) {
+          songs.push({
+            title: match[2],
+            config: JSON.parse(match[3].replace(/""/g, '"'))
+          });
+        }
+      }
+
+      // Send to module
+      const iframe = document.querySelector('#task-module-frame');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+          type: 'instrument-assigner-v2:songs-data',
+          songs: songs,
+          classId: classId
+        }, '*');
+      }
+    } catch (error) {
+      // Send empty list on error
+      const iframe = document.querySelector('#task-module-frame');
+      if (iframe && iframe.contentWindow) {
+        iframe.contentWindow.postMessage({
+          type: 'instrument-assigner-v2:songs-data',
+          songs: [],
+          classId: this.selectedClass || ''
+        }, '*');
+      }
+    }
   }
 }
 

@@ -1,5 +1,5 @@
 {
-  "version": "3.6.2",
+  "version": "3.7.0",
   "lastUpdated": "2026-02-06",
-  "description": "Fix rhythm dictation trainer xylophone pitch and touch drag cleanup"
+  "description": "Add Instrument Assigner V2 module with student selection, 36-slot grid, drag-drop reordering, visual grouping, random fill, and per-class CSV storage"
 }
