@@ -1,5 +1,5 @@
 {
-  "version": "3.7.0",
+  "version": "3.7.1",
   "lastUpdated": "2026-02-06",
-  "description": "Add Instrument Assigner V2 module with student selection, 36-slot grid, drag-drop reordering, visual grouping, random fill, and per-class CSV storage"
+  "description": "Fix critical syntax error in app.js (removed duplicate event handlers and extra closing brace that prevented app from loading)"
 }

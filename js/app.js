@@ -170,7 +170,6 @@ class TeachingAssistantApp {
             promptId: event.data.promptId
           }, '*');
         }
-      }
       } else if (event.data.type === 'seatingchart:request') {
         // Seating chart module is requesting current seating data
         this.handleSeatingChartRequest(event);
@@ -207,18 +206,6 @@ class TeachingAssistantApp {
             console.log('[PARENT] Sent songName back to module');
           }
         }
-      } else if (event.data.type === 'saveBoomwhackerSong') {
-        // Save boomwhacker song configuration
-        console.log('[PARENT] Received saveBoomwhackerSong:', event.data.songName);
-        this.saveBoomwhackerSong(event.data.songName, event.data.configJson);
-      } else if (event.data.type === 'loadBoomwhackerSong') {
-        // Load boomwhacker song configuration
-        console.log('[PARENT] Received loadBoomwhackerSong:', event.data.songName);
-        this.loadBoomwhackerSong(event.data.songName);
-      } else if (event.data.type === 'getBoomwhackerSongs') {
-        // Get list of saved songs
-        console.log('[PARENT] Received getBoomwhackerSongs');
-        this.getBoomwhackerSongs();
       }
     });
 
