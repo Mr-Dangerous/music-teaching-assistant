@@ -342,6 +342,149 @@ When code changes are complete and ready to commit:
 
 **Exceptions:** You may run `git status` or `git log` directly for informational purposes only. All write operations (add, commit, push, etc.) MUST go through the git agent.
 
+## Module Validation Agent
+
+**CRITICAL: Always validate new modules before first push.**
+
+When creating a new custom module in `modules/`, you MUST run the module validation agent before committing and pushing to ensure the module is properly integrated and accessible.
+
+### Purpose
+
+The module validation agent performs comprehensive pre-push validation to catch integration issues that would prevent teachers from using the new module in production. This includes verifying accessibility via the task dropdown, validating the TaskModule interface, and checking for common integration errors.
+
+### When to Use
+
+**REQUIRED for:**
+- ✅ All newly created modules in `modules/` directory
+- ✅ Modules being created for the first time (never pushed before)
+- ✅ Significant rewrites that change module structure or communication
+
+**NOT required for:**
+- ❌ Bug fixes to existing modules (minor edits)
+- ❌ CSS/styling changes only
+- ❌ Updates to existing modules already in production
+
+### Validation Checks
+
+The agent performs the following checks:
+
+#### 1. **Dropdown Accessibility Check** (CRITICAL)
+- Verifies module is referenced in `tasks.csv` OR in fallback task list
+- Without this, module will not appear in task dropdown and is unusable
+- Checks for proper CSV format: `task_id,question,question_type,input_type,grade,question_module,response_module`
+- Validates module path is correct relative to project root
+
+#### 2. **TaskModule Interface Validation**
+Ensures module implements required interface:
+```javascript
+window.TaskModule = {
+  init(context) { },        // Required: Receives context from app
+  getResponse() { },        // Required: Returns current response value
+  isComplete() { },         // Required: Returns boolean completion status
+  reset() { }               // Optional: Cleanup on module close
+}
+```
+
+#### 3. **Message Communication Check**
+Verifies module can send/receive messages:
+- Checks for `window.parent.postMessage()` calls
+- Validates `window.addEventListener('message')` listener
+- Ensures proper message type formatting (e.g., `taskmodule:response`)
+
+#### 4. **Syntax Validation**
+- Validates HTML structure
+- Checks for JavaScript syntax errors (via Node.js if available)
+- Identifies unclosed tags, missing quotes, broken event handlers
+
+#### 5. **Dependency Check**
+- For modules using shared libraries: validates imports from `modules/shared/`
+- Checks CDN links are accessible (jsPDF, html2canvas, etc.)
+- Warns about external dependencies that may break offline functionality
+
+#### 6. **File Organization**
+- Confirms module is in correct directory (`modules/`)
+- Checks naming conventions (kebab-case recommended)
+- Validates no conflicting module names
+
+### How to Invoke
+
+When you create a new module, invoke the validation agent BEFORE the git commit:
+
+```
+Step 1: Create module file (modules/new-module.html)
+Step 2: Add entry to tasks.csv
+Step 3: Invoke validation agent → Use Task tool with subagent_type="general-purpose"
+Step 4: Fix any issues reported by agent
+Step 5: Re-run validation until all checks pass
+Step 6: Invoke git agent to commit and push
+```
+
+**Example invocation:**
+```
+Use Task tool with:
+- subagent_type: "general-purpose"
+- description: "Validate new module"
+- prompt: "Run module validation checks on modules/instrument-assigner-v2.html.
+          Verify it's accessible via dropdown (check tasks.csv), implements
+          TaskModule interface, has proper message handling, and passes syntax
+          validation. Report any issues found."
+```
+
+### Validation Output
+
+The agent will report:
+- ✅ **PASS**: All checks passed, safe to push
+- ⚠️ **WARNING**: Non-critical issues found (e.g., missing optional methods)
+- ❌ **FAIL**: Critical issues that MUST be fixed before push
+
+### Critical Failures (Must Fix)
+
+These issues block pushing:
+1. Module not referenced in tasks.csv (won't appear in dropdown)
+2. Missing required TaskModule interface methods (init, getResponse, isComplete)
+3. JavaScript syntax errors (will break app loading)
+4. Incorrect module path in tasks.csv (404 error when loading)
+
+### Example tasks.csv Entry
+
+For a new module to be accessible, it needs an entry like:
+
+```csv
+task_id,question,question_type,input_type,grade,question_module,response_module
+instrument_v2,Assign instruments for performance,string,custom,,,modules/instrument-assigner-v2.html
+rhythm_dictation,Rhythm Dictation Practice,string,custom,,,modules/rhythm-dictation-trainer.html
+```
+
+**Column requirements:**
+- `task_id`: Unique identifier (no spaces)
+- `question`: Display text in dropdown
+- `question_type`: Usually "string" for custom modules
+- `input_type`: Must be "custom" for HTML modules
+- `response_module`: Path to module file (required for custom input_type)
+
+### Integration with Git Workflow
+
+The validation agent should be invoked BETWEEN module creation and git push:
+
+```
+1. Claude creates new module
+2. Claude adds tasks.csv entry
+3. 🔍 VALIDATION AGENT RUNS (this step)
+4. Claude fixes any issues found
+5. Git agent commits and pushes
+```
+
+**DO NOT skip validation** - catching integration errors before push prevents broken production deployments.
+
+### Future Enhancements
+
+Additional checks to be added:
+- Asset library integration (verify module uses existing assets)
+- Responsive design validation (test on different resolutions)
+- Auto-save behavior check (ensure modules trigger auto-save)
+- Cross-browser compatibility tests
+- Performance profiling (module load time)
+
 ## Fullscreen Mode
 
 The app supports fullscreen mode for immersive student task display:
