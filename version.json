@@ -1,5 +1,5 @@
 {
-  "version": "3.7.2",
+  "version": "3.7.3",
   "lastUpdated": "2026-02-06",
-  "description": "Add comprehensive Module Validation Agent documentation to CLAUDE.md for validating new modules before production deployment"
+  "description": "Add instrument-assigner-v2.html to knownModules fallback list to fix module dropdown visibility"
 }

@@ -523,6 +523,7 @@ class TeachingAssistantApp {
       'edit_student_list.html',
       'greig_boomwhacker_assignment.html',
       'instrument-assigner.html',
+      'instrument-assigner-v2.html',
       'interval_trainer.html',
       'martins-dream-of-1963.html',
       'pentatonic_composer.html',
