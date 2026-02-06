@@ -319,6 +319,28 @@ Version format: `MAJOR.MINOR.PATCH` (e.g., 0.3.0)
 
 **Current version:** 3.6.1 (Next user request: 3.7.0, Next commit: 3.6.2)
 
+### Git Workflow Delegation
+
+**CRITICAL: Always delegate git operations to the specialized git agent.**
+
+When you need to perform ANY git operation (commit, push, version bump), use the Task tool with `subagent_type="Bash"` and `description="Git operations"`. The git agent will:
+- Check git status and diff
+- Create properly formatted commit messages with Co-Authored-By attribution
+- Handle version bumping according to semantic versioning rules
+- Push changes to remote repository
+- Follow all git safety protocols (no force push, no destructive operations, etc.)
+
+**DO NOT perform git operations directly.** Always delegate to the git agent.
+
+Example:
+```
+When code changes are complete and ready to commit:
+→ Use Task tool to invoke git agent
+→ Agent handles: version bump → git add → git commit → git push
+→ Report results back to user
+```
+
+**Exceptions:** You may run `git status` or `git log` directly for informational purposes only. All write operations (add, commit, push, etc.) MUST go through the git agent.
 
 ## Fullscreen Mode
 

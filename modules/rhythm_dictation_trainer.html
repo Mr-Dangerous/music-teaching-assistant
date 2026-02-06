@@ -1102,9 +1102,9 @@
         return 146.83; // D3
       }
 
-      // Highest register instruments use D5
+      // Highest register instruments use D6 (one octave higher for clarity)
       if (highestRegisterInstruments.includes(instrument)) {
-        return 587.33; // D5
+        return 1174.66; // D6
       }
 
       // Mid register instruments (trumpet, harp) use D4
@@ -1130,9 +1130,9 @@
         return 164.81; // E3
       }
 
-      // Highest register instruments use E5
+      // Highest register instruments use E6 (one octave higher for clarity)
       if (highestRegisterInstruments.includes(instrument)) {
-        return 659.25; // E5
+        return 1318.51; // E6
       }
 
       // Mid register instruments use E4 (slightly higher than D4)
@@ -1351,6 +1351,7 @@
         card.addEventListener('touchstart', handleTouchStart, { passive: false });
         card.addEventListener('touchmove', handleTouchMove, { passive: false });
         card.addEventListener('touchend', handleTouchEnd, { passive: false });
+        card.addEventListener('touchcancel', handleTouchCancel, { passive: false });
 
         // Click-to-select (alternative to drag-and-drop)
         card.addEventListener('click', handleRhythmCardClick);
@@ -1692,15 +1693,22 @@
     }
 
     function handleTouchMove(e) {
-      if (!touchDragElement) return;
+      if (!touchDragElement) {
+        // Safety check - if no drag element, clean up ghost if it exists
+        removeDragGhost();
+        return;
+      }
       e.preventDefault();
 
       const touch = e.touches[0];
 
-      // Update ghost position
+      // Update ghost position (create if missing)
       if (dragGhost) {
         dragGhost.style.left = touch.clientX + 'px';
         dragGhost.style.top = touch.clientY + 'px';
+      } else if (draggedRhythm) {
+        // Recreate ghost if it was somehow lost
+        dragGhost = createDragGhost(draggedRhythm, touch.clientX, touch.clientY);
       }
 
       const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
@@ -1718,7 +1726,11 @@
     }
 
     function handleTouchEnd(e) {
-      if (!touchDragElement) return;
+      if (!touchDragElement) {
+        // Ensure ghost is removed even if touch element is null
+        removeDragGhost();
+        return;
+      }
 
       touchDragElement.classList.remove('dragging');
 
@@ -1736,6 +1748,24 @@
         placeRhythmInCell(draggedRhythm, beatIndex);
       }
 
+      // Clean up state - always remove ghost
+      touchDragElement = null;
+      draggedRhythm = null;
+      removeDragGhost();
+    }
+
+    // Handle touch cancellation (interruption)
+    function handleTouchCancel(e) {
+      if (touchDragElement) {
+        touchDragElement.classList.remove('dragging');
+      }
+
+      // Remove drag-over from all cells
+      document.querySelectorAll('.beat-cell').forEach(cell => {
+        cell.classList.remove('drag-over');
+      });
+
+      // Clean up state
       touchDragElement = null;
       draggedRhythm = null;
       removeDragGhost();
