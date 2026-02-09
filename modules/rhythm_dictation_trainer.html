@@ -397,18 +397,17 @@
 
     .beat-cell.has-sustained .beat-content {
       position: relative;
-      width: calc(200% + 20px);
-      margin-right: calc(-100% - 10px);
       z-index: 5;
+      /* Width set dynamically via inline style based on duration */
     }
 
     .beat-cell.has-sustained .rhythm-card-in-cell {
-      max-width: 45%;
       max-height: 125px;
+      /* Width set dynamically via inline style based on duration */
     }
 
     .beat-cell.has-sustained .beat-label::after {
-      content: ' & ' attr(data-next-beat);
+      content: ' - ' attr(data-beat-range);
       color: #636e72;
     }
 
@@ -1022,6 +1021,15 @@
         sustained: true,
         preset: 'intermediate'
       },
+      'whole': {
+        name: 'To-o-o-e',
+        duration: 4,
+        asset: '../assets/cards/card_white_whole_note_sustain_line_toe-oe-oe-oe.png',
+        clicks: [0],
+        sustains: [4], // Sustain for four full beats
+        sustained: true,
+        preset: 'advanced'
+      },
       'sixteenth-four': {
         name: 'Ti-ki-ti-ki',
         duration: 1,
@@ -1330,6 +1338,9 @@
             imageHtml += `<img src="${assetPath}" alt="${rhythm.name}" style="max-width: 50px; max-height: 100px;">`;
           });
           imageHtml += '</div>';
+        } else if (rhythm.sustained && rhythm.duration === 4) {
+          // Whole note - make it biggest to represent 4 beats
+          imageHtml = `<img src="${rhythm.asset}" alt="${rhythm.name}" style="max-width: 250px; max-height: 100px;">`;
         } else if (rhythm.sustained) {
           // Half note - make it bigger to represent 2 beats
           imageHtml = `<img src="${rhythm.asset}" alt="${rhythm.name}" style="max-width: 175px; max-height: 100px;">`;
@@ -1521,17 +1532,27 @@
           const cells = document.querySelectorAll('.beat-cell');
           const cellHasSustainedClass = cells[startCell]?.classList.contains('has-sustained');
 
-          if (rhythm.sustained && numCells === 2 && cellHasSustainedClass) {
-            // For sustained notes that are PLACED (merged cell exists), highlight left then right side
+          if (rhythm.sustained && numCells >= 2 && cellHasSustainedClass) {
+            // For sustained notes that are PLACED (merged cell exists), highlight progressively
             const mergedCell = startCell;
 
-            // Highlight left half on first beat
-            setTimeout(() => highlightBeatSide(mergedCell, 'left'), currentTime * 1000);
-            setTimeout(() => unhighlightBeatSide(mergedCell, 'left'), (currentTime + beatDuration) * 1000);
+            if (numCells === 2) {
+              // Half note: highlight left then right side
+              setTimeout(() => highlightBeatSide(mergedCell, 'left'), currentTime * 1000);
+              setTimeout(() => unhighlightBeatSide(mergedCell, 'left'), (currentTime + beatDuration) * 1000);
 
-            // Highlight right half on second beat
-            setTimeout(() => highlightBeatSide(mergedCell, 'right'), (currentTime + beatDuration) * 1000);
-            setTimeout(() => unhighlightBeatSide(mergedCell, 'right'), (currentTime + 2 * beatDuration) * 1000);
+              setTimeout(() => highlightBeatSide(mergedCell, 'right'), (currentTime + beatDuration) * 1000);
+              setTimeout(() => unhighlightBeatSide(mergedCell, 'right'), (currentTime + 2 * beatDuration) * 1000);
+            } else {
+              // Whole note or longer: highlight entire merged cell for each beat
+              for (let i = 0; i < numCells; i++) {
+                const highlightTime = currentTime + (i * beatDuration);
+                const unhighlightTime = highlightTime + beatDuration;
+
+                setTimeout(() => highlightBeat(mergedCell), highlightTime * 1000);
+                setTimeout(() => unhighlightBeat(mergedCell), unhighlightTime * 1000);
+              }
+            }
           } else {
             // For regular notes OR sustained notes not yet placed, highlight each beat cell individually
             for (let i = 0; i < numCells; i++) {
@@ -1857,12 +1878,21 @@
 
     // Update sustained cell visual styling across the staff
     function updateSustainedCells() {
-      // First, remove all sustained/has-sustained classes
+      // First, remove all sustained/has-sustained classes and inline styles
       document.querySelectorAll('.beat-cell').forEach(cell => {
         cell.classList.remove('sustained', 'has-sustained');
+        const content = cell.querySelector('.beat-content');
+        if (content) {
+          content.style.width = '';
+          content.style.marginRight = '';
+        }
+        const img = cell.querySelector('.rhythm-card-in-cell');
+        if (img) {
+          img.style.maxWidth = '';
+        }
       });
 
-      // Then, apply classes to appropriate cells
+      // Then, apply classes and styles to appropriate cells
       for (let i = 0; i < state.numBeats; i++) {
         const rhythmId = state.studentAnswer[i];
         if (rhythmId && RHYTHMS[rhythmId].sustained) {
@@ -1872,9 +1902,28 @@
           const primaryCell = document.querySelector(`.beat-cell[data-beat="${i}"]`);
           if (primaryCell) {
             primaryCell.classList.add('has-sustained');
+
+            // Set dynamic width based on duration (200% per beat, plus gaps)
+            const content = primaryCell.querySelector('.beat-content');
+            if (content) {
+              const widthPercent = beatsNeeded * 100;
+              const gapPx = (beatsNeeded - 1) * 12; // 12px gap between cells
+              content.style.width = `calc(${widthPercent}% + ${gapPx}px)`;
+              content.style.marginRight = `calc(-${widthPercent - 100}% - ${gapPx / 2}px)`;
+            }
+
+            // Set image max-width based on duration
+            const img = primaryCell.querySelector('.rhythm-card-in-cell');
+            if (img) {
+              const maxWidthPercent = Math.floor(100 / beatsNeeded) - 5; // Slightly smaller than full width
+              img.style.maxWidth = `${maxWidthPercent}%`;
+            }
+
+            // Update label to show beat range
             const label = primaryCell.querySelector('.beat-label');
-            if (label && i + 1 < state.numBeats) {
-              label.setAttribute('data-next-beat', i + 2);
+            if (label) {
+              const endBeat = Math.min(i + beatsNeeded, state.numBeats);
+              label.setAttribute('data-beat-range', `Beat ${endBeat}`);
             }
           }
 

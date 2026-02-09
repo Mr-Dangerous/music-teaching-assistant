@@ -1,5 +1,5 @@
 {
-  "version": "3.7.3",
-  "lastUpdated": "2026-02-06",
-  "description": "Add instrument-assigner-v2.html to knownModules fallback list to fix module dropdown visibility"
+  "version": "3.8.0",
+  "lastUpdated": "2026-02-09",
+  "description": "Add whole note (4-beat To-o-o-e) rhythm to Rhythm Dictation Trainer with dynamic sizing and playback highlighting"
 }
