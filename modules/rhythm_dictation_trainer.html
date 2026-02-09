@@ -1915,7 +1915,9 @@
             // Set image max-width based on duration
             const img = primaryCell.querySelector('.rhythm-card-in-cell');
             if (img) {
-              const maxWidthPercent = Math.floor(100 / beatsNeeded) - 5; // Slightly smaller than full width
+              // For sustained notes, use larger percentage to ensure visibility
+              // Half note (2 beats): 45%, Whole note (4 beats): 40%
+              const maxWidthPercent = beatsNeeded === 2 ? 45 : 40;
               img.style.maxWidth = `${maxWidthPercent}%`;
             }
 

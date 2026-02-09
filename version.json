@@ -1,5 +1,5 @@
 {
-  "version": "3.8.0",
+  "version": "3.8.1",
   "lastUpdated": "2026-02-09",
-  "description": "Add whole note (4-beat To-o-o-e) rhythm to Rhythm Dictation Trainer with dynamic sizing and playback highlighting"
+  "description": "Fix whole note display size in Rhythm Dictation Trainer to match visibility of other notes"
 }
