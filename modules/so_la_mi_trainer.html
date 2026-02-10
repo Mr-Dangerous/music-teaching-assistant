@@ -423,6 +423,74 @@
                 opacity: 1;
             }
         }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+
+        @keyframes fallOut {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100px) rotate(20deg);
+                opacity: 0;
+            }
+        }
+
+        .label-wrong {
+            animation: shake 0.5s ease-in-out, fallOut 0.6s ease-in forwards 0.5s;
+        }
+
+        .label-correct {
+            position: relative;
+        }
+
+        .label-correct::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: calc(40px * var(--module-scale));
+            color: #27ae60;
+            text-shadow: 0 0 calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.5);
+            animation: popIn 0.3s ease;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: calc(10px * var(--module-scale));
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: calc(10px * var(--module-scale));
+            padding: calc(10px * var(--module-scale));
+            background: #f8f9fa;
+            border-radius: calc(10px * var(--module-scale));
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: calc(24px * var(--module-scale));
+            height: calc(24px * var(--module-scale));
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            font-size: calc(16px * var(--module-scale));
+            flex: 1;
+        }
+
+        .staff-lowered {
+            margin-top: calc(150px * var(--module-scale));
+        }
     </style>
 </head>
 
@@ -431,13 +499,16 @@
         <!-- Completion Indicator -->
         <div id="completionIndicator" class="completion-indicator">✓</div>
 
-        <div style="display: flex; gap: 10px; align-items: center; width: 100%; justify-content: center;">
+        <div style="display: flex; gap: 10px; align-items: center; width: 100%; justify-content: center; flex-wrap: wrap;">
             <button class="refresh-btn" onclick="refreshPattern()">🔄 New Pattern</button>
             <button class="first-note-btn" onclick="openFirstNoteSelection()">First Note</button>
             <button class="note-count-btn" id="noteCountBtn" onclick="toggleNoteCount()">3 Notes</button>
             <button class="custom-pattern-btn" onclick="openCustomPattern()">Custom Pattern</button>
             <button class="color-toggle-btn" id="colorToggleBtn" onclick="toggleColors()">Colors On</button>
             <button class="undo-btn" id="undoBtn" onclick="undoLastPlacement()" disabled>Undo</button>
+            <button class="first-note-btn" onclick="openNoteSelection()">Select Notes</button>
+            <button class="custom-pattern-btn" id="checkAnswerBtn" onclick="checkAnswer()">Check Answer</button>
+            <button class="note-count-btn" id="lowerStaffBtn" onclick="toggleStaffPosition()">Lower Staff</button>
         </div>
 
         <canvas id="staffCanvas" width="900" height="250"></canvas>
@@ -483,6 +554,31 @@
             <div class="modal-buttons">
                 <button class="btn-save" onclick="applyCustomPattern()">Apply</button>
                 <button class="btn-cancel" onclick="closeModal('customPatternModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Selection Modal -->
+    <div id="noteSelectionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Select Available Notes</div>
+            <div class="modal-description">Choose which notes should appear in the trainer.</div>
+            <div class="checkbox-group" id="noteCheckboxes">
+                <div class="checkbox-item">
+                    <input type="checkbox" id="note-so" value="so" checked onchange="updateEnabledNotes()">
+                    <label for="note-so">So</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="note-la" value="la" checked onchange="updateEnabledNotes()">
+                    <label for="note-la">La</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="note-mi" value="mi" checked onchange="updateEnabledNotes()">
+                    <label for="note-mi">Mi</label>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-save" onclick="closeModal('noteSelectionModal')">Done</button>
             </div>
         </div>
     </div>
@@ -618,6 +714,8 @@
         let customPattern = null; // Store custom pattern if set
         let colorsEnabled = true; // Track whether colors are enabled
         let placementHistory = []; // Track order of placements for undo functionality
+        let enabledNotes = ['so', 'la', 'mi']; // Notes available in trainer
+        let staffLowered = false; // Track if staff is lowered
 
         // Initialize
         function init() {
@@ -626,11 +724,16 @@
             setupDragAndDrop();
             updateNoteCountButton();
             updateUndoButton();
+            updateLabelContainer();
         }
 
         // Generate random pattern of notes
         function generateRandomPattern() {
-            const notes = ['so', 'la', 'mi'];
+            const notes = enabledNotes; // Use only enabled notes
+            if (notes.length === 0) {
+                alert('Please enable at least one note!');
+                return;
+            }
             currentPattern = [];
 
             // Helper function to pick a random note that's not the same as the last two
@@ -1140,9 +1243,8 @@
             `;
             radioList.appendChild(noneDiv);
 
-            // Note options
-            const notes = ['so', 'la', 'mi'];
-            notes.forEach(note => {
+            // Note options - only show enabled notes
+            enabledNotes.forEach(note => {
                 const div = document.createElement('div');
                 div.className = 'radio-item';
                 div.innerHTML = `
@@ -1259,6 +1361,142 @@
         // Close modal helper
         function closeModal(modalId) {
             document.getElementById(modalId).classList.remove('show');
+        }
+
+        // Open note selection modal
+        function openNoteSelection() {
+            // Update checkboxes based on current enabled notes
+            ['so', 'la', 'mi'].forEach(note => {
+                const checkbox = document.getElementById(`note-${note}`);
+                if (checkbox) {
+                    checkbox.checked = enabledNotes.includes(note);
+                }
+            });
+            document.getElementById('noteSelectionModal').classList.add('show');
+        }
+
+        // Update enabled notes from checkboxes
+        function updateEnabledNotes() {
+            enabledNotes = [];
+            ['so', 'la', 'mi'].forEach(note => {
+                const checkbox = document.getElementById(`note-${note}`);
+                if (checkbox && checkbox.checked) {
+                    enabledNotes.push(note);
+                }
+            });
+
+            // Update label container to show/hide labels
+            updateLabelContainer();
+
+            // If pattern uses disabled notes, regenerate
+            const patternUsesDisabledNotes = currentPattern.some(n => !enabledNotes.includes(n));
+            if (patternUsesDisabledNotes) {
+                resetModule();
+            }
+        }
+
+        // Update label container visibility
+        function updateLabelContainer() {
+            ['so', 'la', 'mi'].forEach(note => {
+                const label = document.querySelector(`.draggable-label[data-note="${note}"]`);
+                if (label) {
+                    label.style.display = enabledNotes.includes(note) ? '' : 'none';
+                }
+            });
+        }
+
+        // Check answer - shake out wrong answers, show checkmarks on correct
+        async function checkAnswer() {
+            // Build correct answer map
+            const correctMap = {};
+            currentPattern.forEach((note, index) => {
+                correctMap[index] = note;
+            });
+
+            // Compare student answer to correct answer
+            const wrongPlacements = [];
+            const correctPlacements = [];
+
+            Object.entries(labelPlacements).forEach(([noteIndex, labelNote]) => {
+                const idx = parseInt(noteIndex);
+                if (correctMap[idx] === labelNote) {
+                    correctPlacements.push({ noteIndex: idx, labelNote });
+                } else {
+                    wrongPlacements.push({ noteIndex: idx, labelNote });
+                }
+            });
+
+            console.log('Correct placements:', correctPlacements);
+            console.log('Wrong placements:', wrongPlacements);
+
+            // Animate correct answers with checkmark
+            correctPlacements.forEach(({ noteIndex }) => {
+                const label = placedLabels.find(l => labelPlacements[noteIndex] === l.dataset.note);
+                if (label) {
+                    label.classList.add('label-correct');
+                }
+            });
+
+            // Animate wrong answers with shake and fall
+            wrongPlacements.forEach(({ noteIndex }) => {
+                const label = placedLabels.find(l => labelPlacements[noteIndex] === l.dataset.note);
+                if (label) {
+                    label.classList.add('label-wrong');
+                }
+            });
+
+            // Wait for animations to complete
+            await new Promise(resolve => setTimeout(resolve, 1200));
+
+            // Remove wrong labels
+            wrongPlacements.forEach(({ noteIndex }) => {
+                const label = placedLabels.find(l => labelPlacements[noteIndex] === l.dataset.note);
+                if (label && label.parentNode) {
+                    label.remove();
+                }
+                delete labelPlacements[noteIndex];
+                // Remove from placement history
+                placementHistory = placementHistory.filter(p => p.noteIndex !== noteIndex);
+            });
+
+            // Clean up wrong labels from placedLabels array
+            placedLabels = placedLabels.filter(l => l.parentNode);
+
+            // Remove checkmark class from correct labels
+            correctPlacements.forEach(({ noteIndex }) => {
+                const label = placedLabels.find(l => labelPlacements[noteIndex] === l.dataset.note);
+                if (label) {
+                    label.classList.remove('label-correct');
+                }
+            });
+
+            // Update UI state
+            updateCompletionIndicator();
+            updateUndoButton();
+        }
+
+        // Toggle staff position (lower/raise for short students)
+        function toggleStaffPosition() {
+            staffLowered = !staffLowered;
+            const canvas = document.getElementById('staffCanvas');
+            const btn = document.getElementById('lowerStaffBtn');
+
+            if (staffLowered) {
+                canvas.classList.add('staff-lowered');
+                btn.textContent = 'Raise Staff';
+            } else {
+                canvas.classList.remove('staff-lowered');
+                btn.textContent = 'Lower Staff';
+            }
+
+            // Reposition all placed labels
+            Object.entries(labelPlacements).forEach(([noteIndex, labelNote]) => {
+                const notePos = notePositions[noteIndex];
+                const label = placedLabels.find(l => l.dataset.note === labelNote && labelPlacements[noteIndex] === labelNote);
+                if (notePos && label) {
+                    positionLabelOnNote(label, notePos);
+                }
+            });
         }
 
         // Listen for init message from parent
