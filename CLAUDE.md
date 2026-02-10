@@ -317,7 +317,7 @@ Version format: `MAJOR.MINOR.PATCH` (e.g., 0.3.0)
 4. Version displayed in bottom-right corner of app
 5. Forces cache refresh for users
 
-**Current version:** 3.6.1 (Next user request: 3.7.0, Next commit: 3.6.2)
+**Current version:** 3.9.2 (Next user request: 3.10.0, Next commit: 3.9.3)
 
 ### Git Workflow Delegation
 
@@ -325,22 +325,46 @@ Version format: `MAJOR.MINOR.PATCH` (e.g., 0.3.0)
 
 When you need to perform ANY git operation (commit, push, version bump), use the Task tool with `subagent_type="Bash"` and `description="Git operations"`. The git agent will:
 - Check git status and diff
+- **MANDATORY: Bump version in version.json according to semantic versioning rules (see below)**
 - Create properly formatted commit messages with Co-Authored-By attribution
-- Handle version bumping according to semantic versioning rules
 - Push changes to remote repository
 - Follow all git safety protocols (no force push, no destructive operations, etc.)
 
 **DO NOT perform git operations directly.** Always delegate to the git agent.
 
+**CRITICAL VERSION BUMPING REQUIREMENT:**
+
+The git agent MUST bump the version in `version.json` following these rules:
+
+1. **User requests new feature/change** → Bump MINOR version (e.g., 3.6.1 → 3.7.0)
+   - Example: User asks to add note selection feature
+   - This happens BEFORE committing
+
+2. **Git commit/push** → Bump PATCH version (e.g., 3.7.0 → 3.7.1)
+   - Example: Committing the code changes
+   - This happens DURING the commit process
+
+**Two-step process example:**
+- Current version: 3.6.1
+- User requests: "Add custom note selection" → Bump to 3.7.0
+- Git commit: Changes committed → Bump to 3.7.1
+- Final result: Version 3.7.1 committed and pushed
+
 Example:
 ```
 When code changes are complete and ready to commit:
 → Use Task tool to invoke git agent
-→ Agent handles: version bump → git add → git commit → git push
+→ Agent handles:
+   1. Bump MINOR version (user-requested feature)
+   2. Bump PATCH version (commit)
+   3. Update version.json
+   4. git add (including version.json)
+   5. git commit with proper message
+   6. git push
 → Report results back to user
 ```
 
-**Exceptions:** You may run `git status` or `git log` directly for informational purposes only. All write operations (add, commit, push, etc.) MUST go through the git agent.
+**Exceptions:** You may run `git status` or `git log` directly for informational purposes only. All write operations (add, commit, push, version bumping, etc.) MUST go through the git agent.
 
 ## Module Validation Agent
 

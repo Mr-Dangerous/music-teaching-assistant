@@ -1,5 +1,5 @@
 {
-  "version": "3.8.1",
-  "lastUpdated": "2026-02-09",
-  "description": "Fix whole note display size in Rhythm Dictation Trainer to match visibility of other notes"
+  "version": "3.9.2",
+  "lastUpdated": "2026-02-10",
+  "description": "Update git workflow documentation with explicit version bumping requirements and retroactive version corrections"
 }
