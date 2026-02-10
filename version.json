@@ -1,5 +1,5 @@
 {
-  "version": "3.10.1",
+  "version": "3.10.2",
   "lastUpdated": "2026-02-10",
-  "description": "Add recorder fingering modeler module - teacher tool for creating custom recorder fingering charts with drag-and-drop notes and lyric support"
+  "description": "Fix incorrect E fingering in recorder-fingering-modeler module - use E_02 variant for correct fingering display"
 }
