@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recorder Fingering Modeler</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Arial', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: #333;
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      padding: 10px;
+      gap: 10px;
+    }
+
+    /* Header with controls */
+    .header {
+      background: white;
+      border-radius: 15px;
+      padding: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn.toggle-off {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    select {
+      padding: 10px;
+      border-radius: 10px;
+      border: 2px solid #667eea;
+      font-size: 16px;
+      min-width: 200px;
+    }
+
+    /* Musical alphabet section */
+    .alphabet-section {
+      background: white;
+      border-radius: 15px;
+      padding: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+
+    .alphabet-title {
+      font-size: 20px;
+      font-weight: bold;
+      margin-bottom: 10px;
+      color: #667eea;
+    }
+
+    .alphabet-container {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .note-button {
+      width: 80px;
+      height: 80px;
+      border-radius: 15px;
+      border: 3px solid #667eea;
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+      color: white;
+      font-size: 32px;
+      font-weight: bold;
+      cursor: grab;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s;
+      user-select: none;
+    }
+
+    .note-button:active {
+      cursor: grabbing;
+    }
+
+    .note-button:hover {
+      transform: scale(1.1);
+    }
+
+    /* Staff section */
+    .staff-section {
+      background: white;
+      border-radius: 15px;
+      padding: 20px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      flex: 1;
+      overflow: auto;
+      position: relative;
+    }
+
+    .staff-container {
+      position: relative;
+      height: 200px;
+      background-image:
+        repeating-linear-gradient(
+          transparent,
+          transparent 39px,
+          #333 39px,
+          #333 41px
+        );
+      background-size: 100% 200px;
+      background-position: 0 20px;
+      border-left: 4px solid #333;
+      border-right: 4px solid #333;
+      margin: 20px 0;
+    }
+
+    .staff-dropzone {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 1;
+    }
+
+    .placed-note {
+      position: absolute;
+      width: 50px;
+      height: 50px;
+      background: #667eea;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 24px;
+      font-weight: bold;
+      cursor: move;
+      z-index: 2;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    .placed-note:hover {
+      transform: scale(1.1);
+    }
+
+    /* Fingering display section */
+    .fingering-section {
+      background: white;
+      border-radius: 15px;
+      padding: 15px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      max-height: 300px;
+      overflow-x: auto;
+      overflow-y: hidden;
+    }
+
+    .fingering-display {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+      min-height: 250px;
+    }
+
+    .note-display {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      min-width: 150px;
+    }
+
+    .note-letter {
+      font-size: 32px;
+      font-weight: bold;
+      color: #667eea;
+    }
+
+    .fingering-image {
+      width: 120px;
+      height: auto;
+      max-height: 180px;
+      object-fit: contain;
+    }
+
+    .note-lyric {
+      font-size: 16px;
+      color: #764ba2;
+      font-style: italic;
+      min-height: 20px;
+    }
+
+    .clear-btn {
+      background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+      margin-left: 10px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* Modal for save dialog */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      min-width: 400px;
+    }
+
+    .modal-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      color: #667eea;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 12px;
+      border: 2px solid #667eea;
+      border-radius: 10px;
+      font-size: 16px;
+      margin-bottom: 20px;
+    }
+
+    .modal-buttons {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    .dragging {
+      opacity: 0.5;
+    }
+
+    .placeholder-text {
+      text-align: center;
+      color: #999;
+      font-size: 18px;
+      padding: 100px 20px;
+    }
+
+    .lyric-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .lyric-modal.active {
+      display: flex;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header Controls -->
+    <div class="header">
+      <div class="controls">
+        <button class="btn" id="toggleNames">Hide Note Names</button>
+        <button class="btn" id="toggleFingerings">Hide Fingerings</button>
+        <button class="btn" id="clearAll">Clear All</button>
+        <button class="btn" id="saveBtn">Save Song</button>
+        <select id="songSelect">
+          <option value="">-- Select a song --</option>
+        </select>
+        <button class="btn" id="loadBtn">Load Song</button>
+      </div>
+    </div>
+
+    <!-- Musical Alphabet -->
+    <div class="alphabet-section">
+      <div class="alphabet-title">Musical Alphabet - Drag notes to staff</div>
+      <div class="alphabet-container" id="alphabet">
+        <!-- Notes will be added here -->
+      </div>
+    </div>
+
+    <!-- Staff -->
+    <div class="staff-section">
+      <div class="staff-container" id="staff">
+        <div class="staff-dropzone" id="dropzone"></div>
+      </div>
+    </div>
+
+    <!-- Fingering Display -->
+    <div class="fingering-section">
+      <div class="fingering-display" id="fingeringDisplay">
+        <div class="placeholder-text">Drag notes to the staff to begin</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Save Modal -->
+  <div class="modal" id="saveModal">
+    <div class="modal-content">
+      <div class="modal-title">Save Song</div>
+      <input type="text" class="modal-input" id="songTitle" placeholder="Enter song title...">
+      <div class="modal-buttons">
+        <button class="btn" id="cancelSave">Cancel</button>
+        <button class="btn" id="confirmSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lyric Modal -->
+  <div class="lyric-modal" id="lyricModal">
+    <div class="modal-content">
+      <div class="modal-title">Add Lyric</div>
+      <input type="text" class="modal-input" id="lyricInput" placeholder="Enter lyric...">
+      <div class="modal-buttons">
+        <button class="btn" id="cancelLyric">Cancel</button>
+        <button class="btn" id="confirmLyric">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Musical notes configuration
+    const NOTES = ['C', 'D', 'E', 'F', 'G', 'A', 'B', 'High C', 'High D'];
+
+    // Mapping notes to recorder fingering images
+    const FINGERING_MAP = {
+      'C': 'recorder_fingering_Low_C.png',
+      'D': 'recorder_fingering_D_orange.png',
+      'E': 'recorder_fingering_E.png',
+      'F': 'recorder_fingering_F.png',
+      'G': 'recorder_fingering_G.png',
+      'A': 'recorder_fingering_A.png',
+      'B': 'recorder_fingering_B.png',
+      'High C': 'recorder_fingering_High_C.png',
+      'High D': 'recorder_fingering_High_D.png'
+    };
+
+    // State
+    let placedNotes = []; // {letter, x, id, lyric}
+    let showNames = true;
+    let showFingerings = true;
+    let draggedElement = null;
+    let savedSongs = [];
+    let fileHandle = null;
+    let longPressTimer = null;
+    let longPressTarget = null;
+
+    // Initialize
+    function init() {
+      createAlphabetButtons();
+      setupEventListeners();
+      loadSavedSongs();
+      updateFingeringDisplay();
+    }
+
+    // Create alphabet buttons
+    function createAlphabetButtons() {
+      const alphabet = document.getElementById('alphabet');
+      NOTES.forEach(note => {
+        const btn = document.createElement('div');
+        btn.className = 'note-button';
+        btn.textContent = note === 'High C' ? 'C\'' : note === 'High D' ? 'D\'' : note;
+        btn.draggable = true;
+        btn.dataset.note = note;
+
+        btn.addEventListener('dragstart', handleDragStart);
+        btn.addEventListener('dragend', handleDragEnd);
+
+        // Touch support
+        btn.addEventListener('touchstart', handleTouchStart, {passive: false});
+        btn.addEventListener('touchmove', handleTouchMove, {passive: false});
+        btn.addEventListener('touchend', handleTouchEnd, {passive: false});
+
+        alphabet.appendChild(btn);
+      });
+    }
+
+    // Setup event listeners
+    function setupEventListeners() {
+      const dropzone = document.getElementById('dropzone');
+      dropzone.addEventListener('dragover', handleDragOver);
+      dropzone.addEventListener('drop', handleDrop);
+
+      document.getElementById('toggleNames').addEventListener('click', toggleNames);
+      document.getElementById('toggleFingerings').addEventListener('click', toggleFingerings);
+      document.getElementById('clearAll').addEventListener('click', clearAll);
+      document.getElementById('saveBtn').addEventListener('click', showSaveModal);
+      document.getElementById('loadBtn').addEventListener('click', loadSong);
+      document.getElementById('cancelSave').addEventListener('click', hideSaveModal);
+      document.getElementById('confirmSave').addEventListener('click', confirmSave);
+      document.getElementById('cancelLyric').addEventListener('click', hideLyricModal);
+      document.getElementById('confirmLyric').addEventListener('click', confirmLyric);
+    }
+
+    // Drag handlers
+    function handleDragStart(e) {
+      draggedElement = e.target.dataset.note;
+      e.target.classList.add('dragging');
+    }
+
+    function handleDragEnd(e) {
+      e.target.classList.remove('dragging');
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      if (!draggedElement) return;
+
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+
+      addNote(draggedElement, x);
+      draggedElement = null;
+    }
+
+    // Touch handlers
+    let touchNote = null;
+    let touchOffsetX = 0;
+    let touchOffsetY = 0;
+
+    function handleTouchStart(e) {
+      e.preventDefault();
+      touchNote = e.target.dataset.note;
+      const touch = e.touches[0];
+      touchOffsetX = touch.clientX - e.target.getBoundingClientRect().left;
+      touchOffsetY = touch.clientY - e.target.getBoundingClientRect().top;
+    }
+
+    function handleTouchMove(e) {
+      e.preventDefault();
+    }
+
+    function handleTouchEnd(e) {
+      e.preventDefault();
+      if (!touchNote) return;
+
+      const touch = e.changedTouches[0];
+      const dropzone = document.getElementById('dropzone');
+      const rect = dropzone.getBoundingClientRect();
+
+      // Check if touch ended over dropzone
+      if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+          touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+        const x = touch.clientX - rect.left;
+        addNote(touchNote, x);
+      }
+
+      touchNote = null;
+    }
+
+    // Add note to staff
+    function addNote(letter, x) {
+      const id = Date.now();
+      const note = {
+        letter,
+        x,
+        id,
+        lyric: ''
+      };
+
+      placedNotes.push(note);
+      sortNotes();
+      renderNotes();
+      updateFingeringDisplay();
+    }
+
+    // Sort notes by x position
+    function sortNotes() {
+      placedNotes.sort((a, b) => a.x - b.x);
+    }
+
+    // Render notes on staff
+    function renderNotes() {
+      const staff = document.getElementById('staff');
+
+      // Clear existing notes
+      const existingNotes = staff.querySelectorAll('.placed-note');
+      existingNotes.forEach(n => n.remove());
+
+      // Add notes
+      placedNotes.forEach(note => {
+        const noteEl = document.createElement('div');
+        noteEl.className = 'placed-note';
+        noteEl.textContent = note.letter.includes('High') ? note.letter.split(' ')[1] + '\'' : note.letter;
+        noteEl.style.left = note.x + 'px';
+        noteEl.style.top = '75px'; // Center on staff
+        noteEl.dataset.id = note.id;
+
+        // Make draggable to reposition
+        noteEl.draggable = true;
+        noteEl.addEventListener('dragstart', handleNoteDragStart);
+        noteEl.addEventListener('dragend', handleDragEnd);
+
+        // Double-click to remove
+        noteEl.addEventListener('dblclick', () => removeNote(note.id));
+
+        // Long-press to add lyric (mouse)
+        noteEl.addEventListener('mousedown', (e) => {
+          if (e.button !== 0) return; // Only left click
+          longPressTarget = note.id;
+          longPressTimer = setTimeout(() => {
+            showLyricModal(note.id);
+          }, 700); // 700ms long press
+        });
+
+        noteEl.addEventListener('mouseup', () => {
+          clearTimeout(longPressTimer);
+          longPressTarget = null;
+        });
+
+        noteEl.addEventListener('mouseleave', () => {
+          clearTimeout(longPressTimer);
+          longPressTarget = null;
+        });
+
+        // Long-press to add lyric (touch)
+        noteEl.addEventListener('touchstart', (e) => {
+          e.stopPropagation(); // Prevent drag
+          longPressTarget = note.id;
+          longPressTimer = setTimeout(() => {
+            showLyricModal(note.id);
+          }, 700);
+        }, {passive: true});
+
+        noteEl.addEventListener('touchend', (e) => {
+          clearTimeout(longPressTimer);
+          longPressTarget = null;
+        }, {passive: true});
+
+        noteEl.addEventListener('touchcancel', () => {
+          clearTimeout(longPressTimer);
+          longPressTarget = null;
+        });
+
+        staff.appendChild(noteEl);
+      });
+    }
+
+    function handleNoteDragStart(e) {
+      const id = parseInt(e.target.dataset.id);
+      const note = placedNotes.find(n => n.id === id);
+      draggedElement = { type: 'reposition', id, note };
+      e.target.classList.add('dragging');
+    }
+
+    // Remove note
+    function removeNote(id) {
+      placedNotes = placedNotes.filter(n => n.id !== id);
+      renderNotes();
+      updateFingeringDisplay();
+    }
+
+    // Update fingering display
+    function updateFingeringDisplay() {
+      const display = document.getElementById('fingeringDisplay');
+      display.innerHTML = '';
+
+      if (placedNotes.length === 0) {
+        display.innerHTML = '<div class="placeholder-text">Drag notes to the staff to begin</div>';
+        return;
+      }
+
+      placedNotes.forEach(note => {
+        const noteDiv = document.createElement('div');
+        noteDiv.className = 'note-display';
+
+        // Note letter
+        const letterDiv = document.createElement('div');
+        letterDiv.className = 'note-letter';
+        letterDiv.textContent = note.letter;
+        if (!showNames) letterDiv.classList.add('hidden');
+        noteDiv.appendChild(letterDiv);
+
+        // Fingering image
+        const img = document.createElement('img');
+        img.className = 'fingering-image';
+        img.src = `../assets/recorder/${FINGERING_MAP[note.letter]}`;
+        img.alt = `${note.letter} fingering`;
+        if (!showFingerings) img.classList.add('hidden');
+        noteDiv.appendChild(img);
+
+        // Lyric
+        const lyricDiv = document.createElement('div');
+        lyricDiv.className = 'note-lyric';
+        lyricDiv.textContent = note.lyric || '\u00A0';
+        noteDiv.appendChild(lyricDiv);
+
+        display.appendChild(noteDiv);
+      });
+    }
+
+    // Toggle functions
+    function toggleNames() {
+      showNames = !showNames;
+      const btn = document.getElementById('toggleNames');
+      btn.textContent = showNames ? 'Hide Note Names' : 'Show Note Names';
+      btn.classList.toggle('toggle-off');
+      updateFingeringDisplay();
+    }
+
+    function toggleFingerings() {
+      showFingerings = !showFingerings;
+      const btn = document.getElementById('toggleFingerings');
+      btn.textContent = showFingerings ? 'Hide Fingerings' : 'Show Fingerings';
+      btn.classList.toggle('toggle-off');
+      updateFingeringDisplay();
+    }
+
+    // Clear all notes
+    function clearAll() {
+      if (placedNotes.length > 0 && !confirm('Clear all notes?')) return;
+      placedNotes = [];
+      renderNotes();
+      updateFingeringDisplay();
+    }
+
+    // Save/Load functionality
+    async function loadSavedSongs() {
+      try {
+        // Try to read from file
+        const response = await fetch('../recorder-chart-songs.csv');
+        if (response.ok) {
+          const text = await response.text();
+          parseSongsCSV(text);
+          updateSongDropdown();
+        }
+      } catch (e) {
+        console.log('No saved songs file found');
+      }
+    }
+
+    function parseSongsCSV(text) {
+      savedSongs = [];
+      const lines = text.trim().split('\n');
+      if (lines.length <= 1) return; // Empty or header only
+
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (!line) continue;
+
+        const commaIndex = line.indexOf(',');
+        if (commaIndex === -1) continue;
+
+        const title = line.substring(0, commaIndex).trim();
+        const jsonStr = line.substring(commaIndex + 1).trim();
+
+        try {
+          const notes = JSON.parse(jsonStr);
+          savedSongs.push({ title, notes });
+        } catch (e) {
+          console.error('Error parsing song:', e);
+        }
+      }
+    }
+
+    function updateSongDropdown() {
+      const select = document.getElementById('songSelect');
+      select.innerHTML = '<option value="">-- Select a song --</option>';
+
+      savedSongs.forEach((song, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        option.textContent = song.title;
+        select.appendChild(option);
+      });
+    }
+
+    function showSaveModal() {
+      document.getElementById('saveModal').classList.add('active');
+      document.getElementById('songTitle').value = '';
+      document.getElementById('songTitle').focus();
+    }
+
+    function hideSaveModal() {
+      document.getElementById('saveModal').classList.remove('active');
+    }
+
+    // Lyric modal functions
+    function showLyricModal(noteId) {
+      const note = placedNotes.find(n => n.id === noteId);
+      if (!note) return;
+
+      longPressTarget = noteId;
+      document.getElementById('lyricInput').value = note.lyric || '';
+      document.getElementById('lyricModal').classList.add('active');
+      setTimeout(() => document.getElementById('lyricInput').focus(), 100);
+    }
+
+    function hideLyricModal() {
+      document.getElementById('lyricModal').classList.remove('active');
+      longPressTarget = null;
+    }
+
+    function confirmLyric() {
+      if (longPressTarget === null) return;
+
+      const note = placedNotes.find(n => n.id === longPressTarget);
+      if (!note) return;
+
+      note.lyric = document.getElementById('lyricInput').value.trim();
+      updateFingeringDisplay();
+      hideLyricModal();
+    }
+
+    async function confirmSave() {
+      const title = document.getElementById('songTitle').value.trim();
+      if (!title) {
+        alert('Please enter a song title');
+        return;
+      }
+
+      // Create song data
+      const songData = {
+        title,
+        notes: placedNotes.map(n => ({ letter: n.letter, lyric: n.lyric, x: n.x }))
+      };
+
+      // Add to saved songs
+      const existingIndex = savedSongs.findIndex(s => s.title === title);
+      if (existingIndex >= 0) {
+        if (!confirm('A song with this title already exists. Overwrite?')) return;
+        savedSongs[existingIndex] = songData;
+      } else {
+        savedSongs.push(songData);
+      }
+
+      // Save to CSV
+      await saveSongsToCSV();
+
+      updateSongDropdown();
+      hideSaveModal();
+      alert('Song saved successfully!');
+    }
+
+    async function saveSongsToCSV() {
+      let csv = 'title,notes\n';
+      savedSongs.forEach(song => {
+        const jsonStr = JSON.stringify(song.notes);
+        csv += `${song.title},"${jsonStr}"\n`;
+      });
+
+      // Try to use File System Access API
+      try {
+        if (!fileHandle) {
+          fileHandle = await window.showSaveFilePicker({
+            suggestedName: 'recorder-chart-songs.csv',
+            types: [{
+              description: 'CSV Files',
+              accept: { 'text/csv': ['.csv'] }
+            }]
+          });
+        }
+
+        const writable = await fileHandle.createWritable();
+        await writable.write(csv);
+        await writable.close();
+      } catch (e) {
+        // Fallback: download file
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'recorder-chart-songs.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    function loadSong() {
+      const select = document.getElementById('songSelect');
+      const index = parseInt(select.value);
+
+      if (isNaN(index)) {
+        alert('Please select a song to load');
+        return;
+      }
+
+      const song = savedSongs[index];
+      if (!song) return;
+
+      // Clear current notes
+      placedNotes = [];
+
+      // Load song notes with new IDs
+      song.notes.forEach(note => {
+        placedNotes.push({
+          letter: note.letter,
+          x: note.x,
+          lyric: note.lyric || '',
+          id: Date.now() + Math.random()
+        });
+      });
+
+      renderNotes();
+      updateFingeringDisplay();
+    }
+
+    // Minimal TaskModule interface (required but not used for responses)
+    window.TaskModule = {
+      init: function(context) {
+        console.log('Recorder Fingering Modeler initialized', context);
+      },
+      getResponse: function() {
+        return 'teacher-tool';
+      },
+      isComplete: function() {
+        return false;
+      },
+      reset: function() {
+        clearAll();
+      }
+    };
+
+    // Listen for init message
+    window.addEventListener('message', function(event) {
+      if (event.data.type === 'taskmodule:init') {
+        TaskModule.init(event.data.context);
+      }
+    });
+
+    // Initialize on load
+    init();
+  </script>
+</body>
+</html>

@@ -1,5 +1,5 @@
 {
-  "version": "3.9.2",
+  "version": "3.10.1",
   "lastUpdated": "2026-02-10",
-  "description": "Update git workflow documentation with explicit version bumping requirements and retroactive version corrections"
+  "description": "Add recorder fingering modeler module - teacher tool for creating custom recorder fingering charts with drag-and-drop notes and lyric support"
 }

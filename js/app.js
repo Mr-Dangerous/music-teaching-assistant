@@ -530,6 +530,7 @@ class TeachingAssistantApp {
       'piano_octave_1.html',
       'picture.html',
       'presentation_viewer.html',
+      'recorder-fingering-modeler.html',
       'results-viewer.html',
       'rhythm_dictation_trainer.html',
       'rhythm-trainer.html',
