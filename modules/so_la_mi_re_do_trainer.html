@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>So La Mi Re Do Trainer</title>
+    <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
     <style>
         :root {
             /* Resolution scaling - inherits from parent or defaults to 1 */
@@ -491,6 +492,50 @@
         .staff-lowered {
             margin-top: calc(150px * var(--module-scale));
         }
+
+        .play-btn {
+            font-size: calc(14px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #27ae60;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .play-btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .root-select {
+            font-size: calc(14px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #2980b9;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(14px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .root-select option {
+            background-color: white;
+            color: #2c3e50;
+        }
+
+        @keyframes labelPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        .label-playing {
+            animation: labelPulse 0.4s ease-in-out infinite;
+        }
     </style>
 </head>
 
@@ -501,6 +546,21 @@
 
         <div style="display: flex; gap: 10px; align-items: center; width: 100%; justify-content: center; flex-wrap: wrap;">
             <button class="refresh-btn" onclick="refreshPattern()">🔄 New Pattern</button>
+            <button class="play-btn" id="playBtn" onclick="playPattern()">▶ Play</button>
+            <select id="rootSelect" class="root-select" onchange="changeRoot(this.value)">
+                <option value="C">Root: C</option>
+                <option value="C#">Root: C#</option>
+                <option value="D">Root: D</option>
+                <option value="D#">Root: D#</option>
+                <option value="E">Root: E</option>
+                <option value="F">Root: F</option>
+                <option value="F#">Root: F#</option>
+                <option value="G">Root: G</option>
+                <option value="G#">Root: G#</option>
+                <option value="A">Root: A</option>
+                <option value="A#">Root: A#</option>
+                <option value="B">Root: B</option>
+            </select>
             <button class="first-note-btn" onclick="openFirstNoteSelection()">First Note</button>
             <button class="note-count-btn" id="noteCountBtn" onclick="toggleNoteCount()">3 Notes</button>
             <button class="custom-pattern-btn" onclick="openCustomPattern()">Custom Pattern</button>
@@ -640,6 +700,11 @@
                             }
                         }
                     }
+                    if (savedSettings.rootNote) {
+                        rootNote = savedSettings.rootNote;
+                        const sel = document.getElementById('rootSelect');
+                        if (sel) sel.value = rootNote;
+                    }
                     console.log('Restored settings:', savedSettings);
                 }
 
@@ -688,7 +753,8 @@
             const settings = {
                 firstNote: firstNote,
                 numberOfNotes: numberOfNotes,
-                customPattern: customPattern
+                customPattern: customPattern,
+                rootNote: rootNote
             };
 
             // Get module path from window location
@@ -729,6 +795,10 @@
         let labelElements = {}; // Maps note position index to placed label DOM element
         let enabledNotes = ['so', 'la', 'mi', 're', 'do']; // Notes available in trainer
         let staffLowered = false; // Track if staff is lowered
+        let rootNote = 'C';
+        let isPlaying = false;
+        let playingNoteIndex = -1;
+        let synth = null;
 
         // Initialize
         function init() {
@@ -929,16 +999,23 @@
                 const yPos = noteYPositions[note];
                 const color = colorsEnabled ? noteColors[note] : '#95a5a6'; // Use grey if colors disabled
 
-                // Draw note circle
+                // Draw note circle (larger + glowing if currently playing)
+                const isActive = (i === playingNoteIndex);
+                const drawRadius = isActive ? noteRadius * 1.4 : noteRadius;
+                if (isActive) {
+                    ctx.shadowBlur = 25 * scale;
+                    ctx.shadowColor = color;
+                }
                 ctx.fillStyle = color;
                 ctx.strokeStyle = '#2c3e50';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = isActive ? 5 : 3;
                 ctx.beginPath();
-                ctx.arc(xPos, yPos, noteRadius, 0, Math.PI * 2);
+                ctx.arc(xPos, yPos, drawRadius, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
+                ctx.shadowBlur = 0;
 
-                // Store position for snap detection
+                // Store position for snap detection (always use original radius)
                 notePositions.push({
                     note: note,
                     x: xPos,
@@ -1160,6 +1237,7 @@
         }
 
         function resetModule() {
+            if (isPlaying) stopPlayback();
             // Remove all placed labels
             placedLabels.forEach(label => {
                 if (label && label.parentNode) {
@@ -1504,6 +1582,72 @@
             // Update UI state
             updateCompletionIndicator();
             updateUndoButton();
+        }
+
+        // Playback constants and functions
+        const solfegeIntervals = { do: 0, re: 2, mi: 4, so: 7, la: 9 };
+        const chromaticNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        function getNoteFreq(solfegeNote, octave = 4) {
+            const rootIdx = chromaticNotes.indexOf(rootNote);
+            const total = rootIdx + solfegeIntervals[solfegeNote];
+            return chromaticNotes[total % 12] + (octave + Math.floor(total / 12));
+        }
+
+        function initSynth() {
+            if (!synth) {
+                synth = new Tone.Synth({
+                    oscillator: { type: 'triangle' },
+                    envelope: { attack: 0.05, decay: 0.2, sustain: 0.5, release: 0.8 }
+                }).toDestination();
+            }
+        }
+
+        async function playPattern() {
+            if (isPlaying) { stopPlayback(); return; }
+            await Tone.start();
+            initSynth();
+            isPlaying = true;
+            updatePlayButton();
+            const beatMs = (60 / 80) * 1000; // 750ms at 80 BPM
+            for (let i = 0; i < currentPattern.length; i++) {
+                if (!isPlaying) break;
+                playingNoteIndex = i;
+                drawStaff();
+                setLabelPlaying(i, true);
+                synth.triggerAttackRelease(getNoteFreq(currentPattern[i]), '4n');
+                await new Promise(r => setTimeout(r, beatMs));
+                setLabelPlaying(i, false);
+            }
+            playingNoteIndex = -1;
+            isPlaying = false;
+            drawStaff();
+            updatePlayButton();
+        }
+
+        function stopPlayback() {
+            isPlaying = false;
+            if (synth) synth.triggerRelease();
+            playingNoteIndex = -1;
+            drawStaff();
+            updatePlayButton();
+        }
+
+        function updatePlayButton() {
+            const btn = document.getElementById('playBtn');
+            if (!btn) return;
+            btn.textContent = isPlaying ? '⏹ Stop' : '▶ Play';
+            btn.style.backgroundColor = isPlaying ? '#c0392b' : '#27ae60';
+        }
+
+        function setLabelPlaying(noteIndex, on) {
+            const label = labelElements[noteIndex];
+            if (label) label.classList.toggle('label-playing', on);
+        }
+
+        function changeRoot(note) {
+            rootNote = note;
+            saveSettings();
         }
 
         // Toggle staff position (lower/raise for short students)
