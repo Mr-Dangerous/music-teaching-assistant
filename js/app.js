@@ -467,43 +467,18 @@ class TeachingAssistantApp {
     this.tasks = [];
 
     try {
-      // Fetch the list of files in the modules/ directory
-      // This requires the server to provide directory listing or we scan known modules
-      const response = await fetch('modules/');
+      // Fetch the manifest file - works on GitHub Pages and any static host
+      const response = await fetch('modules/manifest.json');
 
-      // Check if fetch was successful (directory listing might not be available)
       if (!response.ok) {
-        throw new Error(`Failed to fetch modules/ directory: ${response.status} ${response.statusText}`);
+        throw new Error(`Failed to fetch modules/manifest.json: ${response.status} ${response.statusText}`);
       }
 
-      const html = await response.text();
-
-      // Parse HTML to find .html files (basic approach)
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      const links = doc.querySelectorAll('a');
-
-      links.forEach(link => {
-        const href = link.getAttribute('href');
-        if (href && href.endsWith('.html') && !href.startsWith('_')) {
-          // Extract module name from filename (e.g., "rhythm_game.html" -> "rhythm_game")
-          const moduleName = href.replace('.html', '');
-
-          // Create task object
-          this.tasks.push({
-            task_id: moduleName,
-            question: this.formatModuleName(moduleName), // Convert to readable name
-            module_path: `modules/${href}`
-          });
-        }
-      });
-
-      console.log(`Discovered ${this.tasks.length} modules:`, this.tasks.map(t => t.task_id));
+      this.tasks = await response.json();
+      console.log(`Loaded ${this.tasks.length} modules from manifest.json`);
     } catch (error) {
-      console.error('Failed to load tasks from modules folder:', error);
+      console.error('Failed to load manifest.json:', error);
       console.log('Using fallback: loading hardcoded module list');
-
-      // Fallback: Manually list known modules if directory listing fails
       this.tasks = await this.loadKnownModules();
     }
   }

@@ -8,12 +8,12 @@ The teaching assistant uses a **module-based architecture** where every task loa
 
 ### Understanding the System
 
-The app automatically discovers all modules in the `modules/` folder. Each `.html` file (except those starting with `_`) becomes an available task.
+Modules are registered in `modules/manifest.json`. Each entry in that file becomes an available task in the dropdown.
 
-**Module filename → Task name:**
-- `rhythm-trainer.html` → "Rhythm Trainer"
-- `so_la_mi_trainer.html` → "So La Mi Trainer"
-- `interval_trainer.html` → "Interval Trainer"
+**Manifest entry → Task name:**
+- `"task_id": "rhythm-trainer"` → "Rhythm Trainer" (using the `question` field)
+- `"task_id": "so_la_mi_trainer"` → "So La Mi Trainer"
+- `"task_id": "interval_trainer"` → "Interval Trainer"
 
 **Built-in modules:**
 - `modules/picture.html` - Displays an image from `tasks/Grade X/task_id.png`, keyboard input
@@ -24,16 +24,17 @@ The app automatically discovers all modules in the `modules/` folder. Each `.htm
 
 1. **Create your module** (e.g., `my-module.html`) in the `modules/` folder
 
-2. **⚠️ REQUIRED: Add to the fallback module list**
-   - Edit `js/app.js`
-   - Find the `loadKnownModules()` function (around line 480)
-   - Add your module filename to the `knownModules` array
-   - Example: `'my-module.html',`
-   - **This step is REQUIRED - your module will not appear without it!**
+2. **⚠️ REQUIRED: Register in `modules/manifest.json`**
+   - Open `modules/manifest.json`
+   - Add a new entry to the JSON array:
+     ```json
+     { "task_id": "my-module", "question": "My Module Display Name", "module_path": "modules/my-module.html" }
+     ```
+   - **This step is REQUIRED - your module will not appear in the dropdown without it!**
 
 3. **Reload the app** - your module now appears in the task dropdown
 
-**Why this step is required:** The app attempts to auto-discover modules by scanning the `modules/` folder, but this requires directory listing to be enabled on your web server (which most don't have for security reasons). The app **always** falls back to the hardcoded `knownModules` list in `js/app.js`. Adding your module to this list ensures it works in all environments. Without this step, your module won't be loadable even though the file exists.
+**Why this step is required:** The app is hosted on GitHub Pages, which does not provide directory listings. Modules are loaded from the manifest file, not auto-discovered. Without a manifest entry, the module file exists but cannot be reached from the app.
 
 ### Getting New Modules
 
@@ -73,11 +74,14 @@ interface with init, getResponse, isComplete, and reset methods.
 
 #### 3. Register and Test Your Module
 - Save as `modules/my-module.html`
-- **⚠️ REQUIRED:** Add `'my-module.html'` to the `knownModules` array in `js/app.js` (around line 480)
+- **⚠️ REQUIRED:** Add an entry to `modules/manifest.json`:
+  ```json
+  { "task_id": "my-module", "question": "My Module Display Name", "module_path": "modules/my-module.html" }
+  ```
 - Reload the app - your module appears in the task dropdown
 - Select it and test!
 
-**Don't skip step 2!** The module will not appear in the task list without being registered in the knownModules array.
+**Don't skip step 2!** The module will not appear in the task list without a manifest entry.
 
 ---
 
@@ -358,16 +362,15 @@ The `isComplete` flag in your postMessage tells the parent app whether to enable
 ## Troubleshooting
 
 ### Module Not Appearing in Dropdown
-**Most Common Cause:** Module not registered in the fallback list!
+**Most Common Cause:** Module not registered in `modules/manifest.json`!
 
 **Check (in order):**
-1. **⚠️ MOST IMPORTANT:** Module is registered in the `knownModules` array in `js/app.js` (around line 480)
-2. HTML file exists in `modules/` folder
-3. Filename doesn't start with `_` (underscore files are ignored)
-4. Reload the app to refresh the module list (Ctrl+R or Cmd+R)
-5. Browser console (F12) for error messages
+1. **⚠️ MOST IMPORTANT:** Module has an entry in `modules/manifest.json` with the correct `module_path`
+2. HTML file exists in `modules/` folder with the exact filename used in the manifest
+3. Reload the app to refresh (Ctrl+R or Cmd+R)
+4. Browser console (F12) — look for errors fetching `manifest.json`
 
-**90% of the time, the issue is forgetting to add the module to knownModules in js/app.js!**
+**90% of the time, the issue is a missing or mismatched entry in manifest.json!**
 
 ### Response Not Saving
 **Check:**
@@ -404,13 +407,14 @@ music_teaching_assistant/
 ├── students.csv                 # Student roster
 ├── results.csv                  # Response data
 ├── modules/
-│   ├── _template.html          # Starting template (ignored by loader)
+│   ├── manifest.json           # ⚠️ Register all modules here
+│   ├── _template.html          # Starting template (not in manifest)
 │   ├── picture.html            # Built-in: image display
 │   ├── string.html             # Built-in: text display
 │   ├── word-ending.html        # Example: drag & drop
 │   ├── simple-button-test.html # Example: button selection
 │   ├── rhythm-trainer.html     # Your custom module
-│   └── (more custom modules)   # Auto-loaded when app starts
+│   └── (more custom modules)
 └── tasks/
     ├── Grade K/
     ├── Grade 1/
@@ -431,11 +435,14 @@ music_teaching_assistant/
 ### To Use a Shared Module:
 1. Save HTML to your `modules/` folder
 2. Add any required images to appropriate `tasks/Grade X/` folder (if applicable)
-3. **⚠️ REQUIRED:** Register the module in `js/app.js` by adding the filename to the `knownModules` array (around line 480)
+3. **⚠️ REQUIRED:** Add an entry to `modules/manifest.json`:
+   ```json
+   { "task_id": "shared-module", "question": "Shared Module Name", "module_path": "modules/shared-module.html" }
+   ```
 4. Reload the app - the module appears in the task dropdown
 5. Test with a student
 
-**Step 3 is mandatory!** Without registering in knownModules, the module won't appear in the task dropdown.
+**Step 3 is mandatory!** Without a manifest entry, the module won't appear in the task dropdown.
 
 ---
 

@@ -6,6 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A browser-based smartboard teaching assistant for conducting student assessments. Pure HTML/CSS/JS with no build process - open `index.html` directly in a browser.
 
+## Hosting
+
+**Production:** The app is hosted on **GitHub Pages**. Push to `master` branch to deploy.
+
+GitHub Pages serves static files but does **not** provide directory listings. This means `fetch('modules/')` will return a 404, not an HTML directory index. Any dynamic file discovery must use a pre-built manifest file (e.g., `modules/manifest.json`) rather than parsing directory listings.
+
 ## Running the App
 
 ```bash
