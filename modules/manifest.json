@@ -11,6 +11,7 @@
   { "task_id": "rhythm_dictation_trainer",  "question": "Rhythm Dictation Trainer",      "module_path": "modules/rhythm_dictation_trainer.html" },
   { "task_id": "s_l_m_composer_modular",    "question": "So La Mi Composer (Modular)",   "module_path": "modules/s_l_m_composer_modular.html" },
   { "task_id": "smlrd_composer",            "question": "SMLRD Composer",                "module_path": "modules/smlrd_composer.html" },
+  { "task_id": "pentatonic_trainer",        "question": "Pentatonic Trainer",            "module_path": "modules/pentatonic_trainer.html" },
   { "task_id": "so_la_mi_re_do_trainer",   "question": "So La Mi Re Do Trainer",        "module_path": "modules/so_la_mi_re_do_trainer.html" },
   { "task_id": "so_la_mi_trainer",          "question": "So La Mi Trainer",              "module_path": "modules/so_la_mi_trainer.html" },
   { "task_id": "string",                    "question": "String Task Module",            "module_path": "modules/string.html" },

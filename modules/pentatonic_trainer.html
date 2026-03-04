@@ -1,0 +1,1803 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pentatonic Trainer</title>
+    <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+    <style>
+        :root {
+            /* Resolution scaling - inherits from parent or defaults to 1 */
+            --module-scale: 1;
+        }
+
+        /* Detect 4K mode from parent */
+        body.resolution-4k,
+        :root.resolution-4k {
+            --module-scale: 2;
+            transform: scale(2);
+            transform-origin: top left;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: calc(10px * var(--module-scale));
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: calc(900px * var(--module-scale));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100%;
+            justify-content: flex-start;
+            gap: calc(10px * var(--module-scale));
+        }
+
+        .refresh-btn {
+            align-self: flex-start;
+            font-size: calc(18px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #3498db;
+            border: none;
+            padding: calc(12px * var(--module-scale)) calc(24px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            margin-bottom: 0;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .refresh-btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .refresh-btn:active {
+            transform: translateY(0);
+        }
+
+        #staffCanvas {
+            display: block;
+            border: 3px solid #3498db;
+            border-radius: 5px;
+            background-color: white;
+            max-width: 100%;
+            flex-shrink: 0;
+        }
+
+        .label-container {
+            display: flex;
+            gap: calc(15px * var(--module-scale));
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-top: 0;
+            flex-shrink: 0;
+        }
+
+        .toggle-labels-btn {
+            font-size: calc(16px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #9b59b6;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            margin-top: 0;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-labels-btn:hover {
+            background-color: #8e44ad;
+        }
+
+        .draggable-label {
+            font-size: calc(28px * var(--module-scale));
+            font-weight: bold;
+            color: #2c3e50;
+            padding: calc(12px * var(--module-scale)) calc(32px * var(--module-scale));
+            background-color: #e74c3c;
+            border: calc(3px * var(--module-scale)) solid #c0392b;
+            border-radius: calc(8px * var(--module-scale));
+            cursor: grab;
+            user-select: none;
+            touch-action: none;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+        }
+
+        .draggable-label:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+        }
+
+        .draggable-label.dragging {
+            opacity: 0.7;
+            position: fixed;
+            z-index: 1000;
+            pointer-events: none;
+            border: none;
+            border-bottom: calc(3px * var(--module-scale)) solid #2c3e50;
+        }
+
+        .draggable-label.placed {
+            border: none;
+            background-color: transparent;
+            box-shadow: none;
+            padding: 0;
+            font-size: calc(28px * var(--module-scale));
+            color: white;
+            text-shadow: 0 0 calc(3px * var(--module-scale)) rgba(0, 0, 0, 0.5);
+        }
+
+        .first-note-btn {
+            font-size: calc(14px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #9b59b6;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .first-note-btn:hover {
+            background-color: #8e44ad;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .note-count-btn {
+            font-size: calc(14px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #34495e;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .note-count-btn:hover {
+            background-color: #2c3e50;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .custom-pattern-btn {
+            font-size: calc(14px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #c0392b;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .custom-pattern-btn:hover {
+            background-color: #a93226;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .color-toggle-btn {
+            font-size: calc(14px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #16a085;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .color-toggle-btn:hover {
+            background-color: #138d75;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .undo-btn {
+            font-size: calc(14px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #e67e22;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .undo-btn:hover {
+            background-color: #d35400;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .undo-btn:disabled {
+            background-color: #95a5a6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: calc(30px * var(--module-scale));
+            border-radius: calc(10px * var(--module-scale));
+            max-width: calc(400px * var(--module-scale));
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 calc(4px * var(--module-scale)) calc(20px * var(--module-scale)) rgba(0, 0, 0, 0.3);
+        }
+
+        .modal-header {
+            font-size: calc(20px * var(--module-scale));
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: calc(15px * var(--module-scale));
+            text-align: center;
+        }
+
+        .modal-description {
+            font-size: calc(12px * var(--module-scale));
+            color: #7f8c8d;
+            margin-bottom: calc(15px * var(--module-scale));
+            text-align: center;
+        }
+
+        .radio-list {
+            margin: calc(20px * var(--module-scale)) 0;
+        }
+
+        .radio-item {
+            display: flex;
+            align-items: center;
+            padding: calc(5px * var(--module-scale)) 0;
+            font-size: calc(14px * var(--module-scale));
+        }
+
+        .radio-item input {
+            margin-right: calc(10px * var(--module-scale));
+            width: calc(18px * var(--module-scale));
+            height: calc(18px * var(--module-scale));
+            cursor: pointer;
+        }
+
+        .radio-item label {
+            cursor: pointer;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: calc(15px * var(--module-scale));
+            justify-content: center;
+            margin-top: calc(20px * var(--module-scale));
+        }
+
+        .btn-save {
+            background-color: #27ae60;
+            padding: calc(12px * var(--module-scale)) calc(35px * var(--module-scale));
+            font-size: calc(14px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-save:hover {
+            background-color: #229954;
+        }
+
+        .btn-cancel {
+            background-color: #95a5a6;
+            padding: 12px 25px;
+            font-size: 14px;
+            font-weight: bold;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-cancel:hover {
+            background-color: #7f8c8d;
+        }
+
+        input[type="text"].pattern-input {
+            width: 100%;
+            padding: calc(10px * var(--module-scale));
+            font-size: calc(16px * var(--module-scale));
+            font-family: monospace;
+            border: calc(2px * var(--module-scale)) solid #bdc3c7;
+            border-radius: calc(5px * var(--module-scale));
+            margin: calc(15px * var(--module-scale)) 0;
+            text-align: center;
+        }
+
+        input[type="text"].pattern-input:focus {
+            outline: none;
+            border-color: #2ecc71;
+        }
+
+        .syntax-help {
+            background-color: #ecf0f1;
+            padding: calc(10px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            margin: calc(10px * var(--module-scale)) 0 calc(15px * var(--module-scale));
+            font-size: calc(12px * var(--module-scale));
+            color: #2c3e50;
+        }
+
+        .syntax-help p {
+            margin: calc(5px * var(--module-scale)) 0;
+        }
+
+        .syntax-help code {
+            background-color: #34495e;
+            color: white;
+            padding: calc(2px * var(--module-scale)) calc(6px * var(--module-scale));
+            border-radius: calc(3px * var(--module-scale));
+            font-family: monospace;
+        }
+
+        /* Completion indicator */
+        .completion-indicator {
+            position: absolute;
+            top: calc(10px * var(--module-scale));
+            right: calc(10px * var(--module-scale));
+            width: calc(50px * var(--module-scale));
+            height: calc(50px * var(--module-scale));
+            background-color: #27ae60;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(30px * var(--module-scale));
+            color: white;
+            box-shadow: 0 calc(4px * var(--module-scale)) calc(8px * var(--module-scale)) rgba(0, 0, 0, 0.3);
+            z-index: 100;
+            animation: popIn 0.3s ease;
+        }
+
+        .completion-indicator.show {
+            display: flex;
+        }
+
+        @keyframes popIn {
+            0% {
+                transform: scale(0);
+                opacity: 0;
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+
+        @keyframes fallOut {
+            0% {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(100px) rotate(20deg);
+                opacity: 0;
+            }
+        }
+
+        .label-wrong {
+            animation: shake 0.5s ease-in-out, fallOut 0.6s ease-in forwards 0.5s;
+        }
+
+        .label-correct {
+            position: relative;
+        }
+
+        .label-correct::after {
+            content: '✓';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: calc(40px * var(--module-scale));
+            color: #27ae60;
+            text-shadow: 0 0 calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.5);
+            animation: popIn 0.3s ease;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: calc(10px * var(--module-scale));
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: calc(10px * var(--module-scale));
+            padding: calc(10px * var(--module-scale));
+            background: #f8f9fa;
+            border-radius: calc(10px * var(--module-scale));
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: calc(24px * var(--module-scale));
+            height: calc(24px * var(--module-scale));
+            cursor: pointer;
+        }
+
+        .checkbox-item label {
+            cursor: pointer;
+            font-size: calc(16px * var(--module-scale));
+            flex: 1;
+        }
+
+        .staff-lowered {
+            margin-top: calc(150px * var(--module-scale));
+        }
+
+        .play-btn {
+            font-size: calc(14px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #27ae60;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .play-btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .play-my-btn {
+            font-size: calc(14px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #e67e22;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .play-my-btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .play-my-btn:disabled, .play-btn:disabled {
+            background-color: #95a5a6 !important;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .root-select {
+            font-size: calc(14px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #2980b9;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(14px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .root-select option {
+            background-color: white;
+            color: #2c3e50;
+        }
+
+        @keyframes labelPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        .label-playing {
+            animation: labelPulse 0.4s ease-in-out infinite;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" style="position: relative;">
+        <!-- Completion Indicator -->
+        <div id="completionIndicator" class="completion-indicator">✓</div>
+
+        <div style="display: flex; gap: 10px; align-items: center; width: 100%; justify-content: center; flex-wrap: wrap;">
+            <button class="refresh-btn" onclick="refreshPattern()">🔄 New Pattern</button>
+            <button class="play-btn" id="playBtn" onclick="playPattern()">▶ Pattern</button>
+            <button class="play-my-btn" id="playMyBtn" onclick="playMyAnswer()">▶ My Answer</button>
+            <select id="rootSelect" class="root-select" onchange="changeRoot(this.value)">
+                <option value="C">Root: C</option>
+                <option value="C#">Root: C#</option>
+                <option value="D">Root: D</option>
+                <option value="D#">Root: D#</option>
+                <option value="E">Root: E</option>
+                <option value="F">Root: F</option>
+                <option value="F#">Root: F#</option>
+                <option value="G">Root: G</option>
+                <option value="G#">Root: G#</option>
+                <option value="A">Root: A</option>
+                <option value="A#">Root: A#</option>
+                <option value="B">Root: B</option>
+            </select>
+            <button class="first-note-btn" onclick="openFirstNoteSelection()">First Note</button>
+            <button class="note-count-btn" id="noteCountBtn" onclick="toggleNoteCount()">3 Notes</button>
+            <button class="custom-pattern-btn" onclick="openCustomPattern()">Custom Pattern</button>
+            <button class="color-toggle-btn" id="colorToggleBtn" onclick="toggleColors()">Colors On</button>
+            <button class="undo-btn" id="undoBtn" onclick="undoLastPlacement()" disabled>Undo</button>
+            <button class="first-note-btn" onclick="openNoteSelection()">Select Notes</button>
+            <button class="custom-pattern-btn" id="checkAnswerBtn" onclick="checkAnswer()">Check Answer</button>
+            <button class="note-count-btn" id="lowerStaffBtn" onclick="toggleStaffPosition()">Lower Staff</button>
+            <button class="note-count-btn" id="topLineBtn" onclick="toggleTopLine()">Top Line Off</button>
+            <button class="note-count-btn" id="bottomLineBtn" onclick="toggleBottomLine()">Bottom Line Off</button>
+        </div>
+
+        <canvas id="staffCanvas" width="900" height="400"></canvas>
+
+        <div class="label-container" id="labelContainer">
+            <div class="draggable-label" data-note="do'" style="display:none">do'</div>
+            <div class="draggable-label" data-note="so">So</div>
+            <div class="draggable-label" data-note="la">La</div>
+            <div class="draggable-label" data-note="mi">Mi</div>
+            <div class="draggable-label" data-note="re">Re</div>
+            <div class="draggable-label" data-note="do">Do</div>
+            <div class="draggable-label" data-note="la," style="display:none">la,</div>
+            <div class="draggable-label" data-note="so," style="display:none">so,</div>
+        </div>
+
+        <button class="toggle-labels-btn" onclick="toggleStaffLabels()">Toggle Labels</button>
+    </div>
+
+    <!-- First Note Selection Modal -->
+    <div id="firstNoteModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Select First Note</div>
+            <div class="modal-description">Choose which note should always be first in the pattern.<br>Select 'None' for
+                random patterns.</div>
+            <div class="radio-list" id="firstNoteRadios"></div>
+            <div class="modal-buttons">
+                <button class="btn-save" onclick="saveFirstNote()">Save</button>
+                <button class="btn-cancel" onclick="closeModal('firstNoteModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Pattern Modal -->
+    <div id="customPatternModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Enter Custom Pattern</div>
+            <div class="modal-description">Type your solfege pattern using the shorthand notation below:</div>
+
+            <div class="syntax-help">
+                <strong>Syntax (case-sensitive):</strong><br>
+                <code>s</code>=so, <code>l</code>=la, <code>m</code>=mi, <code>r</code>=re, <code>d</code>=do<br>
+                <code>D</code>=do' (high Do), <code>L</code>=la, (low La), <code>S</code>=so, (low So)<br><br>
+                <strong>Example:</strong> <code>slmrd</code> = so, la, mi, re, do
+            </div>
+
+            <input type="text" id="customPatternInput" class="pattern-input" placeholder="e.g., slmrd or Dslmrd"
+                maxlength="12">
+
+            <div class="modal-buttons">
+                <button class="btn-save" onclick="applyCustomPattern()">Apply</button>
+                <button class="btn-cancel" onclick="closeModal('customPatternModal')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Note Selection Modal -->
+    <div id="noteSelectionModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">Select Available Notes</div>
+            <div class="modal-description">Choose which notes should appear in the trainer.</div>
+            <div class="checkbox-group" id="noteCheckboxes">
+                <div class="checkbox-item" id="cb-doh" style="display:none">
+                    <input type="checkbox" id="note-doh" value="do'" checked onchange="updateEnabledNotes()">
+                    <label for="note-doh">do' (High Do)</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="note-so" value="so" checked onchange="updateEnabledNotes()">
+                    <label for="note-so">So</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="note-la" value="la" checked onchange="updateEnabledNotes()">
+                    <label for="note-la">La</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="note-mi" value="mi" checked onchange="updateEnabledNotes()">
+                    <label for="note-mi">Mi</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="note-re" value="re" checked onchange="updateEnabledNotes()">
+                    <label for="note-re">Re</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="note-do" value="do" checked onchange="updateEnabledNotes()">
+                    <label for="note-do">Do</label>
+                </div>
+                <div class="checkbox-item" id="cb-lal" style="display:none">
+                    <input type="checkbox" id="note-lal" value="la," checked onchange="updateEnabledNotes()">
+                    <label for="note-lal">la, (Low La)</label>
+                </div>
+                <div class="checkbox-item" id="cb-sol" style="display:none">
+                    <input type="checkbox" id="note-sol" value="so," checked onchange="updateEnabledNotes()">
+                    <label for="note-sol">so, (Low So)</label>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-save" onclick="closeModal('noteSelectionModal')">Done</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Detect and apply resolution from parent frame
+        function detectParentResolution() {
+            try {
+                if (window.parent && window.parent !== window) {
+                    const parentBody = window.parent.document.body;
+                    if (parentBody.classList.contains('resolution-4k')) {
+                        document.body.classList.add('resolution-4k');
+                    }
+                }
+            } catch (e) {
+                console.log('Cannot access parent resolution, using default');
+            }
+        }
+
+        detectParentResolution();
+
+        // TaskModule interface for integration with main app
+        window.TaskModule = {
+            context: null,
+
+            init(context, savedSettings) {
+                this.context = context;
+                console.log('Pentatonic Trainer initialized with context:', context);
+
+                // 1. Try to restore from session storage first
+                const session = loadFromSession();
+                if (session && context.studentId !== 'practice') {
+                    if (session.topLineEnabled !== undefined) {
+                        topLineEnabled = session.topLineEnabled;
+                        document.getElementById('topLineBtn').textContent = topLineEnabled ? 'Top Line On' : 'Top Line Off';
+                    }
+                    if (session.bottomLineEnabled !== undefined) {
+                        bottomLineEnabled = session.bottomLineEnabled;
+                        document.getElementById('bottomLineBtn').textContent = bottomLineEnabled ? 'Bottom Line On' : 'Bottom Line Off';
+                    }
+                    if (session.firstNote !== undefined) firstNote = session.firstNote;
+                    if (session.numberOfNotes !== undefined) numberOfNotes = session.numberOfNotes;
+                    if (session.rootNote) {
+                        rootNote = session.rootNote;
+                        const sel = document.getElementById('rootSelect');
+                        if (sel) sel.value = rootNote;
+                    }
+                    if (session.colorsEnabled !== undefined) {
+                        colorsEnabled = session.colorsEnabled;
+                        const btn = document.getElementById('colorToggleBtn');
+                        if (btn) btn.textContent = colorsEnabled ? 'Colors On' : 'Colors Off';
+                    }
+                    if (session.enabledNotes) {
+                        // Restore core enabled notes, then add extended ones based on line toggles
+                        enabledNotes = [...session.enabledNotes];
+                        if (topLineEnabled && !enabledNotes.includes("do'")) enabledNotes.push("do'");
+                        if (bottomLineEnabled) {
+                            if (!enabledNotes.includes('la,')) enabledNotes.push('la,');
+                            if (!enabledNotes.includes('so,')) enabledNotes.push('so,');
+                        }
+                    }
+                    if (session.staffLowered !== undefined) {
+                        staffLowered = session.staffLowered;
+                        const canvas = document.getElementById('staffCanvas');
+                        const btn = document.getElementById('lowerStaffBtn');
+                        if (staffLowered) {
+                            canvas.classList.add('staff-lowered');
+                            if (btn) btn.textContent = 'Raise Staff';
+                        }
+                    }
+                    // Apply custom pattern from session if available
+                    if (session.customPattern) {
+                        customPattern = session.customPattern;
+                        const parsed = parseCustomPattern(customPattern);
+                        if (parsed) {
+                            currentPattern = parsed;
+                            numberOfNotes = parsed.length;
+                        }
+                    }
+                    console.log('Restored from session:', session);
+                }
+
+                // 2. Apply savedSettings from parent (for anything not covered by session)
+                if (savedSettings && context.studentId !== 'practice') {
+                    if (!session) {
+                        // Only apply parent settings if no session (first load)
+                        if (savedSettings.firstNote !== undefined) firstNote = savedSettings.firstNote;
+                        if (savedSettings.numberOfNotes !== undefined) numberOfNotes = savedSettings.numberOfNotes;
+                        if (savedSettings.rootNote) {
+                            rootNote = savedSettings.rootNote;
+                            const sel = document.getElementById('rootSelect');
+                            if (sel) sel.value = rootNote;
+                        }
+                    }
+                    // Custom pattern from parent always takes effect if no session custom pattern
+                    if (!customPattern && savedSettings.customPattern) {
+                        customPattern = savedSettings.customPattern;
+                        const parsed = parseCustomPattern(customPattern);
+                        if (parsed) {
+                            currentPattern = parsed;
+                            numberOfNotes = parsed.length;
+                        }
+                    }
+                }
+
+                // 3. Initialize UI
+                updateNoteSelectionModal();
+                init();
+
+                // 4. Restore existing student response
+                if (context.existingResponse) {
+                    try {
+                        const saved = JSON.parse(context.existingResponse);
+                        if (saved.pattern) {
+                            restorePattern(saved.pattern, saved.placements);
+                        }
+                    } catch (e) {
+                        console.log('No valid existing response to restore');
+                    }
+                }
+            },
+
+            getResponse() {
+                return getCurrentResponse();
+            },
+
+            isComplete() {
+                return checkIfComplete();
+            },
+
+            reset() {
+                resetModule();
+            }
+        };
+
+        // Handle messages from parent frame
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'taskmodule:save-settings') {
+                saveSettings();
+            }
+            if (event.data && event.data.type === 'taskmodule:init') {
+                window.TaskModule.init(event.data.context, event.data.savedSettings);
+            }
+        });
+
+        // Save current settings to parent app
+        function saveSettings() {
+            const settings = {
+                firstNote,
+                numberOfNotes,
+                customPattern,
+                rootNote,
+                colorsEnabled,
+                topLineEnabled,
+                bottomLineEnabled
+            };
+
+            const modulePath = window.location.pathname.split('/').pop();
+            window.parent.postMessage({
+                type: 'taskmodule:settings',
+                modulePath,
+                settings
+            }, '*');
+
+            console.log('Saved settings to parent:', settings);
+        }
+
+        // Session storage for teacher settings persistence across students
+        const SESSION_KEY = 'pentatonic_trainer_settings';
+
+        function saveToSession() {
+            // Save core enabled notes (exclude extended notes determined by line toggles)
+            const coreEnabled = enabledNotes.filter(n => !["do'", 'la,', 'so,'].includes(n));
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+                topLineEnabled, bottomLineEnabled,
+                firstNote, numberOfNotes, customPattern,
+                rootNote, colorsEnabled,
+                enabledNotes: coreEnabled,
+                staffLowered
+            }));
+        }
+
+        function loadFromSession() {
+            try {
+                const raw = sessionStorage.getItem(SESSION_KEY);
+                return raw ? JSON.parse(raw) : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // Configuration
+        const noteColors = {
+            "do'": '#e74c3c',  // Red (same as do)
+            'la':  '#9b59b6',  // Purple
+            'so':  '#27ae60',  // Green
+            'mi':  '#f1c40f',  // Yellow
+            're':  '#e67e22',  // Orange
+            'do':  '#e74c3c',  // Red
+            'la,': '#9b59b6',  // Purple (same as la)
+            'so,': '#27ae60',  // Green (same as so)
+        };
+
+        const allNoteKeys = ["do'", 'la', 'so', 'mi', 're', 'do', 'la,', 'so,'];
+
+        // State
+        let currentPattern = [];
+        let notePositions = [];
+        let labelPlacements = {};
+        let draggedLabel = null;
+        let dragOffset = { x: 0, y: 0 };
+        let labelOriginalPositions = {};
+        let staffLabelsState = 'off'; // 'off', 'so', 'all'
+        let placedLabels = [];
+        let firstNote = 'so';
+        let numberOfNotes = 3;
+        let customPattern = null;
+        let colorsEnabled = true;
+        let placementHistory = [];
+        let labelElements = {};
+        let enabledNotes = ['so', 'la', 'mi', 're', 'do'];
+        let staffLowered = false;
+        let rootNote = 'C';
+        let isPlaying = false;
+        let activePlayBtn = null;
+        let playingNoteIndex = -1;
+        let synth = null;
+        let synthReady = null;
+
+        // Extended staff state
+        let topLineEnabled = false;
+        let bottomLineEnabled = false;
+
+        // Initialize
+        function init() {
+            generateRandomPattern();
+            drawStaff();
+            setupDragAndDrop();
+            updateNoteCountButton();
+            updateUndoButton();
+            updateLabelContainer();
+        }
+
+        // Generate random pattern of notes
+        function generateRandomPattern() {
+            const notes = enabledNotes;
+            if (notes.length === 0) {
+                alert('Please enable at least one note!');
+                return;
+            }
+            currentPattern = [];
+
+            function getNextNote() {
+                const patternLength = currentPattern.length;
+                if (patternLength >= 2) {
+                    const lastNote = currentPattern[patternLength - 1];
+                    const secondLastNote = currentPattern[patternLength - 2];
+                    if (lastNote === secondLastNote) {
+                        const availableNotes = notes.filter(n => n !== lastNote);
+                        return availableNotes[Math.floor(Math.random() * availableNotes.length)];
+                    }
+                }
+                return notes[Math.floor(Math.random() * notes.length)];
+            }
+
+            if (firstNote) {
+                currentPattern.push(firstNote);
+                for (let i = 1; i < numberOfNotes; i++) {
+                    currentPattern.push(getNextNote());
+                }
+            } else {
+                for (let i = 0; i < numberOfNotes; i++) {
+                    currentPattern.push(getNextNote());
+                }
+            }
+
+            console.log('Generated pattern:', currentPattern);
+        }
+
+        // Restore pattern from saved data
+        function restorePattern(pattern, placements) {
+            currentPattern = pattern;
+            labelPlacements = placements || {};
+
+            placedLabels.forEach(label => {
+                if (label && label.parentNode) label.remove();
+            });
+            placedLabels = [];
+            labelElements = {};
+            placementHistory = [];
+
+            drawStaff();
+
+            Object.entries(labelPlacements).forEach(([noteIndex, labelNote]) => {
+                const notePos = notePositions[noteIndex];
+                if (notePos) {
+                    const originalLabel = document.querySelector(`#labelContainer [data-note="${CSS.escape(labelNote)}"]`);
+                    if (originalLabel) {
+                        const clone = originalLabel.cloneNode(true);
+                        clone.classList.remove('dragging');
+                        clone.classList.add('placed');
+                        clone.style.position = 'fixed';
+                        document.body.appendChild(clone);
+                        positionLabelOnNote(clone, notePos);
+                        placedLabels.push(clone);
+                        labelElements[parseInt(noteIndex)] = clone;
+                        placementHistory.push({
+                            noteIndex: parseInt(noteIndex),
+                            labelNote,
+                            labelElement: clone
+                        });
+                    }
+                }
+            });
+
+            updateCompletionIndicator();
+            updateUndoButton();
+        }
+
+        // Get current scale factor
+        function getScale() {
+            return document.body.classList.contains('resolution-4k') ? 2 : 1;
+        }
+
+        // Draw staff and notes
+        function drawStaff() {
+            const canvas = document.getElementById('staffCanvas');
+            const ctx = canvas.getContext('2d');
+            const scale = getScale();
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const staffLeft = 80 * scale;
+            const staffRight = canvasWidth - (80 * scale);
+
+            let noteRadius = 30 * scale;
+            if (currentPattern.length > 6) {
+                noteRadius = 20 * scale;
+            } else if (currentPattern.length > 4) {
+                noteRadius = 25 * scale;
+            }
+
+            // Five-line pentatonic staff (scaled)
+            const lineSpacing = 60 * scale;
+            const highDoLineY = canvasHeight / 2 - lineSpacing * 2;  // y=80
+            const soLineY     = canvasHeight / 2 - lineSpacing;       // y=140
+            const miLineY     = canvasHeight / 2;                     // y=200
+            const doLineY     = canvasHeight / 2 + lineSpacing;       // y=260
+            const lowLineY    = canvasHeight / 2 + lineSpacing * 2;   // y=320
+
+            const noteYPositions = {
+                "do'": highDoLineY - noteRadius,     // above high Do line
+                'la':  soLineY - noteRadius,          // above So line
+                'so':  soLineY,                       // on So line
+                'mi':  miLineY,                       // on Mi line
+                're':  (miLineY + doLineY) / 2,       // between Mi and Do
+                'do':  doLineY,                       // on Do line
+                'la,': lowLineY,                      // on low line
+                'so,': lowLineY + noteRadius,         // below low line
+            };
+
+            // Draw staff lines
+            ctx.strokeStyle = '#2c3e50';
+            ctx.lineWidth = 3 * scale;
+
+            // Conditional top line (high Do)
+            if (topLineEnabled) {
+                ctx.beginPath();
+                ctx.moveTo(staffLeft, highDoLineY);
+                ctx.lineTo(staffRight, highDoLineY);
+                ctx.stroke();
+            }
+
+            // Always draw core 3 lines
+            ctx.beginPath();
+            ctx.moveTo(staffLeft, soLineY);
+            ctx.lineTo(staffRight, soLineY);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(staffLeft, miLineY);
+            ctx.lineTo(staffRight, miLineY);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(staffLeft, doLineY);
+            ctx.lineTo(staffRight, doLineY);
+            ctx.stroke();
+
+            // Conditional bottom line (low La / low So)
+            if (bottomLineEnabled) {
+                ctx.beginPath();
+                ctx.moveTo(staffLeft, lowLineY);
+                ctx.lineTo(staffRight, lowLineY);
+                ctx.stroke();
+            }
+
+            // Draw staff labels based on state
+            if (staffLabelsState !== 'off') {
+                ctx.font = `bold ${24 * scale}px Arial`;
+                ctx.fillStyle = '#2c3e50';
+                ctx.textAlign = 'right';
+                ctx.textBaseline = 'middle';
+
+                if (staffLabelsState === 'so' || staffLabelsState === 'all') {
+                    ctx.fillText('So', staffLeft - (20 * scale), soLineY);
+                }
+
+                if (staffLabelsState === 'all') {
+                    if (topLineEnabled) ctx.fillText("Do'", staffLeft - (20 * scale), highDoLineY);
+                    ctx.fillText('Mi', staffLeft - (20 * scale), miLineY);
+                    ctx.fillText('Do', staffLeft - (20 * scale), doLineY);
+                    if (bottomLineEnabled) ctx.fillText('La,', staffLeft - (20 * scale), lowLineY);
+                }
+            }
+
+            // Draw notes
+            const noteSpacing = (staffRight - staffLeft) / (currentPattern.length + 1);
+            notePositions = [];
+
+            currentPattern.forEach((note, i) => {
+                const xPos = staffLeft + noteSpacing * (i + 1);
+                const yPos = noteYPositions[note];
+                const color = colorsEnabled ? noteColors[note] : '#95a5a6';
+
+                const isActive = (i === playingNoteIndex);
+                const drawRadius = isActive ? noteRadius * 1.4 : noteRadius;
+                if (isActive) {
+                    ctx.shadowBlur = 25 * scale;
+                    ctx.shadowColor = color;
+                }
+                ctx.fillStyle = color;
+                ctx.strokeStyle = '#2c3e50';
+                ctx.lineWidth = isActive ? 5 : 3;
+                ctx.beginPath();
+                ctx.arc(xPos, yPos, drawRadius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                notePositions.push({
+                    note,
+                    x: xPos,
+                    y: yPos,
+                    radius: noteRadius,
+                    index: i
+                });
+            });
+        }
+
+        // Setup drag and drop for labels
+        function setupDragAndDrop() {
+            const labels = document.querySelectorAll('.draggable-label');
+
+            labels.forEach(label => {
+                labelOriginalPositions[label.dataset.note] = {
+                    parent: label.parentElement,
+                    element: label
+                };
+
+                label.addEventListener('mousedown', (e) => {
+                    startDrag(label, e);
+                });
+
+                label.addEventListener('touchstart', (e) => {
+                    startDrag(label, e.touches[0]);
+                    e.preventDefault();
+                });
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (draggedLabel) drag(e);
+            });
+
+            document.addEventListener('touchmove', (e) => {
+                if (draggedLabel) {
+                    drag(e.touches[0]);
+                    e.preventDefault();
+                }
+            }, { passive: false });
+
+            document.addEventListener('mouseup', (e) => {
+                if (draggedLabel) endDrag(e);
+            });
+
+            document.addEventListener('touchend', (e) => {
+                if (draggedLabel) endDrag(e.changedTouches[0]);
+            });
+        }
+
+        function startDrag(label, event) {
+            const clone = label.cloneNode(true);
+            clone.classList.add('dragging');
+            clone.style.position = 'fixed';
+            clone.style.zIndex = '1000';
+            document.body.appendChild(clone);
+
+            draggedLabel = clone;
+
+            const rect = label.getBoundingClientRect();
+            dragOffset.x = event.clientX - rect.left;
+            dragOffset.y = event.clientY - rect.top;
+
+            clone.style.left = (event.clientX - dragOffset.x) + 'px';
+            clone.style.top = (event.clientY - dragOffset.y) + 'px';
+        }
+
+        function drag(event) {
+            if (!draggedLabel) return;
+            draggedLabel.style.left = (event.clientX - dragOffset.x) + 'px';
+            draggedLabel.style.top = (event.clientY - dragOffset.y) + 'px';
+        }
+
+        function endDrag(event) {
+            if (!draggedLabel) return;
+
+            const canvas = document.getElementById('staffCanvas');
+            const canvasRect = canvas.getBoundingClientRect();
+
+            const labelRect = draggedLabel.getBoundingClientRect();
+            const labelCenterX = labelRect.left + labelRect.width / 2;
+            const labelCenterY = labelRect.top + labelRect.height / 2;
+
+            const canvasX = labelCenterX - canvasRect.left;
+            const canvasY = labelCenterY - canvasRect.top;
+
+            let closestNote = null;
+            let closestDistance = Infinity;
+            const snapDistance = 80;
+
+            notePositions.forEach(notePos => {
+                const dx = canvasX - notePos.x;
+                const dy = canvasY - notePos.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance < closestDistance && distance < snapDistance) {
+                    closestDistance = distance;
+                    closestNote = notePos;
+                }
+            });
+
+            if (closestNote) {
+                const previousLabel = labelElements[closestNote.index];
+                if (previousLabel) {
+                    previousLabel.remove();
+                    placedLabels = placedLabels.filter(l => l !== previousLabel);
+                }
+
+                draggedLabel.classList.remove('dragging');
+                draggedLabel.classList.add('placed');
+                positionLabelOnNote(draggedLabel, closestNote);
+
+                placedLabels.push(draggedLabel);
+                labelPlacements[closestNote.index] = draggedLabel.dataset.note;
+                labelElements[closestNote.index] = draggedLabel;
+
+                placementHistory.push({
+                    noteIndex: closestNote.index,
+                    labelNote: draggedLabel.dataset.note,
+                    labelElement: draggedLabel
+                });
+
+                updateUndoButton();
+                console.log('Label placements:', labelPlacements);
+
+                if (checkIfComplete()) {
+                    notifyParent();
+                }
+
+                updateCompletionIndicator();
+            } else {
+                draggedLabel.remove();
+            }
+
+            draggedLabel = null;
+        }
+
+        function positionLabelOnNote(label, notePos) {
+            const canvas = document.getElementById('staffCanvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            label.style.position = 'fixed';
+            label.style.left = (canvasRect.left + notePos.x - label.offsetWidth / 2) + 'px';
+            label.style.top = (canvasRect.top + notePos.y - label.offsetHeight / 2) + 'px';
+        }
+
+        function checkIfComplete() {
+            return Object.keys(labelPlacements).length === numberOfNotes;
+        }
+
+        function updateCompletionIndicator() {
+            const indicator = document.getElementById('completionIndicator');
+            if (checkIfComplete()) {
+                indicator.classList.add('show');
+            } else {
+                indicator.classList.remove('show');
+            }
+        }
+
+        function getCurrentResponse() {
+            let correct = 0;
+            Object.entries(labelPlacements).forEach(([noteIndex, labelNote]) => {
+                if (currentPattern[noteIndex] === labelNote) correct++;
+            });
+
+            return JSON.stringify({
+                pattern: currentPattern,
+                placements: labelPlacements,
+                correct,
+                total: numberOfNotes
+            });
+        }
+
+        function notifyParent() {
+            window.parent.postMessage({
+                type: 'taskmodule:response',
+                value: getCurrentResponse(),
+                isComplete: true
+            }, '*');
+        }
+
+        function resetModule() {
+            if (isPlaying) stopPlayback();
+            placedLabels.forEach(label => {
+                if (label && label.parentNode) label.remove();
+            });
+            placedLabels = [];
+            labelPlacements = {};
+            labelElements = {};
+            placementHistory = [];
+            generateRandomPattern();
+            drawStaff();
+            updateCompletionIndicator();
+            updateUndoButton();
+        }
+
+        function toggleColors() {
+            colorsEnabled = !colorsEnabled;
+            const btn = document.getElementById('colorToggleBtn');
+            if (btn) btn.textContent = colorsEnabled ? 'Colors On' : 'Colors Off';
+            drawStaff();
+            saveSettings(); saveToSession();
+        }
+
+        function undoLastPlacement() {
+            if (placementHistory.length === 0) return;
+            const lastPlacement = placementHistory.pop();
+            if (lastPlacement.labelElement && lastPlacement.labelElement.parentNode) {
+                lastPlacement.labelElement.remove();
+            }
+            placedLabels = placedLabels.filter(l => l !== lastPlacement.labelElement);
+            delete labelPlacements[lastPlacement.noteIndex];
+            delete labelElements[lastPlacement.noteIndex];
+            updateCompletionIndicator();
+            updateUndoButton();
+            console.log('Undone placement. Remaining placements:', labelPlacements);
+        }
+
+        function updateUndoButton() {
+            const btn = document.getElementById('undoBtn');
+            if (btn) btn.disabled = placementHistory.length === 0;
+        }
+
+        function toggleStaffLabels() {
+            if (staffLabelsState === 'off') {
+                staffLabelsState = 'so';
+            } else if (staffLabelsState === 'so') {
+                staffLabelsState = 'all';
+            } else {
+                staffLabelsState = 'off';
+            }
+            drawStaff();
+        }
+
+        function refreshPattern() {
+            resetModule();
+        }
+
+        function toggleNoteCount() {
+            numberOfNotes++;
+            if (numberOfNotes > 6) numberOfNotes = 3;
+            updateNoteCountButton();
+            saveSettings(); saveToSession();
+            resetModule();
+        }
+
+        function updateNoteCountButton() {
+            const btn = document.getElementById('noteCountBtn');
+            if (btn) btn.textContent = numberOfNotes + ' Notes';
+        }
+
+        // Toggle top line (high Do)
+        function toggleTopLine() {
+            topLineEnabled = !topLineEnabled;
+            document.getElementById('topLineBtn').textContent = topLineEnabled ? 'Top Line On' : 'Top Line Off';
+            if (topLineEnabled) {
+                if (!enabledNotes.includes("do'")) enabledNotes.push("do'");
+            } else {
+                enabledNotes = enabledNotes.filter(n => n !== "do'");
+                if (currentPattern.includes("do'")) resetModule();
+            }
+            updateLabelContainer();
+            updateNoteSelectionModal();
+            drawStaff();
+            saveSettings(); saveToSession();
+        }
+
+        // Toggle bottom line (low La / low So)
+        function toggleBottomLine() {
+            bottomLineEnabled = !bottomLineEnabled;
+            document.getElementById('bottomLineBtn').textContent = bottomLineEnabled ? 'Bottom Line On' : 'Bottom Line Off';
+            if (bottomLineEnabled) {
+                if (!enabledNotes.includes('la,')) enabledNotes.push('la,');
+                if (!enabledNotes.includes('so,')) enabledNotes.push('so,');
+            } else {
+                enabledNotes = enabledNotes.filter(n => n !== 'la,' && n !== 'so,');
+                if (currentPattern.some(n => n === 'la,' || n === 'so,')) resetModule();
+            }
+            updateLabelContainer();
+            updateNoteSelectionModal();
+            drawStaff();
+            saveSettings(); saveToSession();
+        }
+
+        // First Note Selection Modal
+        function openFirstNoteSelection() {
+            const radioList = document.getElementById('firstNoteRadios');
+            radioList.innerHTML = '';
+
+            const noneDiv = document.createElement('div');
+            noneDiv.className = 'radio-item';
+            noneDiv.innerHTML = `
+                <input type="radio" name="firstNote" id="first-none" value="none"
+                       ${!firstNote ? 'checked' : ''}>
+                <label for="first-none">None (Random)</label>
+            `;
+            radioList.appendChild(noneDiv);
+
+            enabledNotes.forEach(note => {
+                const div = document.createElement('div');
+                div.className = 'radio-item';
+                div.innerHTML = `
+                    <input type="radio" name="firstNote" id="first-${note}" value="${note}"
+                           ${firstNote === note ? 'checked' : ''}>
+                    <label for="first-${note}">${note.charAt(0).toUpperCase() + note.slice(1)}</label>
+                `;
+                radioList.appendChild(div);
+            });
+
+            document.getElementById('firstNoteModal').classList.add('show');
+        }
+
+        function saveFirstNote() {
+            const selected = document.querySelector('input[name="firstNote"]:checked');
+            if (selected) {
+                firstNote = selected.value === 'none' ? null : selected.value;
+            }
+            saveSettings(); saveToSession();
+            closeModal('firstNoteModal');
+            resetModule();
+        }
+
+        // Custom Pattern Modal
+        function openCustomPattern() {
+            document.getElementById('customPatternInput').value = '';
+            document.getElementById('customPatternModal').classList.add('show');
+            setTimeout(() => {
+                document.getElementById('customPatternInput').focus();
+            }, 100);
+        }
+
+        function parseCustomPattern(input) {
+            // Remove spaces only — preserve case for uppercase extended notes
+            input = input.replace(/\s/g, '');
+
+            if (!input) return null;
+
+            // Mapping from shorthand to full note names (case-sensitive)
+            const noteMap = {
+                'D': "do'",  // High Do (uppercase)
+                's': 'so',
+                'l': 'la',
+                'm': 'mi',
+                'r': 're',
+                'd': 'do',
+                'S': 'so,',  // Low So (uppercase)
+                'L': 'la,',  // Low La (uppercase)
+            };
+
+            const pattern = [];
+            for (let i = 0; i < input.length; i++) {
+                const char = input[i];
+                if (noteMap[char]) {
+                    pattern.push(noteMap[char]);
+                } else {
+                    return null;
+                }
+            }
+
+            return pattern.length > 0 ? pattern : null;
+        }
+
+        function applyCustomPattern() {
+            const input = document.getElementById('customPatternInput').value;
+            const parsed = parseCustomPattern(input);
+
+            if (!parsed) {
+                alert('Invalid pattern! Use: s=so, l=la, m=mi, r=re, d=do, D=do\', L=la,, S=so,');
+                closeModal('customPatternModal');
+                return;
+            }
+
+            if (parsed.length > 12) {
+                alert('Pattern too long! Maximum 12 notes.');
+                closeModal('customPatternModal');
+                return;
+            }
+
+            currentPattern = parsed;
+            numberOfNotes = parsed.length;
+            customPattern = input;
+            updateNoteCountButton();
+
+            placedLabels.forEach(label => {
+                if (label && label.parentNode) label.remove();
+            });
+            placedLabels = [];
+            labelPlacements = {};
+            labelElements = {};
+
+            saveSettings(); saveToSession();
+            closeModal('customPatternModal');
+            drawStaff();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const input = document.getElementById('customPatternInput');
+            if (input) {
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') applyCustomPattern();
+                });
+            }
+        });
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        // Open note selection modal
+        function openNoteSelection() {
+            // Update checkboxes based on current enabled notes
+            const noteCheckMap = [
+                { id: 'note-doh', key: "do'" },
+                { id: 'note-so',  key: 'so' },
+                { id: 'note-la',  key: 'la' },
+                { id: 'note-mi',  key: 'mi' },
+                { id: 'note-re',  key: 're' },
+                { id: 'note-do',  key: 'do' },
+                { id: 'note-lal', key: 'la,' },
+                { id: 'note-sol', key: 'so,' },
+            ];
+            noteCheckMap.forEach(({ id, key }) => {
+                const checkbox = document.getElementById(id);
+                if (checkbox) checkbox.checked = enabledNotes.includes(key);
+            });
+            document.getElementById('noteSelectionModal').classList.add('show');
+        }
+
+        // Update which checkbox rows are visible based on line toggles
+        function updateNoteSelectionModal() {
+            document.getElementById('cb-doh').style.display = topLineEnabled ? '' : 'none';
+            document.getElementById('cb-lal').style.display = bottomLineEnabled ? '' : 'none';
+            document.getElementById('cb-sol').style.display = bottomLineEnabled ? '' : 'none';
+        }
+
+        // Update enabled notes from checkboxes
+        function updateEnabledNotes() {
+            const noteCheckMap = [
+                { id: 'note-doh', key: "do'",  guard: () => topLineEnabled },
+                { id: 'note-so',  key: 'so',   guard: () => true },
+                { id: 'note-la',  key: 'la',   guard: () => true },
+                { id: 'note-mi',  key: 'mi',   guard: () => true },
+                { id: 'note-re',  key: 're',   guard: () => true },
+                { id: 'note-do',  key: 'do',   guard: () => true },
+                { id: 'note-lal', key: 'la,',  guard: () => bottomLineEnabled },
+                { id: 'note-sol', key: 'so,',  guard: () => bottomLineEnabled },
+            ];
+
+            enabledNotes = [];
+            noteCheckMap.forEach(({ id, key, guard }) => {
+                if (!guard()) return;
+                const checkbox = document.getElementById(id);
+                if (checkbox && checkbox.checked) enabledNotes.push(key);
+            });
+
+            updateLabelContainer();
+
+            const patternUsesDisabledNotes = currentPattern.some(n => !enabledNotes.includes(n));
+            if (patternUsesDisabledNotes) resetModule();
+        }
+
+        // Update label container visibility for all 8 notes
+        function updateLabelContainer() {
+            allNoteKeys.forEach(note => {
+                const label = document.querySelector(`#labelContainer [data-note="${CSS.escape(note)}"]`);
+                if (label) label.style.display = enabledNotes.includes(note) ? '' : 'none';
+            });
+        }
+
+        // Check answer - shake out wrong answers, show checkmarks on correct
+        async function checkAnswer() {
+            const correctMap = {};
+            currentPattern.forEach((note, index) => {
+                correctMap[index] = note;
+            });
+
+            const wrongPlacements = [];
+            const correctPlacements = [];
+
+            Object.entries(labelPlacements).forEach(([noteIndex, labelNote]) => {
+                const idx = parseInt(noteIndex);
+                if (correctMap[idx] === labelNote) {
+                    correctPlacements.push({ noteIndex: idx, labelNote });
+                } else {
+                    wrongPlacements.push({ noteIndex: idx, labelNote });
+                }
+            });
+
+            correctPlacements.forEach(({ noteIndex }) => {
+                const label = labelElements[noteIndex];
+                if (label) label.classList.add('label-correct');
+            });
+
+            wrongPlacements.forEach(({ noteIndex }) => {
+                const label = labelElements[noteIndex];
+                if (label) label.classList.add('label-wrong');
+            });
+
+            await new Promise(resolve => setTimeout(resolve, 1200));
+
+            wrongPlacements.forEach(({ noteIndex }) => {
+                const label = labelElements[noteIndex];
+                if (label && label.parentNode) label.remove();
+                delete labelPlacements[noteIndex];
+                delete labelElements[noteIndex];
+                placementHistory = placementHistory.filter(p => p.noteIndex !== noteIndex);
+            });
+
+            placedLabels = placedLabels.filter(l => l.parentNode);
+
+            correctPlacements.forEach(({ noteIndex }) => {
+                const label = labelElements[noteIndex];
+                if (label) label.classList.remove('label-correct');
+            });
+
+            updateCompletionIndicator();
+            updateUndoButton();
+        }
+
+        // Playback
+        const solfegeIntervals = { "do'": 12, 'la': 9, 'so': 7, 'mi': 4, 're': 2, 'do': 0, 'la,': -3, 'so,': -5 };
+        const chromaticNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        function getNoteFreq(solfegeNote, octave = 4) {
+            const rootIdx = chromaticNotes.indexOf(rootNote);
+            const semitones = rootIdx + solfegeIntervals[solfegeNote];
+            const noteIdx = ((semitones % 12) + 12) % 12;  // handles negatives correctly
+            const octaveShift = Math.floor(semitones / 12);
+            return chromaticNotes[noteIdx] + (octave + octaveShift);
+        }
+
+        function initSynth() {
+            if (!synth) {
+                synthReady = new Promise(resolve => {
+                    synth = new Tone.Sampler({
+                        urls: {
+                            A0: "A0.mp3", C1: "C1.mp3", "D#1": "Ds1.mp3", "F#1": "Fs1.mp3",
+                            A1: "A1.mp3", C2: "C2.mp3", "D#2": "Ds2.mp3", "F#2": "Fs2.mp3",
+                            A2: "A2.mp3", C3: "C3.mp3", "D#3": "Ds3.mp3", "F#3": "Fs3.mp3",
+                            A3: "A3.mp3", C4: "C4.mp3", "D#4": "Ds4.mp3", "F#4": "Fs4.mp3",
+                            A4: "A4.mp3", C5: "C5.mp3", "D#5": "Ds5.mp3", "F#5": "Fs5.mp3",
+                            A5: "A5.mp3", C6: "C6.mp3", "D#6": "Ds6.mp3", "F#6": "Fs6.mp3",
+                            A6: "A6.mp3", C7: "C7.mp3", "D#7": "Ds7.mp3", "F#7": "Fs7.mp3",
+                            A7: "A7.mp3", C8: "C8.mp3"
+                        },
+                        baseUrl: "https://tonejs.github.io/audio/salamander/",
+                        onload: resolve
+                    }).toDestination();
+                });
+            }
+        }
+
+        async function playPattern() {
+            if (isPlaying) { stopPlayback(); return; }
+            await Tone.start();
+            initSynth();
+            await synthReady;
+            isPlaying = true;
+            activePlayBtn = 'pattern';
+            updatePlayButton();
+            const beatMs = (60 / 80) * 1000;
+            for (let i = 0; i < currentPattern.length; i++) {
+                if (!isPlaying) break;
+                playingNoteIndex = i;
+                drawStaff();
+                setLabelPlaying(i, true);
+                synth.triggerAttackRelease(getNoteFreq(currentPattern[i]), '4n');
+                await new Promise(r => setTimeout(r, beatMs));
+                setLabelPlaying(i, false);
+            }
+            playingNoteIndex = -1;
+            isPlaying = false;
+            activePlayBtn = null;
+            drawStaff();
+            updatePlayButton();
+        }
+
+        async function playMyAnswer() {
+            if (isPlaying) { stopPlayback(); return; }
+            await Tone.start();
+            initSynth();
+            await synthReady;
+            isPlaying = true;
+            activePlayBtn = 'my';
+            updatePlayButton();
+            const beatMs = (60 / 80) * 1000;
+            for (let i = 0; i < currentPattern.length; i++) {
+                if (!isPlaying) break;
+                playingNoteIndex = i;
+                drawStaff();
+                const placedNote = labelPlacements[i];
+                if (placedNote) {
+                    setLabelPlaying(i, true);
+                    synth.triggerAttackRelease(getNoteFreq(placedNote), '4n');
+                }
+                await new Promise(r => setTimeout(r, beatMs));
+                if (placedNote) setLabelPlaying(i, false);
+            }
+            playingNoteIndex = -1;
+            isPlaying = false;
+            activePlayBtn = null;
+            drawStaff();
+            updatePlayButton();
+        }
+
+        function stopPlayback() {
+            isPlaying = false;
+            activePlayBtn = null;
+            if (synth) synth.releaseAll();
+            playingNoteIndex = -1;
+            drawStaff();
+            updatePlayButton();
+        }
+
+        function updatePlayButton() {
+            const patternBtn = document.getElementById('playBtn');
+            const myBtn = document.getElementById('playMyBtn');
+            if (isPlaying) {
+                if (patternBtn) {
+                    patternBtn.textContent = activePlayBtn === 'pattern' ? '⏹ Stop' : '▶ Pattern';
+                    patternBtn.style.backgroundColor = activePlayBtn === 'pattern' ? '#c0392b' : '#27ae60';
+                    patternBtn.disabled = activePlayBtn !== 'pattern';
+                }
+                if (myBtn) {
+                    myBtn.textContent = activePlayBtn === 'my' ? '⏹ Stop' : '▶ My Answer';
+                    myBtn.style.backgroundColor = activePlayBtn === 'my' ? '#c0392b' : '#e67e22';
+                    myBtn.disabled = activePlayBtn !== 'my';
+                }
+            } else {
+                if (patternBtn) { patternBtn.textContent = '▶ Pattern'; patternBtn.style.backgroundColor = '#27ae60'; patternBtn.disabled = false; }
+                if (myBtn) { myBtn.textContent = '▶ My Answer'; myBtn.style.backgroundColor = '#e67e22'; myBtn.disabled = false; }
+            }
+        }
+
+        function setLabelPlaying(noteIndex, on) {
+            const label = labelElements[noteIndex];
+            if (label) label.classList.toggle('label-playing', on);
+        }
+
+        function changeRoot(note) {
+            rootNote = note;
+            saveSettings(); saveToSession();
+        }
+
+        // Toggle staff position (lower/raise for short students)
+        function toggleStaffPosition() {
+            staffLowered = !staffLowered;
+            const canvas = document.getElementById('staffCanvas');
+            const btn = document.getElementById('lowerStaffBtn');
+
+            if (staffLowered) {
+                canvas.classList.add('staff-lowered');
+                if (btn) btn.textContent = 'Raise Staff';
+            } else {
+                canvas.classList.remove('staff-lowered');
+                if (btn) btn.textContent = 'Lower Staff';
+            }
+
+            Object.keys(labelPlacements).forEach(noteIndex => {
+                const notePos = notePositions[noteIndex];
+                const label = labelElements[noteIndex];
+                if (notePos && label) positionLabelOnNote(label, notePos);
+            });
+
+            saveToSession();
+        }
+    </script>
+</body>
+
+</html>
