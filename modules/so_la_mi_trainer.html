@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>So La Mi Trainer</title>
+    <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
     <style>
         :root {
             /* Resolution scaling - inherits from parent or defaults to 1 */
@@ -51,13 +52,13 @@
 
         .refresh-btn {
             align-self: flex-start;
-            font-size: calc(18px * var(--module-scale));
+            font-size: calc(27px * var(--module-scale));
             font-weight: bold;
             color: white;
             background-color: #3498db;
             border: none;
-            padding: calc(12px * var(--module-scale)) calc(24px * var(--module-scale));
-            border-radius: calc(5px * var(--module-scale));
+            padding: calc(18px * var(--module-scale)) calc(36px * var(--module-scale));
+            border-radius: calc(7px * var(--module-scale));
             cursor: pointer;
             margin-bottom: 0;
             box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
@@ -92,13 +93,13 @@
         }
 
         .toggle-labels-btn {
-            font-size: calc(16px * var(--module-scale));
+            font-size: calc(24px * var(--module-scale));
             font-weight: bold;
             color: white;
             background-color: #9b59b6;
             border: none;
-            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
-            border-radius: calc(5px * var(--module-scale));
+            padding: calc(15px * var(--module-scale)) calc(30px * var(--module-scale));
+            border-radius: calc(7px * var(--module-scale));
             cursor: pointer;
             margin-top: 0;
             box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
@@ -148,13 +149,13 @@
         }
 
         .first-note-btn {
-            font-size: calc(14px * var(--module-scale));
+            font-size: calc(21px * var(--module-scale));
             font-weight: bold;
             color: white;
             background-color: #9b59b6;
             border: none;
-            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
-            border-radius: calc(5px * var(--module-scale));
+            padding: calc(15px * var(--module-scale)) calc(30px * var(--module-scale));
+            border-radius: calc(7px * var(--module-scale));
             cursor: pointer;
             box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
         }
@@ -166,13 +167,13 @@
         }
 
         .note-count-btn {
-            font-size: calc(14px * var(--module-scale));
+            font-size: calc(21px * var(--module-scale));
             font-weight: bold;
             color: white;
             background-color: #34495e;
             border: none;
-            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
-            border-radius: calc(5px * var(--module-scale));
+            padding: calc(15px * var(--module-scale)) calc(30px * var(--module-scale));
+            border-radius: calc(7px * var(--module-scale));
             cursor: pointer;
             box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
         }
@@ -184,13 +185,13 @@
         }
 
         .custom-pattern-btn {
-            font-size: calc(14px * var(--module-scale));
+            font-size: calc(21px * var(--module-scale));
             font-weight: bold;
             color: white;
             background-color: #c0392b;
             border: none;
-            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
-            border-radius: calc(5px * var(--module-scale));
+            padding: calc(15px * var(--module-scale)) calc(30px * var(--module-scale));
+            border-radius: calc(7px * var(--module-scale));
             cursor: pointer;
             box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
         }
@@ -202,13 +203,13 @@
         }
 
         .color-toggle-btn {
-            font-size: calc(14px * var(--module-scale));
+            font-size: calc(21px * var(--module-scale));
             font-weight: bold;
             color: white;
             background-color: #16a085;
             border: none;
-            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
-            border-radius: calc(5px * var(--module-scale));
+            padding: calc(15px * var(--module-scale)) calc(30px * var(--module-scale));
+            border-radius: calc(7px * var(--module-scale));
             cursor: pointer;
             box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
         }
@@ -220,13 +221,13 @@
         }
 
         .undo-btn {
-            font-size: calc(14px * var(--module-scale));
+            font-size: calc(21px * var(--module-scale));
             font-weight: bold;
             color: white;
             background-color: #e67e22;
             border: none;
-            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
-            border-radius: calc(5px * var(--module-scale));
+            padding: calc(15px * var(--module-scale)) calc(30px * var(--module-scale));
+            border-radius: calc(7px * var(--module-scale));
             cursor: pointer;
             box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
         }
@@ -491,6 +492,74 @@
         .staff-lowered {
             margin-top: calc(150px * var(--module-scale));
         }
+
+        .play-btn {
+            font-size: calc(21px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #27ae60;
+            border: none;
+            padding: calc(15px * var(--module-scale)) calc(30px * var(--module-scale));
+            border-radius: calc(7px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .play-btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .play-my-btn {
+            font-size: calc(21px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #e67e22;
+            border: none;
+            padding: calc(15px * var(--module-scale)) calc(30px * var(--module-scale));
+            border-radius: calc(7px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .play-my-btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .play-my-btn:disabled, .play-btn:disabled {
+            background-color: #95a5a6 !important;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .root-select {
+            font-size: calc(21px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #2980b9;
+            border: none;
+            padding: calc(15px * var(--module-scale)) calc(21px * var(--module-scale));
+            border-radius: calc(7px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .root-select option {
+            background-color: white;
+            color: #2c3e50;
+        }
+
+        @keyframes labelPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.3); }
+        }
+
+        .label-playing {
+            animation: labelPulse 0.4s ease-in-out infinite;
+        }
     </style>
 </head>
 
@@ -501,6 +570,22 @@
 
         <div style="display: flex; gap: 10px; align-items: center; width: 100%; justify-content: center; flex-wrap: wrap;">
             <button class="refresh-btn" onclick="refreshPattern()">🔄 New Pattern</button>
+            <button class="play-btn" id="playBtn" onclick="playPattern()">▶ Pattern</button>
+            <button class="play-my-btn" id="playMyBtn" onclick="playMyAnswer()">▶ My Answer</button>
+            <select id="rootSelect" class="root-select" onchange="changeRoot(this.value)">
+                <option value="C">Root: C</option>
+                <option value="C#">Root: C#</option>
+                <option value="D">Root: D</option>
+                <option value="D#">Root: D#</option>
+                <option value="E">Root: E</option>
+                <option value="F">Root: F</option>
+                <option value="F#">Root: F#</option>
+                <option value="G">Root: G</option>
+                <option value="G#">Root: G#</option>
+                <option value="A">Root: A</option>
+                <option value="A#">Root: A#</option>
+                <option value="B">Root: B</option>
+            </select>
             <button class="first-note-btn" onclick="openFirstNoteSelection()">First Note</button>
             <button class="note-count-btn" id="noteCountBtn" onclick="toggleNoteCount()">3 Notes</button>
             <button class="custom-pattern-btn" onclick="openCustomPattern()">Custom Pattern</button>
@@ -509,14 +594,15 @@
             <button class="first-note-btn" onclick="openNoteSelection()">Select Notes</button>
             <button class="custom-pattern-btn" id="checkAnswerBtn" onclick="checkAnswer()">Check Answer</button>
             <button class="note-count-btn" id="lowerStaffBtn" onclick="toggleStaffPosition()">Lower Staff</button>
+            <button class="toggle-labels-btn" id="noteNamesBtn" onclick="toggleNoteNames()">Note Names</button>
         </div>
 
         <canvas id="staffCanvas" width="900" height="250"></canvas>
 
         <div class="label-container" id="labelContainer">
-            <div class="draggable-label" data-note="so">So</div>
-            <div class="draggable-label" data-note="la">La</div>
-            <div class="draggable-label" data-note="mi">Mi</div>
+            <div class="draggable-label" data-note="so">so</div>
+            <div class="draggable-label" data-note="la">la</div>
+            <div class="draggable-label" data-note="mi">mi</div>
         </div>
 
         <button class="toggle-labels-btn" onclick="toggleStaffLabels()">Toggle Labels</button>
@@ -630,6 +716,11 @@
                             }
                         }
                     }
+                    if (savedSettings.rootNote) {
+                        rootNote = savedSettings.rootNote;
+                        const sel = document.getElementById('rootSelect');
+                        if (sel) sel.value = rootNote;
+                    }
                     console.log('Restored settings:', savedSettings);
                 }
 
@@ -678,7 +769,8 @@
             const settings = {
                 firstNote: firstNote,
                 numberOfNotes: numberOfNotes,
-                customPattern: customPattern
+                customPattern: customPattern,
+                rootNote: rootNote
             };
 
             // Get module path from window location
@@ -716,6 +808,14 @@
         let placementHistory = []; // Track order of placements for undo functionality
         let enabledNotes = ['so', 'la', 'mi']; // Notes available in trainer
         let staffLowered = false; // Track if staff is lowered
+        let rootNote = 'C';
+        let showNoteNames = false;
+        let isPlaying = false;
+        let activePlayBtn = null;
+        let playingNoteIndex = -1;
+        let synth = null;
+        let synthReady = null;
+        let labelElements = {}; // Maps note position index to placed label DOM element
 
         // Initialize
         function init() {
@@ -785,6 +885,7 @@
                 }
             });
             placedLabels = [];
+            labelElements = {};
             placementHistory = []; // Clear placement history on restore
 
             drawStaff();
@@ -807,6 +908,7 @@
 
                         // Track this placed label
                         placedLabels.push(clone);
+                        labelElements[parseInt(noteIndex)] = clone;
 
                         // Add to placement history
                         placementHistory.push({
@@ -903,14 +1005,31 @@
                 const yPos = noteYPositions[note];
                 const color = colorsEnabled ? noteColors[note] : '#95a5a6'; // Use grey if colors disabled
 
-                // Draw note circle
+                // Draw note circle (larger + glowing if currently playing)
+                const isActive = (i === playingNoteIndex);
+                const drawRadius = isActive ? noteRadius * 1.4 : noteRadius;
+                if (isActive) {
+                    ctx.shadowBlur = 25 * scale;
+                    ctx.shadowColor = color;
+                }
                 ctx.fillStyle = color;
                 ctx.strokeStyle = '#2c3e50';
-                ctx.lineWidth = 3;
+                ctx.lineWidth = isActive ? 5 : 3;
                 ctx.beginPath();
-                ctx.arc(xPos, yPos, noteRadius, 0, Math.PI * 2);
+                ctx.arc(xPos, yPos, drawRadius, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.stroke();
+                ctx.shadowBlur = 0;
+
+                // Draw concert pitch name above note when enabled
+                if (showNoteNames) {
+                    const pitch = getConcertPitch(note);
+                    ctx.font = `bold ${30 * scale}px Arial`;
+                    ctx.fillStyle = '#2c3e50';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    ctx.fillText(pitch, xPos, yPos - drawRadius - (4 * scale));
+                }
 
                 // Store position for snap detection
                 notePositions.push({
@@ -1053,6 +1172,7 @@
 
                 // Record new placement
                 labelPlacements[closestNote.index] = draggedLabel.dataset.note;
+                labelElements[closestNote.index] = draggedLabel;
 
                 // Add to placement history for undo functionality
                 placementHistory.push({
@@ -1144,7 +1264,9 @@
 
             placedLabels = [];
             labelPlacements = {};
+            labelElements = {};
             placementHistory = [];
+            if (isPlaying) stopPlayback();
             generateRandomPattern();
             drawStaff();
             updateCompletionIndicator();
@@ -1176,6 +1298,7 @@
 
             // Remove from labelPlacements object
             delete labelPlacements[lastPlacement.noteIndex];
+            delete labelElements[lastPlacement.noteIndex];
 
             // Update UI
             updateCompletionIndicator();
@@ -1497,6 +1620,143 @@
                     positionLabelOnNote(label, notePos);
                 }
             });
+        }
+
+        // Playback
+        const solfegeIntervals = { so: 7, la: 9, mi: 4 };
+        const chromaticNotes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+
+        function getNoteFreq(solfegeNote, octave = 4) {
+            const rootIdx = chromaticNotes.indexOf(rootNote);
+            const total = rootIdx + solfegeIntervals[solfegeNote];
+            return chromaticNotes[total % 12] + (octave + Math.floor(total / 12));
+        }
+
+        function getConcertPitch(solfegeNote) {
+            const rootIdx = chromaticNotes.indexOf(rootNote);
+            const total = rootIdx + solfegeIntervals[solfegeNote];
+            const noteIdx = ((total % 12) + 12) % 12;
+            return chromaticNotes[noteIdx];
+        }
+
+        function initSynth() {
+            if (!synth) {
+                synthReady = new Promise(resolve => {
+                    synth = new Tone.Sampler({
+                        urls: {
+                            A0: "A0.mp3", C1: "C1.mp3", "D#1": "Ds1.mp3", "F#1": "Fs1.mp3",
+                            A1: "A1.mp3", C2: "C2.mp3", "D#2": "Ds2.mp3", "F#2": "Fs2.mp3",
+                            A2: "A2.mp3", C3: "C3.mp3", "D#3": "Ds3.mp3", "F#3": "Fs3.mp3",
+                            A3: "A3.mp3", C4: "C4.mp3", "D#4": "Ds4.mp3", "F#4": "Fs4.mp3",
+                            A4: "A4.mp3", C5: "C5.mp3", "D#5": "Ds5.mp3", "F#5": "Fs5.mp3",
+                            A5: "A5.mp3", C6: "C6.mp3", "D#6": "Ds6.mp3", "F#6": "Fs6.mp3",
+                            A6: "A6.mp3", C7: "C7.mp3", "D#7": "Ds7.mp3", "F#7": "Fs7.mp3",
+                            A7: "A7.mp3", C8: "C8.mp3"
+                        },
+                        baseUrl: "https://tonejs.github.io/audio/salamander/",
+                        onload: resolve
+                    }).toDestination();
+                });
+            }
+        }
+
+        async function playPattern() {
+            if (isPlaying) { stopPlayback(); return; }
+            await Tone.start();
+            initSynth();
+            await synthReady;
+            isPlaying = true;
+            activePlayBtn = 'pattern';
+            updatePlayButton();
+            const beatMs = (60 / 80) * 1000;
+            for (let i = 0; i < currentPattern.length; i++) {
+                if (!isPlaying) break;
+                playingNoteIndex = i;
+                drawStaff();
+                setLabelPlaying(i, true);
+                synth.triggerAttackRelease(getNoteFreq(currentPattern[i]), '4n');
+                await new Promise(r => setTimeout(r, beatMs));
+                setLabelPlaying(i, false);
+            }
+            playingNoteIndex = -1;
+            isPlaying = false;
+            activePlayBtn = null;
+            drawStaff();
+            updatePlayButton();
+        }
+
+        async function playMyAnswer() {
+            if (isPlaying) { stopPlayback(); return; }
+            await Tone.start();
+            initSynth();
+            await synthReady;
+            isPlaying = true;
+            activePlayBtn = 'my';
+            updatePlayButton();
+            const beatMs = (60 / 80) * 1000;
+            for (let i = 0; i < currentPattern.length; i++) {
+                if (!isPlaying) break;
+                playingNoteIndex = i;
+                drawStaff();
+                const placedNote = labelPlacements[i];
+                if (placedNote) {
+                    setLabelPlaying(i, true);
+                    synth.triggerAttackRelease(getNoteFreq(placedNote), '4n');
+                }
+                await new Promise(r => setTimeout(r, beatMs));
+                if (placedNote) setLabelPlaying(i, false);
+            }
+            playingNoteIndex = -1;
+            isPlaying = false;
+            activePlayBtn = null;
+            drawStaff();
+            updatePlayButton();
+        }
+
+        function stopPlayback() {
+            isPlaying = false;
+            activePlayBtn = null;
+            if (synth) synth.releaseAll();
+            playingNoteIndex = -1;
+            drawStaff();
+            updatePlayButton();
+        }
+
+        function updatePlayButton() {
+            const patternBtn = document.getElementById('playBtn');
+            const myBtn = document.getElementById('playMyBtn');
+            if (isPlaying) {
+                if (patternBtn) {
+                    patternBtn.textContent = activePlayBtn === 'pattern' ? '⏹ Stop' : '▶ Pattern';
+                    patternBtn.style.backgroundColor = activePlayBtn === 'pattern' ? '#c0392b' : '#27ae60';
+                    patternBtn.disabled = activePlayBtn !== 'pattern';
+                }
+                if (myBtn) {
+                    myBtn.textContent = activePlayBtn === 'my' ? '⏹ Stop' : '▶ My Answer';
+                    myBtn.style.backgroundColor = activePlayBtn === 'my' ? '#c0392b' : '#e67e22';
+                    myBtn.disabled = activePlayBtn !== 'my';
+                }
+            } else {
+                if (patternBtn) { patternBtn.textContent = '▶ Pattern'; patternBtn.style.backgroundColor = '#27ae60'; patternBtn.disabled = false; }
+                if (myBtn) { myBtn.textContent = '▶ My Answer'; myBtn.style.backgroundColor = '#e67e22'; myBtn.disabled = false; }
+            }
+        }
+
+        function setLabelPlaying(noteIndex, on) {
+            const label = labelElements[noteIndex];
+            if (label) label.classList.toggle('label-playing', on);
+        }
+
+        function changeRoot(note) {
+            rootNote = note;
+            saveSettings();
+        }
+
+        function toggleNoteNames() {
+            showNoteNames = !showNoteNames;
+            const btn = document.getElementById('noteNamesBtn');
+            if (btn) btn.textContent = showNoteNames ? 'Note Names On' : 'Note Names';
+            drawStaff();
         }
 
         // Listen for init message from parent
