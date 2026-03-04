@@ -1,5 +1,5 @@
 {
-  "version": "3.12.1",
+  "version": "3.12.2",
   "lastUpdated": "2026-03-04",
-  "description": "Archive unused modules, trim manifest to active modules only"
+  "description": "Update manifest.json to match actual active modules, removing archived entries"
 }
