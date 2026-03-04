@@ -492,35 +492,20 @@ class TeachingAssistantApp {
     const knownModules = [
       'audio-player.html',
       'boomwhacker_assigner.html',
-      'chord_progression_composer.html',
       'class_seating_chart.html',
       'dance_viewer.html',
       'edit_student_list.html',
-      'greig_boomwhacker_assignment.html',
-      'instrument-assigner.html',
-      'instrument-assigner-v2.html',
-      'interval_trainer.html',
-      'martins-dream-of-1963.html',
       'pentatonic_composer.html',
-      'piano_octave_1.html',
-      'picture.html',
       'presentation_viewer.html',
       'recorder-fingering-modeler.html',
       'results-viewer.html',
       'rhythm_dictation_trainer.html',
-      'rhythm-trainer.html',
-      'simple-button-test.html',
-      's_l_m_composer.html',
       's_l_m_composer_modular.html',
       'smlrd_composer.html',
-      'smlrd_composer_working.html',
       'so_la_mi_re_do_trainer.html',
       'so_la_mi_trainer.html',
       'string.html',
-      'student_notes.html',
-      'tuner.html',
-      'video-player.html',
-      'word-ending.html'
+      'student_notes.html'
     ];
 
     // Just load all modules - they're part of the application, not user data
