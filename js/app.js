@@ -3481,13 +3481,8 @@ class TeachingAssistantApp {
       
       const assignBtn = document.getElementById('assign-seats-btn');
       if (assignBtn) {
-        if (classStudents.length > 30) {
-          assignBtn.disabled = true;
-          assignBtn.title = 'Class has more than 30 students';
-        } else {
-          assignBtn.disabled = false;
-          assignBtn.title = '';
-        }
+        assignBtn.disabled = false;
+        assignBtn.title = '';
       }
     }
   }
@@ -3524,7 +3519,17 @@ class TeachingAssistantApp {
     this.seatAssignments.forEach((assignedColor) => {
       if (assignedColor === color) usedSlots++;
     });
-    return this.slotsPerColor - usedSlots;
+    // Use dynamic slot limit based on actual class size so combined classes don't hit a false ceiling
+    let classSize;
+    if (this.selectedClasses.size > 0) {
+      classSize = this.students.filter(s => this.selectedClasses.has(s.class)).length;
+    } else if (this.selectedClass) {
+      classSize = this.students.filter(s => s.class === this.selectedClass).length;
+    } else {
+      classSize = this.slotsPerColor * this.seatColors.length;
+    }
+    const effectiveSlotsPerColor = Math.max(this.slotsPerColor, Math.ceil(classSize / this.seatColors.length));
+    return effectiveSlotsPerColor - usedSlots;
   }
 
   /**
@@ -3818,10 +3823,11 @@ class TeachingAssistantApp {
       }
     });
     
-    // Track available slots per color
+    // Track available slots per color — scale up for combined/large classes
+    const effectiveSlotsPerColor = Math.max(this.slotsPerColor, Math.ceil(availableStudents.length / this.seatColors.length));
     const availableSlots = {};
     this.seatColors.forEach(color => {
-      availableSlots[color] = this.slotsPerColor;
+      availableSlots[color] = effectiveSlotsPerColor;
     });
     
     // Subtract already assigned seats (keeping existing assignments)
@@ -4056,27 +4062,30 @@ class TeachingAssistantApp {
   /**
    * Clear all seat assignments
    */
-  clearSeatAssignments() {
+  async clearSeatAssignments() {
     this.seatAssignments.clear();
     this.furnitureAssignments.clear();
-    
+
     // Remove all dots and furniture icons from student buttons
     const dots = document.querySelectorAll('.student-seat-dot');
     dots.forEach(dot => dot.remove());
-    
+
     const furnitureIcons = document.querySelectorAll('.student-furniture-icon');
     furnitureIcons.forEach(icon => icon.remove());
-    
+
     // Remove data attributes from buttons
     const buttons = document.querySelectorAll('.student-roster-button');
     buttons.forEach(btn => {
       delete btn.dataset.seatColor;
       delete btn.dataset.furniture;
     });
-    
+
     // Update palette counts
     this.updateSeatPaletteCounts();
-    
+
+    // Persist the cleared state so it survives navigation
+    await this.saveSeatingCharts();
+
     this.showNotification('Seat assignments cleared', 'success');
   }
 

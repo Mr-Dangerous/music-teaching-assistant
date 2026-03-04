@@ -1,5 +1,5 @@
 {
-  "version": "3.20.2",
+  "version": "3.21.1",
   "lastUpdated": "2026-03-04",
-  "description": "Fix concert pitch label Y position in all three solfege trainers"
+  "description": "Fix seating chart for combined classes: enable Assign Seats button for classes >30, scale drag-and-drop slot limits dynamically, and persist cleared seat assignments to CSV"
 }
