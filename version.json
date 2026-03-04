@@ -1,5 +1,5 @@
 {
-  "version": "3.20.1",
+  "version": "3.20.2",
   "lastUpdated": "2026-03-04",
-  "description": "Add root change, play back, and note names features to so-la-mi and so-la-mi-re-do trainers; update button sizes and lowercase labels"
+  "description": "Fix concert pitch label Y position in all three solfege trainers"
 }
