@@ -511,6 +511,30 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
 
+        .play-my-btn {
+            font-size: calc(14px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #e67e22;
+            border: none;
+            padding: calc(10px * var(--module-scale)) calc(20px * var(--module-scale));
+            border-radius: calc(5px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .play-my-btn:hover {
+            filter: brightness(1.1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .play-my-btn:disabled, .play-btn:disabled {
+            background-color: #95a5a6 !important;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .root-select {
             font-size: calc(14px * var(--module-scale));
             font-weight: bold;
@@ -546,7 +570,8 @@
 
         <div style="display: flex; gap: 10px; align-items: center; width: 100%; justify-content: center; flex-wrap: wrap;">
             <button class="refresh-btn" onclick="refreshPattern()">🔄 New Pattern</button>
-            <button class="play-btn" id="playBtn" onclick="playPattern()">▶ Play</button>
+            <button class="play-btn" id="playBtn" onclick="playPattern()">▶ Pattern</button>
+            <button class="play-my-btn" id="playMyBtn" onclick="playMyAnswer()">▶ My Answer</button>
             <select id="rootSelect" class="root-select" onchange="changeRoot(this.value)">
                 <option value="C">Root: C</option>
                 <option value="C#">Root: C#</option>
@@ -797,6 +822,7 @@
         let staffLowered = false; // Track if staff is lowered
         let rootNote = 'C';
         let isPlaying = false;
+        let activePlayBtn = null; // 'pattern' or 'my'
         let playingNoteIndex = -1;
         let synth = null;
         let synthReady = null; // Promise that resolves when piano samples are loaded
@@ -1620,10 +1646,11 @@
             if (isPlaying) { stopPlayback(); return; }
             await Tone.start();
             initSynth();
-            await synthReady; // wait for piano samples to finish downloading
+            await synthReady;
             isPlaying = true;
+            activePlayBtn = 'pattern';
             updatePlayButton();
-            const beatMs = (60 / 80) * 1000; // 750ms at 80 BPM
+            const beatMs = (60 / 80) * 1000;
             for (let i = 0; i < currentPattern.length; i++) {
                 if (!isPlaying) break;
                 playingNoteIndex = i;
@@ -1635,12 +1662,43 @@
             }
             playingNoteIndex = -1;
             isPlaying = false;
+            activePlayBtn = null;
+            drawStaff();
+            updatePlayButton();
+        }
+
+        async function playMyAnswer() {
+            if (isPlaying) { stopPlayback(); return; }
+            await Tone.start();
+            initSynth();
+            await synthReady;
+            isPlaying = true;
+            activePlayBtn = 'my';
+            updatePlayButton();
+            const beatMs = (60 / 80) * 1000;
+            for (let i = 0; i < currentPattern.length; i++) {
+                if (!isPlaying) break;
+                playingNoteIndex = i;
+                drawStaff();
+                const placedNote = labelPlacements[i];
+                if (placedNote) {
+                    setLabelPlaying(i, true);
+                    synth.triggerAttackRelease(getNoteFreq(placedNote), '4n');
+                }
+                // no label = silent pause for one beat
+                await new Promise(r => setTimeout(r, beatMs));
+                if (placedNote) setLabelPlaying(i, false);
+            }
+            playingNoteIndex = -1;
+            isPlaying = false;
+            activePlayBtn = null;
             drawStaff();
             updatePlayButton();
         }
 
         function stopPlayback() {
             isPlaying = false;
+            activePlayBtn = null;
             if (synth) synth.releaseAll();
             playingNoteIndex = -1;
             drawStaff();
@@ -1648,10 +1706,23 @@
         }
 
         function updatePlayButton() {
-            const btn = document.getElementById('playBtn');
-            if (!btn) return;
-            btn.textContent = isPlaying ? '⏹ Stop' : '▶ Play';
-            btn.style.backgroundColor = isPlaying ? '#c0392b' : '#27ae60';
+            const patternBtn = document.getElementById('playBtn');
+            const myBtn = document.getElementById('playMyBtn');
+            if (isPlaying) {
+                if (patternBtn) {
+                    patternBtn.textContent = activePlayBtn === 'pattern' ? '⏹ Stop' : '▶ Pattern';
+                    patternBtn.style.backgroundColor = activePlayBtn === 'pattern' ? '#c0392b' : '#27ae60';
+                    patternBtn.disabled = activePlayBtn !== 'pattern';
+                }
+                if (myBtn) {
+                    myBtn.textContent = activePlayBtn === 'my' ? '⏹ Stop' : '▶ My Answer';
+                    myBtn.style.backgroundColor = activePlayBtn === 'my' ? '#c0392b' : '#e67e22';
+                    myBtn.disabled = activePlayBtn !== 'my';
+                }
+            } else {
+                if (patternBtn) { patternBtn.textContent = '▶ Pattern'; patternBtn.style.backgroundColor = '#27ae60'; patternBtn.disabled = false; }
+                if (myBtn) { myBtn.textContent = '▶ My Answer'; myBtn.style.backgroundColor = '#e67e22'; myBtn.disabled = false; }
+            }
         }
 
         function setLabelPlaying(noteIndex, on) {
