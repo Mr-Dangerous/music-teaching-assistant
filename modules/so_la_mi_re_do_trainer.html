@@ -726,6 +726,7 @@
         let customPattern = null; // Store custom pattern if set
         let colorsEnabled = true; // Track whether colors are enabled
         let placementHistory = []; // Track order of placements for undo functionality
+        let labelElements = {}; // Maps note position index to placed label DOM element
         let enabledNotes = ['so', 'la', 'mi', 're', 'do']; // Notes available in trainer
         let staffLowered = false; // Track if staff is lowered
 
@@ -797,6 +798,7 @@
                 }
             });
             placedLabels = [];
+            labelElements = {};
             placementHistory = []; // Clear placement history on restore
 
             drawStaff();
@@ -819,6 +821,7 @@
 
                         // Track this placed label
                         placedLabels.push(clone);
+                        labelElements[parseInt(noteIndex)] = clone;
 
                         // Add to placement history
                         placementHistory.push({
@@ -1057,10 +1060,8 @@
             });
 
             if (closestNote) {
-                // Remove any previous label on this note
-                const previousLabel = placedLabels.find(l =>
-                    labelPlacements[closestNote.index] === l.dataset.note
-                );
+                // Remove any previous label on this note (use direct element reference)
+                const previousLabel = labelElements[closestNote.index];
                 if (previousLabel) {
                     previousLabel.remove();
                     placedLabels = placedLabels.filter(l => l !== previousLabel);
@@ -1076,6 +1077,7 @@
 
                 // Record new placement
                 labelPlacements[closestNote.index] = draggedLabel.dataset.note;
+                labelElements[closestNote.index] = draggedLabel;
 
                 // Add to placement history for undo functionality
                 placementHistory.push({
@@ -1167,6 +1169,7 @@
 
             placedLabels = [];
             labelPlacements = {};
+            labelElements = {};
             placementHistory = [];
             generateRandomPattern();
             drawStaff();
@@ -1199,6 +1202,7 @@
 
             // Remove from labelPlacements object
             delete labelPlacements[lastPlacement.noteIndex];
+            delete labelElements[lastPlacement.noteIndex];
 
             // Update UI
             updateCompletionIndicator();
@@ -1365,6 +1369,7 @@
             });
             placedLabels = [];
             labelPlacements = {};
+            labelElements = {};
 
             saveSettings(); // Save settings including custom pattern
             closeModal('customPatternModal');
@@ -1456,7 +1461,7 @@
 
             // Animate correct answers with checkmark
             correctPlacements.forEach(({ noteIndex }) => {
-                const label = placedLabels.find(l => labelPlacements[noteIndex] === l.dataset.note);
+                const label = labelElements[noteIndex];
                 if (label) {
                     label.classList.add('label-correct');
                 }
@@ -1464,7 +1469,7 @@
 
             // Animate wrong answers with shake and fall
             wrongPlacements.forEach(({ noteIndex }) => {
-                const label = placedLabels.find(l => labelPlacements[noteIndex] === l.dataset.note);
+                const label = labelElements[noteIndex];
                 if (label) {
                     label.classList.add('label-wrong');
                 }
@@ -1475,11 +1480,12 @@
 
             // Remove wrong labels
             wrongPlacements.forEach(({ noteIndex }) => {
-                const label = placedLabels.find(l => labelPlacements[noteIndex] === l.dataset.note);
+                const label = labelElements[noteIndex];
                 if (label && label.parentNode) {
                     label.remove();
                 }
                 delete labelPlacements[noteIndex];
+                delete labelElements[noteIndex];
                 // Remove from placement history
                 placementHistory = placementHistory.filter(p => p.noteIndex !== noteIndex);
             });
@@ -1489,7 +1495,7 @@
 
             // Remove checkmark class from correct labels
             correctPlacements.forEach(({ noteIndex }) => {
-                const label = placedLabels.find(l => labelPlacements[noteIndex] === l.dataset.note);
+                const label = labelElements[noteIndex];
                 if (label) {
                     label.classList.remove('label-correct');
                 }
@@ -1515,9 +1521,9 @@
             }
 
             // Reposition all placed labels
-            Object.entries(labelPlacements).forEach(([noteIndex, labelNote]) => {
+            Object.keys(labelPlacements).forEach(noteIndex => {
                 const notePos = notePositions[noteIndex];
-                const label = placedLabels.find(l => l.dataset.note === labelNote && labelPlacements[noteIndex] === labelNote);
+                const label = labelElements[noteIndex];
                 if (notePos && label) {
                     positionLabelOnNote(label, notePos);
                 }
