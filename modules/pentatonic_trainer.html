@@ -621,6 +621,7 @@
             <button class="note-count-btn" id="lowerStaffBtn" onclick="toggleStaffPosition()">Lower Staff</button>
             <button class="note-count-btn" id="topLineBtn" onclick="toggleTopLine()">Top Line Off</button>
             <button class="note-count-btn" id="bottomLineBtn" onclick="toggleBottomLine()">Bottom Line Off</button>
+            <button class="toggle-labels-btn" id="noteNamesBtn" onclick="toggleNoteNames()">Note Names</button>
         </div>
 
         <canvas id="staffCanvas" width="1080" height="400"></canvas>
@@ -628,35 +629,34 @@
         <div style="display: flex; gap: calc(10px * var(--module-scale)); align-items: center; justify-content: center; width: 100%; flex-shrink: 0; flex-wrap: nowrap;">
             <button class="toggle-labels-btn" onclick="toggleStaffLabels()">Toggle Labels</button>
             <div class="label-container" id="labelContainer">
-                <div class="draggable-label" data-note="do'" style="display:none">
-                    <span class="label-pitch">do'</span>
-                    <span class="label-register">HIGH</span>
-                </div>
-                <div class="draggable-label" data-note="so">
-                    <span class="label-pitch">so</span>
-                </div>
-                <div class="draggable-label" data-note="la">
-                    <span class="label-pitch">la</span>
-                </div>
-                <div class="draggable-label" data-note="mi">
-                    <span class="label-pitch">mi</span>
-                </div>
-                <div class="draggable-label" data-note="re">
-                    <span class="label-pitch">re</span>
-                </div>
-                <div class="draggable-label" data-note="do">
-                    <span class="label-pitch">do</span>
+                <div class="draggable-label" data-note="so," style="display:none">
+                    <span class="label-pitch">so,</span>
+                    <span class="label-register">LOW</span>
                 </div>
                 <div class="draggable-label" data-note="la," style="display:none">
                     <span class="label-pitch">la,</span>
                     <span class="label-register">LOW</span>
                 </div>
-                <div class="draggable-label" data-note="so," style="display:none">
-                    <span class="label-pitch">so,</span>
-                    <span class="label-register">LOW</span>
+                <div class="draggable-label" data-note="do">
+                    <span class="label-pitch">do</span>
+                </div>
+                <div class="draggable-label" data-note="re">
+                    <span class="label-pitch">re</span>
+                </div>
+                <div class="draggable-label" data-note="mi">
+                    <span class="label-pitch">mi</span>
+                </div>
+                <div class="draggable-label" data-note="la">
+                    <span class="label-pitch">la</span>
+                </div>
+                <div class="draggable-label" data-note="so">
+                    <span class="label-pitch">so</span>
+                </div>
+                <div class="draggable-label" data-note="do'" style="display:none">
+                    <span class="label-pitch">do'</span>
+                    <span class="label-register">HIGH</span>
                 </div>
             </div>
-            <button class="toggle-labels-btn" id="noteNamesBtn" onclick="toggleNoteNames()">Note Names</button>
         </div>
     </div>
 
@@ -1189,7 +1189,7 @@
                 // Draw concert pitch name above note when enabled
                 if (showNoteNames) {
                     const pitch = getConcertPitch(note);
-                    ctx.font = `bold ${15 * scale}px Arial`;
+                    ctx.font = `bold ${30 * scale}px Arial`;
                     ctx.fillStyle = '#2c3e50';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'bottom';
