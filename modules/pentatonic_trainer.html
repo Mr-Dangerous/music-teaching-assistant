@@ -41,7 +41,7 @@
 
         .container {
             width: 100%;
-            max-width: calc(900px * var(--module-scale));
+            max-width: calc(1080px * var(--module-scale));
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -85,8 +85,8 @@
 
         .label-container {
             display: flex;
-            gap: calc(15px * var(--module-scale));
-            flex-wrap: wrap;
+            gap: calc(8px * var(--module-scale));
+            flex-wrap: nowrap;
             justify-content: center;
             margin-top: 0;
             flex-shrink: 0;
@@ -110,10 +110,14 @@
         }
 
         .draggable-label {
-            font-size: calc(28px * var(--module-scale));
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            font-size: calc(20px * var(--module-scale));
             font-weight: bold;
             color: #2c3e50;
-            padding: calc(12px * var(--module-scale)) calc(32px * var(--module-scale));
+            padding: calc(5px * var(--module-scale)) calc(14px * var(--module-scale));
             background-color: #e74c3c;
             border: calc(3px * var(--module-scale)) solid #c0392b;
             border-radius: calc(8px * var(--module-scale));
@@ -122,6 +126,20 @@
             touch-action: none;
             box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
             transition: transform 0.2s;
+            min-width: calc(52px * var(--module-scale));
+        }
+
+        .label-pitch {
+            line-height: 1.1;
+        }
+
+        .label-register {
+            font-size: calc(8px * var(--module-scale));
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            opacity: 0.75;
+            line-height: 1;
+            margin-top: calc(2px * var(--module-scale));
         }
 
         .draggable-label:active {
@@ -138,14 +156,22 @@
             border-bottom: calc(3px * var(--module-scale)) solid #2c3e50;
         }
 
+        .draggable-label.dragging .label-register {
+            display: none;
+        }
+
         .draggable-label.placed {
             border: none;
             background-color: transparent;
             box-shadow: none;
             padding: 0;
-            font-size: calc(28px * var(--module-scale));
+            font-size: calc(22px * var(--module-scale));
             color: white;
             text-shadow: 0 0 calc(3px * var(--module-scale)) rgba(0, 0, 0, 0.5);
+        }
+
+        .draggable-label.placed .label-register {
+            display: none;
         }
 
         .first-note-btn {
@@ -597,20 +623,41 @@
             <button class="note-count-btn" id="bottomLineBtn" onclick="toggleBottomLine()">Bottom Line Off</button>
         </div>
 
-        <canvas id="staffCanvas" width="900" height="400"></canvas>
+        <canvas id="staffCanvas" width="1080" height="400"></canvas>
 
-        <div class="label-container" id="labelContainer">
-            <div class="draggable-label" data-note="do'" style="display:none">do'</div>
-            <div class="draggable-label" data-note="so">So</div>
-            <div class="draggable-label" data-note="la">La</div>
-            <div class="draggable-label" data-note="mi">Mi</div>
-            <div class="draggable-label" data-note="re">Re</div>
-            <div class="draggable-label" data-note="do">Do</div>
-            <div class="draggable-label" data-note="la," style="display:none">la,</div>
-            <div class="draggable-label" data-note="so," style="display:none">so,</div>
+        <div style="display: flex; gap: calc(10px * var(--module-scale)); align-items: center; justify-content: center; width: 100%; flex-shrink: 0; flex-wrap: nowrap;">
+            <button class="toggle-labels-btn" onclick="toggleStaffLabels()">Toggle Labels</button>
+            <div class="label-container" id="labelContainer">
+                <div class="draggable-label" data-note="do'" style="display:none">
+                    <span class="label-pitch">do'</span>
+                    <span class="label-register">HIGH</span>
+                </div>
+                <div class="draggable-label" data-note="so">
+                    <span class="label-pitch">so</span>
+                </div>
+                <div class="draggable-label" data-note="la">
+                    <span class="label-pitch">la</span>
+                </div>
+                <div class="draggable-label" data-note="mi">
+                    <span class="label-pitch">mi</span>
+                </div>
+                <div class="draggable-label" data-note="re">
+                    <span class="label-pitch">re</span>
+                </div>
+                <div class="draggable-label" data-note="do">
+                    <span class="label-pitch">do</span>
+                </div>
+                <div class="draggable-label" data-note="la," style="display:none">
+                    <span class="label-pitch">la,</span>
+                    <span class="label-register">LOW</span>
+                </div>
+                <div class="draggable-label" data-note="so," style="display:none">
+                    <span class="label-pitch">so,</span>
+                    <span class="label-register">LOW</span>
+                </div>
+            </div>
+            <button class="toggle-labels-btn" id="noteNamesBtn" onclick="toggleNoteNames()">Note Names</button>
         </div>
-
-        <button class="toggle-labels-btn" onclick="toggleStaffLabels()">Toggle Labels</button>
     </div>
 
     <!-- First Note Selection Modal -->
@@ -761,6 +808,11 @@
                             if (btn) btn.textContent = 'Raise Staff';
                         }
                     }
+                    if (session.showNoteNames !== undefined) {
+                        showNoteNames = session.showNoteNames;
+                        const btn = document.getElementById('noteNamesBtn');
+                        if (btn) btn.textContent = showNoteNames ? 'Note Names On' : 'Note Names';
+                    }
                     // Apply custom pattern from session if available
                     if (session.customPattern) {
                         customPattern = session.customPattern;
@@ -869,7 +921,7 @@
                 firstNote, numberOfNotes, customPattern,
                 rootNote, colorsEnabled,
                 enabledNotes: coreEnabled,
-                staffLowered
+                staffLowered, showNoteNames
             }));
         }
 
@@ -923,6 +975,7 @@
         // Extended staff state
         let topLineEnabled = false;
         let bottomLineEnabled = false;
+        let showNoteNames = false;
 
         // Initialize
         function init() {
@@ -1132,6 +1185,16 @@
                 ctx.fill();
                 ctx.stroke();
                 ctx.shadowBlur = 0;
+
+                // Draw concert pitch name above note when enabled
+                if (showNoteNames) {
+                    const pitch = getConcertPitch(note);
+                    ctx.font = `bold ${15 * scale}px Arial`;
+                    ctx.fillStyle = '#2c3e50';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    ctx.fillText(pitch, xPos, yPos - drawRadius - (4 * scale));
+                }
 
                 notePositions.push({
                     note,
@@ -1768,6 +1831,22 @@
         function setLabelPlaying(noteIndex, on) {
             const label = labelElements[noteIndex];
             if (label) label.classList.toggle('label-playing', on);
+        }
+
+        // Return concert pitch letter (no octave) for a solfege note + current root
+        function getConcertPitch(solfegeNote) {
+            const rootIdx = chromaticNotes.indexOf(rootNote);
+            const semitones = rootIdx + solfegeIntervals[solfegeNote];
+            const noteIdx = ((semitones % 12) + 12) % 12;
+            return chromaticNotes[noteIdx];
+        }
+
+        function toggleNoteNames() {
+            showNoteNames = !showNoteNames;
+            const btn = document.getElementById('noteNamesBtn');
+            if (btn) btn.textContent = showNoteNames ? 'Note Names On' : 'Note Names';
+            drawStaff();
+            saveToSession();
         }
 
         function changeRoot(note) {
