@@ -675,6 +675,7 @@
             <button class="note-count-btn interval-active" id="limitThirdBtn" onclick="setIntervalLimit('third')">Max 3rd</button>
             <button class="note-count-btn" id="limitFourthBtn" onclick="setIntervalLimit('fourth')">Max 4th</button>
             <button class="note-count-btn" id="limitFifthBtn" onclick="setIntervalLimit('fifth')">Max 5th</button>
+            <button class="note-count-btn" id="showSolfegeBtn" onclick="toggleShowSolfege()">Show Solfege</button>
             <button class="note-count-btn" id="trebleClefBtn" onclick="toggleTrebleClefMode()">Treble Clef</button>
         </div>
 
@@ -869,7 +870,13 @@
                     }
                     if (session.showNoteNames !== undefined) {
                         showNoteNames = session.showNoteNames;
-                        updateNoteNamesBtn();
+                        const btn = document.getElementById('noteNamesBtn');
+                        if (btn) btn.textContent = showNoteNames ? 'Note Names On' : 'Note Names';
+                    }
+                    if (session.showSolfege !== undefined) {
+                        showSolfege = session.showSolfege;
+                        const btn = document.getElementById('showSolfegeBtn');
+                        if (btn) btn.classList.toggle('interval-active', showSolfege);
                     }
                     if (session.intervalLimit !== undefined) {
                         intervalLimit = session.intervalLimit;
@@ -992,7 +999,7 @@
                 firstNote, numberOfNotes, customPattern,
                 rootNote, colorsEnabled,
                 enabledNotes: coreEnabled,
-                staffLowered, showNoteNames, intervalLimit, trebleClefMode
+                staffLowered, showNoteNames, showSolfege, intervalLimit, trebleClefMode
             }));
         }
 
@@ -1047,6 +1054,7 @@
         let topLineEnabled = false;
         let bottomLineEnabled = false;
         let showNoteNames = false;
+        let showSolfege = false;
         let trebleClefMode = false;
         let trebleClefImg = null;
         // Interval limit: null = off, 'third' = <=4 semitones, 'fourth' = <=5, 'fifth' = <=7
@@ -1305,15 +1313,25 @@
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
-                // Draw note label above note when enabled
-                // In treble clef mode shows solfege; otherwise shows concert pitch
+                // Draw concert pitch name above note when enabled
                 if (showNoteNames) {
-                    const label = trebleClefMode ? note : getConcertPitch(note);
                     ctx.font = `bold ${30 * scale}px Arial`;
                     ctx.fillStyle = '#2c3e50';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'bottom';
-                    ctx.fillText(label, xPos, yPos - drawRadius + (4 * scale));
+                    ctx.fillText(getConcertPitch(note), xPos, yPos - drawRadius + (4 * scale));
+                }
+
+                // Draw solfege label above note when enabled
+                if (showSolfege) {
+                    ctx.font = `bold ${30 * scale}px Arial`;
+                    ctx.fillStyle = '#2c3e50';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+                    const solfegeY = showNoteNames
+                        ? yPos - drawRadius + (4 * scale) - (32 * scale)
+                        : yPos - drawRadius + (4 * scale);
+                    ctx.fillText(note, xPos, solfegeY);
                 }
 
                 notePositions.push({
@@ -1564,7 +1582,6 @@
                 loadTrebleClef().then(() => drawStaff());
             }
 
-            updateNoteNamesBtn();
             updateLabelContainer();
             resetModule();
             saveToSession();
@@ -2092,16 +2109,18 @@
 
         function toggleNoteNames() {
             showNoteNames = !showNoteNames;
-            updateNoteNamesBtn();
+            const btn = document.getElementById('noteNamesBtn');
+            if (btn) btn.textContent = showNoteNames ? 'Note Names On' : 'Note Names';
             drawStaff();
             saveToSession();
         }
 
-        function updateNoteNamesBtn() {
-            const btn = document.getElementById('noteNamesBtn');
-            if (!btn) return;
-            const baseLabel = trebleClefMode ? 'Solfege' : 'Note Names';
-            btn.textContent = showNoteNames ? baseLabel + ' On' : baseLabel;
+        function toggleShowSolfege() {
+            showSolfege = !showSolfege;
+            const btn = document.getElementById('showSolfegeBtn');
+            if (btn) btn.classList.toggle('interval-active', showSolfege);
+            drawStaff();
+            saveToSession();
         }
 
         function changeRoot(note) {
