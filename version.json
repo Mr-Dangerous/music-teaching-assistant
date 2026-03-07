@@ -1,5 +1,5 @@
 {
-  "version": "3.23.1",
+  "version": "3.24.1",
   "lastUpdated": "2026-03-07",
-  "description": "Reorganize trainer button interface: compact primary bar with 5 core buttons (New Pattern, Play Pattern, My Answer, Check Answer, Undo) always visible; all settings (Root, First Note, Note Count, Custom Pattern, Colors, Select Notes, Lower Staff, Note Names, Toggle Labels, interval limits) moved to collapsible settings panel toggled by a Settings button; applies to both Pentatonic Trainer and So La Mi Re Do Trainer"
+  "description": "Add Treble Clef Mode to Pentatonic Trainer: forces 5-line staff, sets root to G, draws treble clef image aligned to G4 line, converts palette to note names (G, A, B, D, E), deduplicates palette by pitch class hiding upper-octave duplicates, shows prime mark for upper-octave placements, uses pitch class comparison for answer checking, persists setting to session storage"
 }

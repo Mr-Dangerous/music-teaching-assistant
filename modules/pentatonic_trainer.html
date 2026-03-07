@@ -674,6 +674,7 @@
             <button class="note-count-btn interval-active" id="limitThirdBtn" onclick="setIntervalLimit('third')">Max 3rd</button>
             <button class="note-count-btn" id="limitFourthBtn" onclick="setIntervalLimit('fourth')">Max 4th</button>
             <button class="note-count-btn" id="limitFifthBtn" onclick="setIntervalLimit('fifth')">Max 5th</button>
+            <button class="note-count-btn" id="trebleClefBtn" onclick="toggleTrebleClefMode()">Treble Clef</button>
         </div>
 
         <canvas id="staffCanvas" width="1080" height="400"></canvas>
@@ -871,6 +872,12 @@
                             if (btn) btn.classList.toggle('interval-active', intervalLimit === l);
                         });
                     }
+                    if (session.trebleClefMode !== undefined) {
+                        trebleClefMode = session.trebleClefMode;
+                        const btn = document.getElementById('trebleClefBtn');
+                        if (btn) btn.classList.toggle('interval-active', trebleClefMode);
+                        if (trebleClefMode) loadTrebleClef();
+                    }
                     // Apply custom pattern from session if available
                     if (session.customPattern) {
                         customPattern = session.customPattern;
@@ -979,7 +986,7 @@
                 firstNote, numberOfNotes, customPattern,
                 rootNote, colorsEnabled,
                 enabledNotes: coreEnabled,
-                staffLowered, showNoteNames, intervalLimit
+                staffLowered, showNoteNames, intervalLimit, trebleClefMode
             }));
         }
 
@@ -1034,6 +1041,8 @@
         let topLineEnabled = false;
         let bottomLineEnabled = false;
         let showNoteNames = false;
+        let trebleClefMode = false;
+        let trebleClefImg = null;
         // Interval limit: null = off, 'third' = <=4 semitones, 'fourth' = <=5, 'fifth' = <=7
         let intervalLimit = 'third';
 
@@ -1128,6 +1137,15 @@
                         clone.style.position = 'fixed';
                         document.body.appendChild(clone);
                         positionLabelOnNote(clone, notePos);
+
+                        // In treble clef mode, display the note name for this position
+                        if (trebleClefMode) {
+                            const ps = clone.querySelector('.label-pitch');
+                            if (ps) ps.textContent = getNoteName(notePos.note);
+                            const rs = clone.querySelector('.label-register');
+                            if (rs) rs.style.display = 'none';
+                        }
+
                         placedLabels.push(clone);
                         labelElements[parseInt(noteIndex)] = clone;
                         placementHistory.push({
@@ -1158,7 +1176,7 @@
 
             const canvasWidth = canvas.width;
             const canvasHeight = canvas.height;
-            const staffLeft = 80 * scale;
+            const staffLeft = (trebleClefMode ? 120 : 80) * scale;
             const staffRight = canvasWidth - (80 * scale);
 
             let noteRadius = 30 * scale;
@@ -1223,6 +1241,17 @@
                 ctx.stroke();
             }
 
+            // Draw treble clef image (in treble clef mode)
+            if (trebleClefMode && trebleClefImg) {
+                // The G curl of the treble clef aligns to doLineY (G4 = 2nd line from bottom)
+                // Clef spans generously above and below the staff
+                const clefH = (lowLineY - highDoLineY) * 1.5;
+                const clefW = clefH * 0.30;
+                // G curl sits at ~62% from the top of the image
+                const clefTop = doLineY - clefH * 0.62;
+                ctx.drawImage(trebleClefImg, 5 * scale, clefTop, clefW, clefH);
+            }
+
             // Draw staff labels based on state
             if (staffLabelsState !== 'off') {
                 ctx.font = `bold ${24 * scale}px Arial`;
@@ -1230,15 +1259,19 @@
                 ctx.textAlign = 'right';
                 ctx.textBaseline = 'middle';
 
+                const labelFor = trebleClefMode
+                    ? n => getConcertPitch(n)
+                    : n => ({ "do'": "Do'", so: 'So', mi: 'Mi', do: 'Do', 'la,': 'La,' }[n] || n);
+
                 if (staffLabelsState === 'so' || staffLabelsState === 'all') {
-                    ctx.fillText('So', staffLeft - (20 * scale), soLineY);
+                    ctx.fillText(labelFor('so'), staffLeft - (20 * scale), soLineY);
                 }
 
                 if (staffLabelsState === 'all') {
-                    if (topLineEnabled) ctx.fillText("Do'", staffLeft - (20 * scale), highDoLineY);
-                    ctx.fillText('Mi', staffLeft - (20 * scale), miLineY);
-                    ctx.fillText('Do', staffLeft - (20 * scale), doLineY);
-                    if (bottomLineEnabled) ctx.fillText('La,', staffLeft - (20 * scale), lowLineY);
+                    if (topLineEnabled) ctx.fillText(labelFor("do'"), staffLeft - (20 * scale), highDoLineY);
+                    ctx.fillText(labelFor('mi'), staffLeft - (20 * scale), miLineY);
+                    ctx.fillText(labelFor('do'), staffLeft - (20 * scale), doLineY);
+                    if (bottomLineEnabled) ctx.fillText(labelFor('la,'), staffLeft - (20 * scale), lowLineY);
                 }
             }
 
@@ -1387,6 +1420,14 @@
                 draggedLabel.classList.add('placed');
                 positionLabelOnNote(draggedLabel, closestNote);
 
+                // In treble clef mode, display the note name for this position
+                if (trebleClefMode) {
+                    const ps = draggedLabel.querySelector('.label-pitch');
+                    if (ps) ps.textContent = getNoteName(closestNote.note);
+                    const rs = draggedLabel.querySelector('.label-register');
+                    if (rs) rs.style.display = 'none';
+                }
+
                 placedLabels.push(draggedLabel);
                 labelPlacements[closestNote.index] = draggedLabel.dataset.note;
                 labelElements[closestNote.index] = draggedLabel;
@@ -1436,7 +1477,11 @@
         function getCurrentResponse() {
             let correct = 0;
             Object.entries(labelPlacements).forEach(([noteIndex, labelNote]) => {
-                if (currentPattern[noteIndex] === labelNote) correct++;
+                const expected = currentPattern[noteIndex];
+                const isCorrect = trebleClefMode
+                    ? getConcertPitch(expected) === getConcertPitch(labelNote)
+                    : expected === labelNote;
+                if (isCorrect) correct++;
             });
 
             return JSON.stringify({
@@ -1476,6 +1521,37 @@
             if (btn) btn.textContent = colorsEnabled ? 'Colors On' : 'Colors Off';
             drawStaff();
             saveSettings(); saveToSession();
+        }
+
+        function toggleTrebleClefMode() {
+            trebleClefMode = !trebleClefMode;
+            const btn = document.getElementById('trebleClefBtn');
+            if (btn) btn.classList.toggle('interval-active', trebleClefMode);
+
+            if (trebleClefMode) {
+                // Force both extended lines on
+                if (!topLineEnabled) {
+                    topLineEnabled = true;
+                    document.getElementById('topLineBtn').textContent = 'Top Line On';
+                    if (!enabledNotes.includes("do'")) enabledNotes.push("do'");
+                }
+                if (!bottomLineEnabled) {
+                    bottomLineEnabled = true;
+                    document.getElementById('bottomLineBtn').textContent = 'Bottom Line On';
+                    if (!enabledNotes.includes('la,')) enabledNotes.push('la,');
+                    if (!enabledNotes.includes('so,')) enabledNotes.push('so,');
+                }
+                // Set root to G
+                rootNote = 'G';
+                const sel = document.getElementById('rootSelect');
+                if (sel) sel.value = 'G';
+                // Preload clef image then redraw
+                loadTrebleClef().then(() => drawStaff());
+            }
+
+            updateLabelContainer();
+            resetModule();
+            saveToSession();
         }
 
         function toggleSettings() {
@@ -1754,9 +1830,39 @@
 
         // Update label container visibility for all 8 notes
         function updateLabelContainer() {
+            // Upper-octave notes whose pitch class is already covered by a lower counterpart
+            const upperDups = { "do'": "do", "so": "so,", "la": "la," };
+
             allNoteKeys.forEach(note => {
                 const label = document.querySelector(`#labelContainer [data-note="${CSS.escape(note)}"]`);
-                if (label) label.style.display = enabledNotes.includes(note) ? '' : 'none';
+                if (!label) return;
+
+                const enabled = enabledNotes.includes(note);
+                const pitchSpan = label.querySelector('.label-pitch');
+                const regSpan = label.querySelector('.label-register');
+
+                if (!enabled) {
+                    label.style.display = 'none';
+                    return;
+                }
+
+                if (trebleClefMode) {
+                    // Hide upper-octave duplicates — their pitch class is provided by the lower tile
+                    const lowerCounterpart = upperDups[note];
+                    if (lowerCounterpart && enabledNotes.includes(lowerCounterpart)) {
+                        label.style.display = 'none';
+                        return;
+                    }
+                    // Show with note name instead of solfege
+                    label.style.display = '';
+                    if (pitchSpan) pitchSpan.textContent = getConcertPitch(note);
+                    if (regSpan) regSpan.style.display = 'none';
+                } else {
+                    // Normal solfege mode — restore original text
+                    label.style.display = '';
+                    if (pitchSpan) pitchSpan.textContent = note;
+                    if (regSpan) regSpan.style.display = '';
+                }
             });
         }
 
@@ -1772,7 +1878,11 @@
 
             Object.entries(labelPlacements).forEach(([noteIndex, labelNote]) => {
                 const idx = parseInt(noteIndex);
-                if (correctMap[idx] === labelNote) {
+                const expected = correctMap[idx];
+                const isCorrect = trebleClefMode
+                    ? getConcertPitch(expected) === getConcertPitch(labelNote)
+                    : expected === labelNote;
+                if (isCorrect) {
                     correctPlacements.push({ noteIndex: idx, labelNote });
                 } else {
                     wrongPlacements.push({ noteIndex: idx, labelNote });
@@ -1936,6 +2046,26 @@
             const semitones = rootIdx + solfegeIntervals[solfegeNote];
             const noteIdx = ((semitones % 12) + 12) % 12;
             return chromaticNotes[noteIdx];
+        }
+
+        // Returns the note letter for a staff position, adding a prime for upper-octave
+        // notes when their lower-octave counterpart is also in the enabled set.
+        function getNoteName(solfegeNote) {
+            const letter = getConcertPitch(solfegeNote);
+            const lowerOf = { "do'": "do", "so": "so,", "la": "la," };
+            const lower = lowerOf[solfegeNote];
+            const needsPrime = lower && enabledNotes.includes(lower);
+            return needsPrime ? letter + "'" : letter;
+        }
+
+        function loadTrebleClef() {
+            if (trebleClefImg) return Promise.resolve(trebleClefImg);
+            return new Promise(resolve => {
+                const img = new Image();
+                img.onload = () => { trebleClefImg = img; resolve(img); };
+                img.onerror = () => resolve(null);
+                img.src = '../assets/clefs/symbol_treble_clef.png';
+            });
         }
 
         function toggleNoteNames() {
