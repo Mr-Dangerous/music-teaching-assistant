@@ -210,6 +210,14 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
 
+        .note-count-btn.interval-active {
+            background-color: #16a085;
+        }
+
+        .note-count-btn.interval-active:hover {
+            background-color: #1abc9c;
+        }
+
         .custom-pattern-btn {
             font-size: calc(21px * var(--module-scale));
             font-weight: bold;
@@ -622,6 +630,9 @@
             <button class="note-count-btn" id="topLineBtn" onclick="toggleTopLine()">Top Line Off</button>
             <button class="note-count-btn" id="bottomLineBtn" onclick="toggleBottomLine()">Bottom Line Off</button>
             <button class="toggle-labels-btn" id="noteNamesBtn" onclick="toggleNoteNames()">Note Names</button>
+            <button class="note-count-btn interval-active" id="limitThirdBtn" onclick="setIntervalLimit('third')">Max 3rd</button>
+            <button class="note-count-btn" id="limitFourthBtn" onclick="setIntervalLimit('fourth')">Max 4th</button>
+            <button class="note-count-btn" id="limitFifthBtn" onclick="setIntervalLimit('fifth')">Max 5th</button>
         </div>
 
         <canvas id="staffCanvas" width="1080" height="400"></canvas>
@@ -813,6 +824,13 @@
                         const btn = document.getElementById('noteNamesBtn');
                         if (btn) btn.textContent = showNoteNames ? 'Note Names On' : 'Note Names';
                     }
+                    if (session.intervalLimit !== undefined) {
+                        intervalLimit = session.intervalLimit;
+                        ['third', 'fourth', 'fifth'].forEach(l => {
+                            const btn = document.getElementById('limit' + l.charAt(0).toUpperCase() + l.slice(1) + 'Btn');
+                            if (btn) btn.classList.toggle('interval-active', intervalLimit === l);
+                        });
+                    }
                     // Apply custom pattern from session if available
                     if (session.customPattern) {
                         customPattern = session.customPattern;
@@ -921,7 +939,7 @@
                 firstNote, numberOfNotes, customPattern,
                 rootNote, colorsEnabled,
                 enabledNotes: coreEnabled,
-                staffLowered, showNoteNames
+                staffLowered, showNoteNames, intervalLimit
             }));
         }
 
@@ -976,6 +994,15 @@
         let topLineEnabled = false;
         let bottomLineEnabled = false;
         let showNoteNames = false;
+        // Interval limit: null = off, 'third' = <=4 semitones, 'fourth' = <=5, 'fifth' = <=7
+        let intervalLimit = 'third';
+
+        // Semitone values for interval calculation (relative to do = 0)
+        const NOTE_SEMITONES = {
+            "so,": -5, "la,": -3,
+            "do": 0, "re": 2, "mi": 4, "so": 7, "la": 9, "do'": 12
+        };
+        const INTERVAL_SEMITONES = { 'third': 4, 'fourth': 5, 'fifth': 7 };
 
         // Initialize
         function init() {
@@ -998,15 +1025,28 @@
 
             function getNextNote() {
                 const patternLength = currentPattern.length;
+                let candidates = [...notes];
+
+                // Limit to notes within the chosen interval of the last note
+                if (patternLength >= 1 && intervalLimit) {
+                    const lastNote = currentPattern[patternLength - 1];
+                    const lastSemitone = NOTE_SEMITONES[lastNote];
+                    const maxSemitones = INTERVAL_SEMITONES[intervalLimit];
+                    const withinLimit = notes.filter(n => Math.abs(NOTE_SEMITONES[n] - lastSemitone) <= maxSemitones);
+                    if (withinLimit.length > 0) candidates = withinLimit;
+                }
+
+                // Prevent three consecutive identical notes
                 if (patternLength >= 2) {
                     const lastNote = currentPattern[patternLength - 1];
                     const secondLastNote = currentPattern[patternLength - 2];
                     if (lastNote === secondLastNote) {
-                        const availableNotes = notes.filter(n => n !== lastNote);
-                        return availableNotes[Math.floor(Math.random() * availableNotes.length)];
+                        const noRepeat = candidates.filter(n => n !== lastNote);
+                        if (noRepeat.length > 0) candidates = noRepeat;
                     }
                 }
-                return notes[Math.floor(Math.random() * notes.length)];
+
+                return candidates[Math.floor(Math.random() * candidates.length)];
             }
 
             if (firstNote) {
@@ -1396,6 +1436,16 @@
             if (btn) btn.textContent = colorsEnabled ? 'Colors On' : 'Colors Off';
             drawStaff();
             saveSettings(); saveToSession();
+        }
+
+        function setIntervalLimit(limit) {
+            // Toggle off if already active, otherwise switch to this limit
+            intervalLimit = (intervalLimit === limit) ? null : limit;
+            ['third', 'fourth', 'fifth'].forEach(l => {
+                const btn = document.getElementById('limit' + l.charAt(0).toUpperCase() + l.slice(1) + 'Btn');
+                if (btn) btn.classList.toggle('interval-active', intervalLimit === l);
+            });
+            saveToSession();
         }
 
         function undoLastPlacement() {

@@ -184,6 +184,14 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
 
+        .note-count-btn.interval-active {
+            background-color: #16a085;
+        }
+
+        .note-count-btn.interval-active:hover {
+            background-color: #1abc9c;
+        }
+
         .custom-pattern-btn {
             font-size: calc(21px * var(--module-scale));
             font-weight: bold;
@@ -595,6 +603,9 @@
             <button class="custom-pattern-btn" id="checkAnswerBtn" onclick="checkAnswer()">Check Answer</button>
             <button class="note-count-btn" id="lowerStaffBtn" onclick="toggleStaffPosition()">Lower Staff</button>
             <button class="toggle-labels-btn" id="noteNamesBtn" onclick="toggleNoteNames()">Note Names</button>
+            <button class="note-count-btn interval-active" id="limitThirdBtn" onclick="setIntervalLimit('third')">Max 3rd</button>
+            <button class="note-count-btn" id="limitFourthBtn" onclick="setIntervalLimit('fourth')">Max 4th</button>
+            <button class="note-count-btn" id="limitFifthBtn" onclick="setIntervalLimit('fifth')">Max 5th</button>
         </div>
 
         <canvas id="staffCanvas" width="900" height="250"></canvas>
@@ -823,6 +834,14 @@
         let staffLowered = false; // Track if staff is lowered
         let rootNote = 'C';
         let showNoteNames = false;
+        // Interval limit: null = off, 'third' = <=4 semitones, 'fourth' = <=5, 'fifth' = <=7
+        let intervalLimit = 'third';
+
+        // Semitone values for interval calculation (relative to do = 0)
+        const NOTE_SEMITONES = {
+            "do": 0, "re": 2, "mi": 4, "so": 7, "la": 9
+        };
+        const INTERVAL_SEMITONES = { 'third': 4, 'fourth': 5, 'fifth': 7 };
         let isPlaying = false;
         let activePlayBtn = null; // 'pattern' or 'my'
         let playingNoteIndex = -1;
@@ -848,24 +867,31 @@
             }
             currentPattern = [];
 
-            // Helper function to pick a random note that's not the same as the last two
+            // Helper function to pick the next note
             function getNextNote() {
                 const patternLength = currentPattern.length;
+                let candidates = [...notes];
 
-                // If we have at least 2 notes, check if they're the same
+                // Limit to notes within the chosen interval of the last note
+                if (patternLength >= 1 && intervalLimit) {
+                    const lastNote = currentPattern[patternLength - 1];
+                    const lastSemitone = NOTE_SEMITONES[lastNote];
+                    const maxSemitones = INTERVAL_SEMITONES[intervalLimit];
+                    const withinLimit = notes.filter(n => Math.abs(NOTE_SEMITONES[n] - lastSemitone) <= maxSemitones);
+                    if (withinLimit.length > 0) candidates = withinLimit;
+                }
+
+                // Prevent three consecutive identical notes
                 if (patternLength >= 2) {
                     const lastNote = currentPattern[patternLength - 1];
                     const secondLastNote = currentPattern[patternLength - 2];
-
-                    // If last two notes are the same, don't allow that note again
                     if (lastNote === secondLastNote) {
-                        const availableNotes = notes.filter(n => n !== lastNote);
-                        return availableNotes[Math.floor(Math.random() * availableNotes.length)];
+                        const noRepeat = candidates.filter(n => n !== lastNote);
+                        if (noRepeat.length > 0) candidates = noRepeat;
                     }
                 }
 
-                // Otherwise, any random note is fine
-                return notes[Math.floor(Math.random() * notes.length)];
+                return candidates[Math.floor(Math.random() * candidates.length)];
             }
 
             // If first note is set, start with it
@@ -1301,6 +1327,15 @@
                 btn.textContent = colorsEnabled ? 'Colors On' : 'Colors Off';
             }
             drawStaff();
+        }
+
+        function setIntervalLimit(limit) {
+            // Toggle off if already active, otherwise switch to this limit
+            intervalLimit = (intervalLimit === limit) ? null : limit;
+            ['third', 'fourth', 'fifth'].forEach(l => {
+                const btn = document.getElementById('limit' + l.charAt(0).toUpperCase() + l.slice(1) + 'Btn');
+                if (btn) btn.classList.toggle('interval-active', intervalLimit === l);
+            });
         }
 
         function undoLastPlacement() {
