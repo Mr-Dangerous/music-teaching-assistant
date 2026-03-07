@@ -168,6 +168,7 @@
             font-size: calc(22px * var(--module-scale));
             color: white;
             text-shadow: 0 0 calc(3px * var(--module-scale)) rgba(0, 0, 0, 0.5);
+            transform: translate(-50%, -50%);
         }
 
         .draggable-label.placed .label-register {
@@ -708,6 +709,12 @@
                     <span class="label-pitch">do'</span>
                     <span class="label-register">HIGH</span>
                 </div>
+                <div class="draggable-label" data-note="F" style="display:none">
+                    <span class="label-pitch">F</span>
+                </div>
+                <div class="draggable-label" data-note="C" style="display:none">
+                    <span class="label-pitch">C</span>
+                </div>
             </div>
         </div>
     </div>
@@ -862,8 +869,7 @@
                     }
                     if (session.showNoteNames !== undefined) {
                         showNoteNames = session.showNoteNames;
-                        const btn = document.getElementById('noteNamesBtn');
-                        if (btn) btn.textContent = showNoteNames ? 'Note Names On' : 'Note Names';
+                        updateNoteNamesBtn();
                     }
                     if (session.intervalLimit !== undefined) {
                         intervalLimit = session.intervalLimit;
@@ -1299,14 +1305,15 @@
                 ctx.stroke();
                 ctx.shadowBlur = 0;
 
-                // Draw concert pitch name above note when enabled
+                // Draw note label above note when enabled
+                // In treble clef mode shows solfege; otherwise shows concert pitch
                 if (showNoteNames) {
-                    const pitch = getConcertPitch(note);
+                    const label = trebleClefMode ? note : getConcertPitch(note);
                     ctx.font = `bold ${30 * scale}px Arial`;
                     ctx.fillStyle = '#2c3e50';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'bottom';
-                    ctx.fillText(pitch, xPos, yPos - drawRadius + (4 * scale));
+                    ctx.fillText(label, xPos, yPos - drawRadius + (4 * scale));
                 }
 
                 notePositions.push({
@@ -1418,15 +1425,22 @@
 
                 draggedLabel.classList.remove('dragging');
                 draggedLabel.classList.add('placed');
-                positionLabelOnNote(draggedLabel, closestNote);
 
-                // In treble clef mode, display the note name for this position
+                // In treble clef mode, update display text before positioning
                 if (trebleClefMode) {
+                    const labelNote = draggedLabel.dataset.note;
                     const ps = draggedLabel.querySelector('.label-pitch');
-                    if (ps) ps.textContent = getNoteName(closestNote.note);
                     const rs = draggedLabel.querySelector('.label-register');
                     if (rs) rs.style.display = 'none';
+                    if (ps) {
+                        // F and C are distractors — display as-is; all others use position name
+                        ps.textContent = ['F', 'C'].includes(labelNote)
+                            ? labelNote
+                            : getNoteName(closestNote.note);
+                    }
                 }
+
+                positionLabelOnNote(draggedLabel, closestNote);
 
                 placedLabels.push(draggedLabel);
                 labelPlacements[closestNote.index] = draggedLabel.dataset.note;
@@ -1457,8 +1471,9 @@
             const canvas = document.getElementById('staffCanvas');
             const canvasRect = canvas.getBoundingClientRect();
             label.style.position = 'fixed';
-            label.style.left = (canvasRect.left + notePos.x - label.offsetWidth / 2) + 'px';
-            label.style.top = (canvasRect.top + notePos.y - label.offsetHeight / 2) + 'px';
+            label.style.left = (canvasRect.left + notePos.x) + 'px';
+            label.style.top = (canvasRect.top + notePos.y) + 'px';
+            // transform: translate(-50%, -50%) is set by .placed CSS — no offsetWidth needed
         }
 
         function checkIfComplete() {
@@ -1479,7 +1494,7 @@
             Object.entries(labelPlacements).forEach(([noteIndex, labelNote]) => {
                 const expected = currentPattern[noteIndex];
                 const isCorrect = trebleClefMode
-                    ? getConcertPitch(expected) === getConcertPitch(labelNote)
+                    ? !['F', 'C'].includes(labelNote) && getConcertPitch(expected) === getConcertPitch(labelNote)
                     : expected === labelNote;
                 if (isCorrect) correct++;
             });
@@ -1549,6 +1564,7 @@
                 loadTrebleClef().then(() => drawStaff());
             }
 
+            updateNoteNamesBtn();
             updateLabelContainer();
             resetModule();
             saveToSession();
@@ -1830,6 +1846,12 @@
 
         // Update label container visibility for all 8 notes
         function updateLabelContainer() {
+            // Show/hide F and C distractor tiles (treble clef mode only)
+            ['F', 'C'].forEach(note => {
+                const label = document.querySelector(`#labelContainer [data-note="${note}"]`);
+                if (label) label.style.display = trebleClefMode ? '' : 'none';
+            });
+
             // Upper-octave notes whose pitch class is already covered by a lower counterpart
             const upperDups = { "do'": "do", "so": "so,", "la": "la," };
 
@@ -1880,7 +1902,7 @@
                 const idx = parseInt(noteIndex);
                 const expected = correctMap[idx];
                 const isCorrect = trebleClefMode
-                    ? getConcertPitch(expected) === getConcertPitch(labelNote)
+                    ? !['F', 'C'].includes(labelNote) && getConcertPitch(expected) === getConcertPitch(labelNote)
                     : expected === labelNote;
                 if (isCorrect) {
                     correctPlacements.push({ noteIndex: idx, labelNote });
@@ -2070,10 +2092,16 @@
 
         function toggleNoteNames() {
             showNoteNames = !showNoteNames;
-            const btn = document.getElementById('noteNamesBtn');
-            if (btn) btn.textContent = showNoteNames ? 'Note Names On' : 'Note Names';
+            updateNoteNamesBtn();
             drawStaff();
             saveToSession();
+        }
+
+        function updateNoteNamesBtn() {
+            const btn = document.getElementById('noteNamesBtn');
+            if (!btn) return;
+            const baseLabel = trebleClefMode ? 'Solfege' : 'Note Names';
+            btn.textContent = showNoteNames ? baseLabel + ' On' : baseLabel;
         }
 
         function changeRoot(note) {

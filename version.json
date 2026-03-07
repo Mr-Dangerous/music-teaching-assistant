@@ -1,5 +1,5 @@
 {
-  "version": "3.24.1",
+  "version": "3.25.1",
   "lastUpdated": "2026-03-07",
-  "description": "Add Treble Clef Mode to Pentatonic Trainer: forces 5-line staff, sets root to G, draws treble clef image aligned to G4 line, converts palette to note names (G, A, B, D, E), deduplicates palette by pitch class hiding upper-octave duplicates, shows prime mark for upper-octave placements, uses pitch class comparison for answer checking, persists setting to session storage"
+  "description": "Pentatonic Trainer: add F and C distractor tiles in Treble Clef Mode (always marked incorrect), fix note label centering via CSS transform, and rename Note Names button to Solfege in Treble Clef Mode showing solfege syllables above note circles"
 }
