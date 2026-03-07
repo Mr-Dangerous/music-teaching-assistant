@@ -192,6 +192,40 @@
             background-color: #1abc9c;
         }
 
+        .settings-toggle-btn {
+            font-size: calc(21px * var(--module-scale));
+            font-weight: bold;
+            color: white;
+            background-color: #2980b9;
+            border: none;
+            padding: calc(15px * var(--module-scale)) calc(30px * var(--module-scale));
+            border-radius: calc(7px * var(--module-scale));
+            cursor: pointer;
+            box-shadow: 0 calc(2px * var(--module-scale)) calc(5px * var(--module-scale)) rgba(0, 0, 0, 0.2);
+        }
+
+        .settings-toggle-btn:hover {
+            background-color: #2471a3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .settings-panel {
+            display: none;
+            flex-wrap: wrap;
+            gap: calc(10px * var(--module-scale));
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            padding: calc(8px * var(--module-scale));
+            background: rgba(0,0,0,0.05);
+            border-radius: calc(8px * var(--module-scale));
+        }
+
+        .settings-panel.open {
+            display: flex;
+        }
+
         .custom-pattern-btn {
             font-size: calc(21px * var(--module-scale));
             font-weight: bold;
@@ -576,10 +610,18 @@
         <!-- Completion Indicator -->
         <div id="completionIndicator" class="completion-indicator">✓</div>
 
+        <!-- Primary controls: always visible -->
         <div style="display: flex; gap: 10px; align-items: center; width: 100%; justify-content: center; flex-wrap: wrap;">
             <button class="refresh-btn" onclick="refreshPattern()">🔄 New Pattern</button>
             <button class="play-btn" id="playBtn" onclick="playPattern()">▶ Pattern</button>
             <button class="play-my-btn" id="playMyBtn" onclick="playMyAnswer()">▶ My Answer</button>
+            <button class="custom-pattern-btn" id="checkAnswerBtn" onclick="checkAnswer()">Check Answer</button>
+            <button class="undo-btn" id="undoBtn" onclick="undoLastPlacement()" disabled>Undo</button>
+            <button class="settings-toggle-btn" id="settingsToggleBtn" onclick="toggleSettings()">⚙ Settings ▼</button>
+        </div>
+
+        <!-- Settings panel: hidden by default -->
+        <div id="settingsPanel" class="settings-panel">
             <select id="rootSelect" class="root-select" onchange="changeRoot(this.value)">
                 <option value="C">Root: C</option>
                 <option value="C#">Root: C#</option>
@@ -598,11 +640,10 @@
             <button class="note-count-btn" id="noteCountBtn" onclick="toggleNoteCount()">3 Notes</button>
             <button class="custom-pattern-btn" onclick="openCustomPattern()">Custom Pattern</button>
             <button class="color-toggle-btn" id="colorToggleBtn" onclick="toggleColors()">Colors On</button>
-            <button class="undo-btn" id="undoBtn" onclick="undoLastPlacement()" disabled>Undo</button>
             <button class="first-note-btn" onclick="openNoteSelection()">Select Notes</button>
-            <button class="custom-pattern-btn" id="checkAnswerBtn" onclick="checkAnswer()">Check Answer</button>
             <button class="note-count-btn" id="lowerStaffBtn" onclick="toggleStaffPosition()">Lower Staff</button>
             <button class="toggle-labels-btn" id="noteNamesBtn" onclick="toggleNoteNames()">Note Names</button>
+            <button class="toggle-labels-btn" onclick="toggleStaffLabels()">Toggle Labels</button>
             <button class="note-count-btn interval-active" id="limitThirdBtn" onclick="setIntervalLimit('third')">Max 3rd</button>
             <button class="note-count-btn" id="limitFourthBtn" onclick="setIntervalLimit('fourth')">Max 4th</button>
             <button class="note-count-btn" id="limitFifthBtn" onclick="setIntervalLimit('fifth')">Max 5th</button>
@@ -617,8 +658,6 @@
             <div class="draggable-label" data-note="re">re</div>
             <div class="draggable-label" data-note="do">do</div>
         </div>
-
-        <button class="toggle-labels-btn" onclick="toggleStaffLabels()">Toggle Labels</button>
     </div>
 
     <!-- First Note Selection Modal -->
@@ -1327,6 +1366,13 @@
                 btn.textContent = colorsEnabled ? 'Colors On' : 'Colors Off';
             }
             drawStaff();
+        }
+
+        function toggleSettings() {
+            const panel = document.getElementById('settingsPanel');
+            const btn = document.getElementById('settingsToggleBtn');
+            const open = panel.classList.toggle('open');
+            btn.textContent = open ? '⚙ Settings ▲' : '⚙ Settings ▼';
         }
 
         function setIntervalLimit(limit) {
