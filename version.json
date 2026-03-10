@@ -1,5 +1,5 @@
 {
-  "version": "3.26.1",
-  "lastUpdated": "2026-03-07",
-  "description": "Pentatonic Trainer: replace broken solfege-in-note-names behavior with dedicated Show Solfege button; solfege syllables draw above note circles in any mode; Note Names always shows concert pitch"
+  "version": "3.27.1",
+  "lastUpdated": "2026-03-10",
+  "description": "Add Riser Chart with drag-and-drop, color mapping from seating chart (orange→yellow, purple→grey), persistent positions, and top/top/bottom/bottom/bottom/top assignment order"
 }

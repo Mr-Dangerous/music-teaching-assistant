@@ -57,6 +57,7 @@
         <button id="assign-seats-btn" class="btn btn-seat-assign">Assign Seats</button>
         <button id="clear-seats-btn" class="btn btn-seat-clear">Clear</button>
         <button id="show-seating-chart-btn" class="btn btn-seating-chart">📋 Seating Chart</button>
+        <button id="show-riser-chart-btn" class="btn btn-riser-chart">🎵 Riser Chart</button>
         </div>
       </div>
     </div>
@@ -344,6 +345,21 @@
       </nav>
 
       <button class="seating-chart-refresh-btn" id="seating-chart-refresh-btn" aria-label="Refresh seating chart">🔄 Refresh Seating</button>
+    </div>
+  </div>
+
+  <!-- Riser Chart Overlay -->
+  <div id="riser-chart-overlay" class="riser-chart-overlay" style="display: none;">
+    <div class="riser-chart-overlay-backdrop"></div>
+    <div class="riser-chart-overlay-content">
+      <div class="riser-chart-header">
+        <h2 id="riser-chart-title">Class Riser Chart</h2>
+        <button id="riser-chart-close-btn" class="riser-chart-close-btn" title="Close (ESC)">✕</button>
+      </div>
+      <div class="riser-chart-risers" id="riser-chart-risers">
+        <!-- Riser sections generated here -->
+      </div>
+      <button class="riser-chart-refresh-btn" id="riser-chart-refresh-btn">🔄 Refresh</button>
     </div>
   </div>
 

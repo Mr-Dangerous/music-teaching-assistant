@@ -2635,3 +2635,250 @@ body.snow-theme .app-header {
 .seating-chart-student-spot.moving {
   animation: none;
 }
+
+/* =============================================
+   RISER CHART
+   ============================================= */
+
+.btn-riser-chart {
+  background: linear-gradient(135deg, #8b5cf6, #6d28d9) !important;
+  color: white !important;
+  font-size: 12px !important;
+  padding: 6px 10px !important;
+}
+
+.btn-riser-chart:hover {
+  background: linear-gradient(135deg, #7c3aed, #5b21b6) !important;
+}
+
+.riser-chart-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.riser-chart-overlay-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(5px);
+}
+
+.riser-chart-overlay-content {
+  position: relative;
+  width: 95%;
+  height: 95%;
+  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+  border-radius: 20px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+  overflow: hidden;
+}
+
+.riser-chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  margin-bottom: 10px;
+  flex-shrink: 0;
+}
+
+.riser-chart-header h2 {
+  color: white;
+  font-size: clamp(24px, 3vw, 32px);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  margin: 0;
+}
+
+.riser-chart-close-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 28px;
+  font-weight: bold;
+  width: 50px;
+  height: 50px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.riser-chart-close-btn:hover {
+  background: #dc2626;
+  transform: scale(1.1);
+}
+
+.riser-chart-risers {
+  display: flex;
+  gap: 12px;
+  flex: 1;
+  width: 100%;
+  padding: 10px;
+  align-items: stretch;
+}
+
+.riser-chart-section {
+  flex: 1;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 3px solid rgba(255,255,255,0.3);
+}
+
+.riser-chart-section[data-color="red"] {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+}
+
+.riser-chart-section[data-color="blue"] {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+}
+
+.riser-chart-section[data-color="green"] {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+}
+
+.riser-chart-section[data-color="grey"] {
+  background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+}
+
+.riser-chart-section[data-color="yellow"] {
+  background: linear-gradient(135deg, #eab308 0%, #ca8a04 100%);
+}
+
+.riser-chart-section-label {
+  text-align: center;
+  color: white;
+  font-weight: 800;
+  font-size: clamp(16px, 2vw, 22px);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  padding: 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  flex-shrink: 0;
+}
+
+.riser-chart-grid {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+}
+
+.riser-chart-row {
+  flex: 1;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  position: relative;
+}
+
+.riser-chart-row-label {
+  position: absolute;
+  left: 4px;
+  top: 2px;
+  font-size: 10px;
+  color: rgba(255,255,255,0.6);
+  font-weight: 600;
+  text-transform: uppercase;
+  pointer-events: none;
+}
+
+.riser-chart-spot {
+  flex: 1;
+  height: 100%;
+  min-height: 50px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(14px, 1.8vw, 22px);
+  font-weight: 700;
+  color: white;
+  text-shadow: 0 2px 3px rgba(0,0,0,0.4);
+  text-align: center;
+  padding: 4px;
+  border: 2px solid rgba(255,255,255,0.4);
+  transition: all 0.2s;
+  overflow: hidden;
+}
+
+.riser-chart-spot.occupied {
+  background: rgba(255, 255, 255, 0.9);
+  color: #1f2937;
+  text-shadow: none;
+  border-color: white;
+  cursor: move;
+  user-select: none;
+}
+
+.riser-chart-spot.drag-over {
+  background: rgba(251, 191, 36, 0.5);
+  transform: scale(1.05);
+  border-color: #fbbf24;
+}
+
+.riser-chart-spot.dragging {
+  opacity: 0.4;
+}
+
+.riser-chart-student-name {
+  font-size: clamp(12px, 1.5vw, 20px);
+  font-weight: 700;
+  word-break: break-word;
+  line-height: 1.1;
+}
+
+.riser-chart-drag-ghost {
+  position: fixed;
+  background: rgba(255, 255, 255, 0.95);
+  color: #1f2937;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  pointer-events: none;
+  z-index: 100001;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.riser-chart-animated-clone {
+  will-change: left, top;
+}
+
+.riser-chart-refresh-btn {
+  background: linear-gradient(135deg, #6366f1, #4f46e5);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 10px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 10px;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.riser-chart-refresh-btn:hover {
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  transform: scale(1.05);
+}

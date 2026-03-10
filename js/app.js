@@ -54,6 +54,14 @@ class TeachingAssistantApp {
     // Manual position assignments - saved to seating_charts.csv
     this.manualPositions = new Map(); // studentId -> 'red_3', 'blue_1', etc.
 
+    // Riser chart manual positions - saved to seating_charts.csv
+    this.riserManualPositions = new Map(); // studentId -> 'red_top_1', 'yellow_bottom_3', etc.
+    // Color mapping: seating chart color -> riser color
+    this.seatToRiserColor = { red: 'red', orange: 'yellow', green: 'green', blue: 'blue', purple: 'grey' };
+    this.riserColors = ['red', 'blue', 'green', 'grey', 'yellow'];
+    // Assignment order within each color group: top, top, bottom, bottom, bottom, top
+    this.riserAssignmentOrder = ['top_1', 'top_2', 'bottom_1', 'bottom_2', 'bottom_3', 'top_3'];
+
     // Furniture assignments - in-memory only
     this.furnitureAssignments = new Map(); // studentId -> 'stool' | 'chair'
     this.furnitureTypes = ['stool', 'chair'];
@@ -226,6 +234,11 @@ class TeachingAssistantApp {
       showSeatingChartBtn.addEventListener('click', () => this.showSeatingChartOverlay());
     }
 
+    const showRiserChartBtn = document.getElementById('show-riser-chart-btn');
+    if (showRiserChartBtn) {
+      showRiserChartBtn.addEventListener('click', () => this.showRiserChartOverlay());
+    }
+
     // Seating chart overlay controls
     const seatingChartCloseBtn = document.getElementById('seating-chart-close-btn');
     if (seatingChartCloseBtn) {
@@ -240,6 +253,22 @@ class TeachingAssistantApp {
     const seatingChartRefreshBtn = document.getElementById('seating-chart-refresh-btn');
     if (seatingChartRefreshBtn) {
       seatingChartRefreshBtn.addEventListener('click', () => this.renderSeatingChart());
+    }
+
+    // Riser chart overlay controls
+    const riserChartCloseBtn = document.getElementById('riser-chart-close-btn');
+    if (riserChartCloseBtn) {
+      riserChartCloseBtn.addEventListener('click', () => this.hideRiserChartOverlay());
+    }
+
+    const riserChartBackdrop = document.querySelector('.riser-chart-overlay-backdrop');
+    if (riserChartBackdrop) {
+      riserChartBackdrop.addEventListener('click', () => this.hideRiserChartOverlay());
+    }
+
+    const riserChartRefreshBtn = document.getElementById('riser-chart-refresh-btn');
+    if (riserChartRefreshBtn) {
+      riserChartRefreshBtn.addEventListener('click', () => this.renderRiserChart());
     }
 
     const clearSeatsBtn = document.getElementById('clear-seats-btn');
@@ -2919,10 +2948,11 @@ class TeachingAssistantApp {
       this.seatAssignments.clear();
       this.furnitureAssignments.clear();
       this.manualPositions.clear();
+      this.riserManualPositions.clear();
 
       // Skip header row and load seating data
       parsedLines.slice(1).forEach(fields => {
-        const [classIdentifier, studentId, rugColor, furnitureType, specificPosition] = fields;
+        const [classIdentifier, studentId, rugColor, furnitureType, specificPosition, riserPosition] = fields;
 
         // Only load assignments for the current class/combination
         let currentClassIdentifier;
@@ -2946,6 +2976,11 @@ class TeachingAssistantApp {
           // Load specific manual position
           if (specificPosition && specificPosition.trim() !== '') {
             this.manualPositions.set(studentId, specificPosition);
+          }
+
+          // Load riser position
+          if (riserPosition && riserPosition.trim() !== '') {
+            this.riserManualPositions.set(studentId, riserPosition);
           }
         }
       });
@@ -3010,12 +3045,13 @@ class TeachingAssistantApp {
         const rugColor = this.seatAssignments.get(student.student_id) || '';
         const furniture = this.furnitureAssignments.get(student.student_id);
         const specificPosition = this.manualPositions.get(student.student_id) || '';
+        const riserPosition = this.riserManualPositions.get(student.student_id) || '';
 
         // Only save if student has a rug assignment or chair assignment
         // NEVER save stool assignments (they're temporary)
         if (rugColor || furniture === 'chair') {
           const furnitureType = (furniture === 'chair') ? 'chair' : '';
-          currentClassData.push([currentClassIdentifier, student.student_id, rugColor, furnitureType, specificPosition]);
+          currentClassData.push([currentClassIdentifier, student.student_id, rugColor, furnitureType, specificPosition, riserPosition]);
         }
       });
 
@@ -3023,9 +3059,9 @@ class TeachingAssistantApp {
       const allData = [...existingData, ...currentClassData];
 
       // Create CSV content
-      const header = 'class_identifier,student_id,rug_color,furniture_type,specific_position\n';
+      const header = 'class_identifier,student_id,rug_color,furniture_type,specific_position,riser_position\n';
       const rows = allData.map(fields =>
-        `${fields[0]},${fields[1]},${fields[2]},${fields[3]},${fields[4] || ''}`
+        `${fields[0]},${fields[1]},${fields[2]},${fields[3]},${fields[4] || ''},${fields[5] || ''}`
       ).join('\n');
       const csvContent = header + rows;
 
@@ -4065,6 +4101,7 @@ class TeachingAssistantApp {
   async clearSeatAssignments() {
     this.seatAssignments.clear();
     this.furnitureAssignments.clear();
+    this.riserManualPositions.clear();
 
     // Remove all dots and furniture icons from student buttons
     const dots = document.querySelectorAll('.student-seat-dot');
@@ -4160,6 +4197,372 @@ class TeachingAssistantApp {
       document.removeEventListener('keydown', this.seatingChartEscHandler);
       this.seatingChartEscHandler = null;
     }
+  }
+
+  // =============================================
+  // RISER CHART
+  // =============================================
+
+  showRiserChartOverlay() {
+    const overlay = document.getElementById('riser-chart-overlay');
+    if (!overlay) return;
+
+    overlay.style.display = 'flex';
+    this.renderRiserChart();
+
+    this.riserChartEscHandler = (e) => {
+      if (e.key === 'Escape') {
+        this.hideRiserChartOverlay();
+      }
+    };
+    document.addEventListener('keydown', this.riserChartEscHandler);
+  }
+
+  hideRiserChartOverlay() {
+    const overlay = document.getElementById('riser-chart-overlay');
+    if (!overlay) return;
+
+    overlay.style.display = 'none';
+
+    if (this.riserChartEscHandler) {
+      document.removeEventListener('keydown', this.riserChartEscHandler);
+      this.riserChartEscHandler = null;
+    }
+  }
+
+  renderRiserChart() {
+    const container = document.getElementById('riser-chart-risers');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Get students in current class
+    let classStudents, className;
+    if (this.selectedClasses.size > 0) {
+      classStudents = this.students.filter(s => this.selectedClasses.has(s.class));
+      className = Array.from(this.selectedClasses).join(' + ');
+    } else if (this.selectedClass) {
+      classStudents = this.students.filter(s => s.class === this.selectedClass);
+      className = this.selectedClass;
+    } else {
+      return;
+    }
+
+    const availableStudents = classStudents.filter(s => !this.isStudentAbsent(s.student_id));
+
+    document.getElementById('riser-chart-title').textContent = `Riser Chart: ${className}`;
+
+    // Group students by riser color based on their seating chart color
+    const studentsByRiserColor = {};
+    this.riserColors.forEach(c => { studentsByRiserColor[c] = []; });
+
+    availableStudents.forEach(student => {
+      const seatColor = this.seatAssignments.get(student.student_id);
+      if (seatColor) {
+        const riserColor = this.seatToRiserColor[seatColor];
+        if (riserColor && studentsByRiserColor[riserColor]) {
+          studentsByRiserColor[riserColor].push(student);
+        }
+      }
+    });
+
+    // Build manual position lookup: position -> student
+    const manualByPosition = {};
+    this.riserManualPositions.forEach((position, studentId) => {
+      const student = availableStudents.find(s => s.student_id === studentId);
+      if (student) {
+        manualByPosition[position] = student;
+      }
+    });
+
+    // Render each riser color section
+    this.riserColors.forEach(riserColor => {
+      const section = document.createElement('div');
+      section.className = 'riser-chart-section';
+      section.dataset.color = riserColor;
+
+      const label = document.createElement('div');
+      label.className = 'riser-chart-section-label';
+      label.textContent = riserColor.charAt(0).toUpperCase() + riserColor.slice(1);
+      section.appendChild(label);
+
+      const grid = document.createElement('div');
+      grid.className = 'riser-chart-grid';
+
+      // Top row (3 spots)
+      const topRow = document.createElement('div');
+      topRow.className = 'riser-chart-row riser-chart-row-top';
+      const topLabel = document.createElement('span');
+      topLabel.className = 'riser-chart-row-label';
+      topLabel.textContent = 'Top';
+      topRow.appendChild(topLabel);
+
+      for (let i = 1; i <= 3; i++) {
+        const spot = document.createElement('div');
+        spot.className = 'riser-chart-spot';
+        spot.dataset.position = `${riserColor}_top_${i}`;
+        topRow.appendChild(spot);
+      }
+
+      // Bottom row (3 spots)
+      const bottomRow = document.createElement('div');
+      bottomRow.className = 'riser-chart-row riser-chart-row-bottom';
+      const bottomLabel = document.createElement('span');
+      bottomLabel.className = 'riser-chart-row-label';
+      bottomLabel.textContent = 'Bottom';
+      bottomRow.appendChild(bottomLabel);
+
+      for (let i = 1; i <= 3; i++) {
+        const spot = document.createElement('div');
+        spot.className = 'riser-chart-spot';
+        spot.dataset.position = `${riserColor}_bottom_${i}`;
+        bottomRow.appendChild(spot);
+      }
+
+      grid.appendChild(topRow);
+      grid.appendChild(bottomRow);
+      section.appendChild(grid);
+      container.appendChild(section);
+
+      // Place students: manual positions first, then auto-assign remaining
+      const studentsInColor = studentsByRiserColor[riserColor];
+      const manualStudentIds = new Set();
+
+      // Place manually positioned students
+      const allSpots = section.querySelectorAll('.riser-chart-spot');
+      allSpots.forEach(spot => {
+        const pos = spot.dataset.position;
+        if (manualByPosition[pos]) {
+          const student = manualByPosition[pos];
+          // Verify this student actually belongs to this riser color
+          const seatColor = this.seatAssignments.get(student.student_id);
+          const expectedRiserColor = this.seatToRiserColor[seatColor];
+          if (expectedRiserColor === riserColor) {
+            this.fillRiserSpot(spot, student);
+            manualStudentIds.add(student.student_id);
+          }
+        }
+      });
+
+      // Auto-assign remaining students using assignment order: top, top, bottom, bottom, bottom, top
+      const unassigned = studentsInColor.filter(s => !manualStudentIds.has(s.student_id));
+      const assignmentSlots = this.riserAssignmentOrder.map(slot => `${riserColor}_${slot}`);
+
+      let unassignedIdx = 0;
+      assignmentSlots.forEach(slotPos => {
+        if (unassignedIdx >= unassigned.length) return;
+        const spot = section.querySelector(`.riser-chart-spot[data-position="${slotPos}"]`);
+        if (spot && !spot.classList.contains('occupied')) {
+          const student = unassigned[unassignedIdx++];
+          this.fillRiserSpot(spot, student);
+          // Save auto-assigned position
+          this.riserManualPositions.set(student.student_id, slotPos);
+        }
+      });
+    });
+
+    this.setupRiserChartDragAndDrop();
+  }
+
+  fillRiserSpot(spot, student) {
+    spot.classList.add('occupied');
+    spot.dataset.studentId = student.student_id;
+    spot.innerHTML = `<span class="riser-chart-student-name">${this.getFirstNameOnly(student.name)}</span>`;
+    spot.draggable = true;
+  }
+
+  setupRiserChartDragAndDrop() {
+    const occupiedSpots = document.querySelectorAll('.riser-chart-spot.occupied');
+
+    occupiedSpots.forEach(spot => {
+      spot.addEventListener('dragstart', (e) => {
+        this.riserDraggedSpot = spot;
+        spot.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', spot.dataset.studentId);
+        this.createRiserDragGhost(spot, e.clientX, e.clientY);
+      });
+
+      spot.addEventListener('dragend', () => {
+        spot.classList.remove('dragging');
+        this.removeRiserDragGhost();
+        this.riserDraggedSpot = null;
+      });
+
+      spot.addEventListener('touchstart', (e) => {
+        this.riserDraggedSpot = spot;
+        spot.classList.add('dragging');
+        const touch = e.touches[0];
+        this.createRiserDragGhost(spot, touch.clientX, touch.clientY);
+        e.preventDefault();
+      }, { passive: false });
+    });
+
+    const allSpots = document.querySelectorAll('.riser-chart-spot');
+    allSpots.forEach(spot => {
+      spot.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (spot !== this.riserDraggedSpot) {
+          spot.classList.add('drag-over');
+        }
+      });
+
+      spot.addEventListener('dragleave', () => {
+        spot.classList.remove('drag-over');
+      });
+
+      spot.addEventListener('drop', (e) => {
+        e.preventDefault();
+        spot.classList.remove('drag-over');
+        if (this.riserDraggedSpot && spot !== this.riserDraggedSpot) {
+          this.swapRiserChartStudents(this.riserDraggedSpot, spot);
+        }
+      });
+    });
+
+    if (!this.riserTouchHandlersAdded) {
+      document.addEventListener('touchmove', this.handleRiserTouchMove.bind(this), { passive: false });
+      document.addEventListener('touchend', this.handleRiserTouchEnd.bind(this), { passive: false });
+      this.riserTouchHandlersAdded = true;
+    }
+
+    if (!this.riserMouseHandlerAdded) {
+      document.addEventListener('mousemove', (e) => {
+        if (this.riserDragGhost) {
+          this.riserDragGhost.style.left = (e.clientX - 40) + 'px';
+          this.riserDragGhost.style.top = (e.clientY - 30) + 'px';
+        }
+      });
+      this.riserMouseHandlerAdded = true;
+    }
+  }
+
+  createRiserDragGhost(spot, x, y) {
+    this.removeRiserDragGhost();
+    const ghost = document.createElement('div');
+    ghost.className = 'riser-chart-drag-ghost';
+    ghost.textContent = spot.textContent;
+    document.body.appendChild(ghost);
+    this.riserDragGhost = ghost;
+    ghost.style.left = (x - 40) + 'px';
+    ghost.style.top = (y - 30) + 'px';
+  }
+
+  removeRiserDragGhost() {
+    if (this.riserDragGhost) {
+      this.riserDragGhost.remove();
+      this.riserDragGhost = null;
+    }
+  }
+
+  handleRiserTouchMove(e) {
+    if (!this.riserDraggedSpot) return;
+
+    const touch = e.touches[0];
+    if (this.riserDragGhost) {
+      this.riserDragGhost.style.left = (touch.clientX - 40) + 'px';
+      this.riserDragGhost.style.top = (touch.clientY - 30) + 'px';
+    }
+
+    const elementBelow = document.elementFromPoint(touch.clientX, touch.clientY);
+    const allSpots = document.querySelectorAll('.riser-chart-spot');
+    allSpots.forEach(s => s.classList.remove('drag-over'));
+
+    let targetSpot = elementBelow;
+    while (targetSpot && !targetSpot.classList.contains('riser-chart-spot')) {
+      targetSpot = targetSpot.parentElement;
+    }
+
+    if (targetSpot && targetSpot.classList.contains('riser-chart-spot') && targetSpot !== this.riserDraggedSpot) {
+      targetSpot.classList.add('drag-over');
+      this.riserDropTargetSpot = targetSpot;
+    } else {
+      this.riserDropTargetSpot = null;
+    }
+
+    e.preventDefault();
+  }
+
+  handleRiserTouchEnd(e) {
+    if (!this.riserDraggedSpot) return;
+
+    this.riserDraggedSpot.classList.remove('dragging');
+    this.removeRiserDragGhost();
+
+    const allSpots = document.querySelectorAll('.riser-chart-spot');
+    allSpots.forEach(s => s.classList.remove('drag-over'));
+
+    if (this.riserDropTargetSpot && this.riserDropTargetSpot !== this.riserDraggedSpot) {
+      this.swapRiserChartStudents(this.riserDraggedSpot, this.riserDropTargetSpot);
+    }
+
+    this.riserDraggedSpot = null;
+    this.riserDropTargetSpot = null;
+  }
+
+  async swapRiserChartStudents(spot1, spot2) {
+    const student1Id = spot1.dataset.studentId;
+    const student2Id = spot2.dataset.studentId;
+    const pos1 = spot1.dataset.position;
+    const pos2 = spot2.dataset.position;
+
+    const rect1 = spot1.getBoundingClientRect();
+    const rect2 = spot2.getBoundingClientRect();
+    const isSwap = student2Id !== undefined;
+
+    // Create animated clones
+    const clone1 = this.createRiserAnimatedClone(spot1, rect1);
+    const clone2 = isSwap ? this.createRiserAnimatedClone(spot2, rect2) : null;
+
+    spot1.style.opacity = '0';
+    if (isSwap) spot2.style.opacity = '0';
+
+    await new Promise(resolve => requestAnimationFrame(resolve));
+
+    clone1.style.transition = 'all 0.5s cubic-bezier(0.4, 0.0, 0.2, 1)';
+    clone1.style.left = rect2.left + 'px';
+    clone1.style.top = rect2.top + 'px';
+
+    if (isSwap && clone2) {
+      clone2.style.transition = 'all 0.5s cubic-bezier(0.4, 0.0, 0.2, 1)';
+      clone2.style.left = rect1.left + 'px';
+      clone2.style.top = rect1.top + 'px';
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    clone1.remove();
+    if (clone2) clone2.remove();
+
+    spot1.style.opacity = '';
+    if (isSwap) spot2.style.opacity = '';
+
+    // Update positions
+    if (student1Id) {
+      this.riserManualPositions.set(student1Id, pos2);
+    }
+    if (student2Id) {
+      this.riserManualPositions.set(student2Id, pos1);
+    }
+
+    this.renderRiserChart();
+    await this.saveSeatingCharts();
+  }
+
+  createRiserAnimatedClone(spot, rect) {
+    const clone = document.createElement('div');
+    clone.className = 'riser-chart-spot occupied riser-chart-animated-clone';
+    clone.innerHTML = spot.innerHTML;
+    clone.style.width = rect.width + 'px';
+    clone.style.height = rect.height + 'px';
+    clone.style.position = 'fixed';
+    clone.style.left = rect.left + 'px';
+    clone.style.top = rect.top + 'px';
+    clone.style.zIndex = '100000';
+    clone.style.pointerEvents = 'none';
+    document.body.appendChild(clone);
+    return clone;
   }
 
   /**
