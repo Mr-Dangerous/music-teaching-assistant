@@ -2725,12 +2725,13 @@ body.snow-theme .app-header {
 }
 
 .riser-chart-risers {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
   gap: 12px;
   flex: 1;
   width: 100%;
   padding: 10px;
-  align-items: stretch;
 }
 
 .riser-chart-section {

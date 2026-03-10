@@ -1,5 +1,5 @@
 {
-  "version": "3.27.1",
+  "version": "3.27.2",
   "lastUpdated": "2026-03-10",
-  "description": "Add Riser Chart with drag-and-drop, color mapping from seating chart (orange→yellow, purple→grey), persistent positions, and top/top/bottom/bottom/bottom/top assignment order"
+  "description": "Riser Chart: change layout from 5-wide to 3x2 grid"
 }
