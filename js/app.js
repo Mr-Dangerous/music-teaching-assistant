@@ -255,6 +255,11 @@ class TeachingAssistantApp {
       seatingChartRefreshBtn.addEventListener('click', () => this.renderSeatingChart());
     }
 
+    const seatingChartPrintBtn = document.getElementById('seating-chart-print-btn');
+    if (seatingChartPrintBtn) {
+      seatingChartPrintBtn.addEventListener('click', () => this.printSeatingChart());
+    }
+
     // Riser chart overlay controls
     const riserChartCloseBtn = document.getElementById('riser-chart-close-btn');
     if (riserChartCloseBtn) {
@@ -4197,6 +4202,13 @@ class TeachingAssistantApp {
       document.removeEventListener('keydown', this.seatingChartEscHandler);
       this.seatingChartEscHandler = null;
     }
+  }
+
+  /**
+   * Print seating chart (opens browser print dialog / Save as PDF)
+   */
+  printSeatingChart() {
+    window.print();
   }
 
   // =============================================

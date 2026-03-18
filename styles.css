@@ -2266,6 +2266,30 @@ body.snow-theme .app-header {
   transform: scale(1.1);
 }
 
+.seating-chart-header-buttons {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.seating-chart-print-btn {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 18px;
+  font-weight: 700;
+  padding: 8px 20px;
+  height: 50px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.seating-chart-print-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
 .seating-chart-error-banner {
   background: #fef3c7;
   border: 2px solid #f59e0b;
@@ -2882,4 +2906,122 @@ body.snow-theme .app-header {
 .riser-chart-refresh-btn:hover {
   background: linear-gradient(135deg, #4f46e5, #4338ca);
   transform: scale(1.05);
+}
+
+/* ============================================= */
+/* PRINT STYLES - Seating Chart                  */
+/* ============================================= */
+@media print {
+  /* Hide everything except the seating chart overlay */
+  body > *:not(#seating-chart-overlay) {
+    display: none !important;
+  }
+
+  /* Make overlay fill the page naturally for print */
+  .seating-chart-overlay {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    height: auto !important;
+    background: white !important;
+  }
+
+  .seating-chart-overlay-backdrop {
+    display: none !important;
+  }
+
+  .seating-chart-overlay-content {
+    position: static !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: none !important;
+    background: white !important;
+    border-radius: 0 !important;
+    padding: 10px !important;
+    overflow: visible !important;
+  }
+
+  /* Hide UI controls in print */
+  .seating-chart-header-buttons,
+  .seating-chart-refresh-btn {
+    display: none !important;
+  }
+
+  /* Title styling for print */
+  .seating-chart-header h2 {
+    color: black !important;
+    text-shadow: none !important;
+    font-size: 24pt !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+
+  /* Classroom container for print */
+  .seating-chart-classroom-container {
+    width: 90% !important;
+    max-width: 90% !important;
+    height: auto !important;
+    margin: 0 auto !important;
+    transform: none !important;
+  }
+
+  /* Teacher area */
+  .seating-chart-teacher-area {
+    background: #374151 !important;
+    color: white !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Rug and color rows - force background colors to print */
+  .seating-chart-rug {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    min-height: 300px !important;
+  }
+
+  .seating-chart-color-row {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    min-height: 60px !important;
+  }
+
+  .seating-chart-student-spot {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  .seating-chart-student-spot.occupied {
+    background: rgba(255, 255, 255, 0.9) !important;
+    border: 2px solid #333 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Stools and chairs */
+  .seating-chart-stools-container .seating-chart-stool,
+  .seating-chart-stools-container .seating-chart-chair {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Legend */
+  .seating-chart-legend {
+    margin-top: 15px !important;
+  }
+
+  .seating-chart-legend-item span {
+    color: black !important;
+  }
+
+  .seating-chart-legend-color {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Drag ghost cleanup */
+  .seating-chart-drag-ghost {
+    display: none !important;
+  }
 }

@@ -1,5 +1,5 @@
 {
-  "version": "3.27.2",
-  "lastUpdated": "2026-03-10",
-  "description": "Riser Chart: change layout from 5-wide to 3x2 grid"
+  "version": "3.28.1",
+  "lastUpdated": "2026-03-18",
+  "description": "Add Print/Save PDF button to seating chart overlay"
 }
