@@ -1,5 +1,5 @@
 {
-  "version": "3.29.2",
+  "version": "3.30.1",
   "lastUpdated": "2026-03-24",
-  "description": "Add ukulele tuner to manifest.json and fallback module list"
+  "description": "Add GitHub Actions workflow to auto-generate manifest.json from modules folder"
 }

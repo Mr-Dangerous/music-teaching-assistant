@@ -518,11 +518,12 @@ class TeachingAssistantApp {
   }
 
   /**
-   * Fallback method: Load a hardcoded list of known modules
-   * Just loads all modules directly without checking - they're part of the app
+   * Fallback method when manifest.json cannot be fetched (e.g. local file:// access).
+   * In production on GitHub Pages, manifest.json is always present and auto-generated
+   * by the generate-manifest GitHub Actions workflow — this list should never be needed.
+   * If you add a module and the manifest workflow hasn't run yet, add the file here too.
    */
   async loadKnownModules() {
-    // List of all known module files (update this when adding new modules)
     const knownModules = [
       'audio-player.html',
       'boomwhacker_assigner.html',
@@ -530,6 +531,7 @@ class TeachingAssistantApp {
       'dance_viewer.html',
       'edit_student_list.html',
       'pentatonic_composer.html',
+      'pentatonic_trainer.html',
       'presentation_viewer.html',
       'recorder-fingering-modeler.html',
       'results-viewer.html',
@@ -540,15 +542,14 @@ class TeachingAssistantApp {
       'so_la_mi_trainer.html',
       'string.html',
       'student_notes.html',
-      'ukulele-tuner.html'
+      'ukulele-tuner.html',
     ];
 
-    // Just load all modules - they're part of the application, not user data
     const tasks = knownModules.map(moduleFile => {
       const moduleName = moduleFile.replace('.html', '');
       return {
-        task_id: moduleName,
-        question: this.formatModuleName(moduleName),
+        task_id:     moduleName,
+        question:    this.formatModuleName(moduleName),
         module_path: `modules/${moduleFile}`
       };
     });
