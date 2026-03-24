@@ -1,5 +1,5 @@
 {
-  "version": "3.28.1",
-  "lastUpdated": "2026-03-18",
-  "description": "Add Print/Save PDF button to seating chart overlay"
+  "version": "3.29.1",
+  "lastUpdated": "2026-03-24",
+  "description": "Add ukulele tuner module with Tone.js audio and SVG peg animation"
 }
