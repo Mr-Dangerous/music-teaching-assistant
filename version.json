@@ -1,5 +1,5 @@
 {
-  "version": "3.39.1",
+  "version": "3.40.1",
   "lastUpdated": "2026-03-24",
-  "description": "Add snap sound (sawtooth twang + noise burst) and enhanced string snap animation with two pieces flying apart"
+  "description": "Randomise initial peg rotation per string so each peg starts at a unique visual angle, matching real ukulele pegs"
 }

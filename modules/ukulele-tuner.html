@@ -385,6 +385,7 @@ function freshStates() {
     offset:     randomOffset(),
     lastAction: null,
     snapped:    false,
+    pegBase:    Math.floor(Math.random() * 360), // random visual starting angle
   }));
 }
 
@@ -820,7 +821,7 @@ function buildSVG() {
 
 function applyPegAngles() {
   pegGroups.forEach((g, i) => {
-    const angle = Math.max(-180, Math.min(180, states[i].offset));
+    const angle = (states[i].pegBase + states[i].offset) % 360;
     const pp    = PEG_POS[i];
     g.setAttribute('transform', `translate(${pp.x},${pp.y}) rotate(${angle})`);
   });
