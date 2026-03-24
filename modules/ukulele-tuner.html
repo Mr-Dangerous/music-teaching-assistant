@@ -167,6 +167,30 @@
       border-radius: 8px;
       font-size: 13px;
     }
+
+    #snap-msg {
+      display: none;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #7f1d1d;
+      color: #fef2f2;
+      border: 2px solid #ef4444;
+      border-radius: 14px;
+      padding: 14px 22px;
+      font-size: 16px;
+      font-weight: 700;
+      text-align: center;
+      line-height: 1.4;
+      z-index: 100;
+      pointer-events: none;
+      animation: snapPop 0.25s ease-out;
+    }
+    @keyframes snapPop {
+      from { transform: translate(-50%, -50%) scale(0.7); opacity: 0; }
+      to   { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -182,6 +206,7 @@
   <div id="results"></div>
 </div>
 <div id="tone-error">⚠ Audio unavailable — check internet connection</div>
+<div id="snap-msg">🎸 You snapped a string!<br><span style="font-size:13px;font-weight:500">Make sure you are listening.</span></div>
 
 <script>
 'use strict';
@@ -244,6 +269,7 @@ function freshStates() {
     enabled:    true,
     offset:     randomOffset(),
     lastAction: null,
+    snapped:    false,
   }));
 }
 
@@ -366,6 +392,53 @@ function animateStringPluck(idx) {
   stringAnimFrames[idx] = requestAnimationFrame(frame);
 }
 
+let snapMsgTimer = null;
+
+function snapString(idx) {
+  const s = states[idx];
+  s.snapped = true;
+  deactivatePegTurn();
+  stopPlayerNote();
+
+  // Wild snap animation — string flies apart
+  const x = STR_X[idx];
+  const midY = (NUT_Y + NECK_BOT) / 2;
+  if (stringAnimFrames[idx]) cancelAnimationFrame(stringAnimFrames[idx]);
+  const start = performance.now();
+  const dur = 400;
+  function snapFrame(now) {
+    const t = Math.min((now - start) / dur, 1);
+    const amp = 18 * t;
+    visStr[idx].setAttribute('d',
+      `M ${x} ${NUT_Y} Q ${x + amp} ${midY - amp * 2} ${x} ${NECK_BOT}`);
+    if (t < 1) {
+      stringAnimFrames[idx] = requestAnimationFrame(snapFrame);
+    } else {
+      visStr[idx].setAttribute('opacity', '0'); // string disappears
+      delete stringAnimFrames[idx];
+    }
+  }
+  stringAnimFrames[idx] = requestAnimationFrame(snapFrame);
+
+  // Show message
+  const msg = document.getElementById('snap-msg');
+  if (snapMsgTimer) clearTimeout(snapMsgTimer);
+  msg.style.display = 'block';
+
+  // After 2s: re-string at +100 cents (half step too high), hide message
+  snapMsgTimer = setTimeout(() => {
+    msg.style.display = 'none';
+    s.snapped    = false;
+    s.offset     = 100;
+    s.lastAction = null;
+    visStr[idx].setAttribute('d', `M ${x} ${NUT_Y} L ${x} ${NECK_BOT}`);
+    visStr[idx].setAttribute('opacity', '1');
+    applyPegAngles();
+    applyStringVisuals();
+    snapMsgTimer = null;
+  }, 2000);
+}
+
 // ══════════════════════════════════════════════════════════════
 // SVG CONSTRUCTION
 // ══════════════════════════════════════════════════════════════
@@ -434,7 +507,7 @@ function buildSVG() {
     hit.style.cursor = 'pointer';
     // pointerup so a second finger can pluck while peg-turning
     hit.addEventListener('pointerup', (e) => {
-      if (!states[i].enabled) return;
+      if (!states[i].enabled || states[i].snapped) return;
       if (e.pointerId === pegTurn.pointerId) return;
       selectedIdx = i;
       touchString(i);
@@ -610,7 +683,7 @@ function clientToSVG(clientX, clientY) {
 }
 
 function activatePegTurn(idx, pointerId, clientX, clientY) {
-  if (!states[idx].enabled) return;
+  if (!states[idx].enabled || states[idx].snapped) return;
   selectedIdx = idx;
 
   const svgPt = clientToSVG(clientX, clientY);
@@ -823,8 +896,16 @@ svg.addEventListener('pointermove', (e) => {
   const dirMult    = pp.side === 'left' ? -1 : 1;
   const centsDelta = da * CENTS_PER_DEG * dirMult;
 
-  const s  = states[pegTurn.idx];
-  s.offset = Math.max(-300, Math.min(250, s.offset + centsDelta));
+  const s       = states[pegTurn.idx];
+  const newOff  = s.offset + centsDelta;
+
+  // Snap if tuned more than a full step (200 ¢) too high
+  if (newOff > 200) {
+    snapString(pegTurn.idx);
+    return;
+  }
+
+  s.offset = Math.max(-300, newOff);
   if (Math.abs(centsDelta) > 0.01)
     s.lastAction = centsDelta > 0 ? 'up' : 'down';
 

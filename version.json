@@ -1,5 +1,5 @@
 {
-  "version": "3.33.3",
+  "version": "3.34.1",
   "lastUpdated": "2026-03-24",
-  "description": "Increase ukulele tuner SVG rendered size 50% (200x260 to 300x390px CSS)"
+  "description": "Ukulele string snaps if tuned more than a full step (200 cents) too high, with fly-apart animation and warning message"
 }
