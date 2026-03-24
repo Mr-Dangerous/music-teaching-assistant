@@ -286,10 +286,10 @@ function centsToFreq(base, cents) {
 }
 
 // ── Peg turning ────────────────────────────────────────────
-const pegTurn = { active: false, idx: -1, pointerId: null, lastAngle: null };
+const pegTurn = { active: false, overlayOpen: false, idx: -1, pointerId: null, lastAngle: null };
 const longPressTimers  = {};
 const longPressOrigins = {};
-const TRACK_R       = 28;
+const TRACK_R       = 45;
 const CENTS_PER_DEG = 100 / 360; // one semitone per full revolution
 
 // ── String animation ───────────────────────────────────────
@@ -448,12 +448,16 @@ const svg = document.getElementById('uke-svg');
 
 let pegGroups    = [];
 let visStr       = [];
-let trackGroup   = null;
-let trackArcUp   = null;
-let trackArcDown = null;
-let trackThumb   = null;
-let trackLabelUp  = null;
-let trackLabelDown = null;
+let trackGroup      = null;
+let trackArcUp      = null;
+let trackArcDown    = null;
+let trackThumb      = null;
+let trackLabelUp    = null;
+let trackLabelDown  = null;
+let trackArrowGroup = null;
+let arrowAnimFrame  = null;
+let arrowAngle      = 0;
+let arrowDir        = 1; // +1 = CW (right peg), -1 = CCW (left peg)
 
 function mkEl(tag, attrs, parent) {
   const e = document.createElementNS(NS, tag);
@@ -597,21 +601,33 @@ function buildSVG() {
 
   // ── Peg-turn track overlay (hidden until long press) ───
   trackGroup = mkEl('g', { visibility: 'hidden' }, svg);
-  mkEl('circle', { r: TRACK_R + 6, fill: 'rgba(0,0,0,0.52)' }, trackGroup);
+  mkEl('circle', { r: TRACK_R + 14, fill: 'rgba(0,0,0,0.58)' }, trackGroup);
   trackArcUp   = mkEl('path', { fill: 'none', stroke: '#4ade80',
-                                 'stroke-width': 3, 'stroke-linecap': 'round' }, trackGroup);
+                                 'stroke-width': 5, 'stroke-linecap': 'round' }, trackGroup);
   trackArcDown = mkEl('path', { fill: 'none', stroke: '#f87171',
-                                 'stroke-width': 3, 'stroke-linecap': 'round' }, trackGroup);
-  mkEl('circle', { r: TRACK_R, fill: 'none', stroke: 'rgba(255,255,255,0.32)',
-                   'stroke-dasharray': '3,2.5', 'stroke-width': 1.5 }, trackGroup);
+                                 'stroke-width': 5, 'stroke-linecap': 'round' }, trackGroup);
+  mkEl('circle', { r: TRACK_R, fill: 'none', stroke: 'rgba(255,255,255,0.25)',
+                   'stroke-dasharray': '5,4', 'stroke-width': 1.5 }, trackGroup);
+  // Rotating arrows — orbiting in "tune up" direction
+  trackArrowGroup = mkEl('g', {}, trackGroup);
+  for (let i = 0; i < 3; i++) {
+    const θ = i * 120;
+    const ax = TRACK_R * Math.cos(θ * Math.PI / 180);
+    const ay = TRACK_R * Math.sin(θ * Math.PI / 180);
+    mkEl('polygon', {
+      points: '-5,4 0,-9 5,4',
+      fill: '#fbbf24', opacity: '0.9',
+      transform: `translate(${ax.toFixed(1)},${ay.toFixed(1)}) rotate(${θ + 90})`
+    }, trackArrowGroup);
+  }
   trackLabelUp   = mkEl('text', { 'text-anchor': 'middle', 'dominant-baseline': 'middle',
-                                   'font-size': '9', 'font-weight': 'bold',
+                                   'font-size': '13', 'font-weight': 'bold',
                                    fill: '#4ade80' }, trackGroup);
   trackLabelDown = mkEl('text', { 'text-anchor': 'middle', 'dominant-baseline': 'middle',
-                                   'font-size': '9', 'font-weight': 'bold',
+                                   'font-size': '13', 'font-weight': 'bold',
                                    fill: '#f87171' }, trackGroup);
-  trackThumb = mkEl('circle', { r: 5, fill: 'white', stroke: '#1e293b',
-                                 'stroke-width': 1.5, cx: 0, cy: -TRACK_R }, trackGroup);
+  trackThumb = mkEl('circle', { r: 7, fill: 'white', stroke: '#1e293b',
+                                 'stroke-width': 2, cx: 0, cy: -TRACK_R }, trackGroup);
 
   applyPegAngles();
   applyStringVisuals();
@@ -698,12 +714,32 @@ function activatePegTurn(idx, pointerId, clientX, clientY) {
   updateUI();
 }
 
-function deactivatePegTurn() {
+function tickArrows() {
+  arrowAngle = (arrowAngle + arrowDir * 0.4) % 360;
+  if (trackArrowGroup) trackArrowGroup.setAttribute('transform', `rotate(${arrowAngle})`);
+  arrowAnimFrame = requestAnimationFrame(tickArrows);
+}
+
+function startArrowAnim(clockwise) {
+  arrowDir = clockwise ? 1 : -1;
+  if (!arrowAnimFrame) arrowAnimFrame = requestAnimationFrame(tickArrows);
+}
+
+function stopArrowAnim() {
+  if (arrowAnimFrame) { cancelAnimationFrame(arrowAnimFrame); arrowAnimFrame = null; }
+}
+
+// closeOverlay=false: stop drag only (overlay stays); closeOverlay=true: full dismiss
+function deactivatePegTurn(closeOverlay = true) {
   pegTurn.active    = false;
-  pegTurn.idx       = -1;
   pegTurn.pointerId = null;
   pegTurn.lastAngle = null;
-  if (trackGroup) trackGroup.setAttribute('visibility', 'hidden');
+  if (closeOverlay) {
+    pegTurn.overlayOpen = false;
+    pegTurn.idx         = -1;
+    stopArrowAnim();
+    if (trackGroup) trackGroup.setAttribute('visibility', 'hidden');
+  }
 }
 
 function showPegTrackOverlay(idx, initialSvgPt) {
@@ -718,14 +754,17 @@ function showPegTrackOverlay(idx, initialSvgPt) {
   if (isLeft) {
     trackArcUp.setAttribute('d',   `M 0 ${-R} A ${R} ${R} 0 0 0 0 ${R}`);
     trackArcDown.setAttribute('d', `M 0 ${-R} A ${R} ${R} 0 0 1 0 ${R}`);
-    trackLabelUp.setAttribute('x',    String(-(R + 8)));
-    trackLabelDown.setAttribute('x',  String( (R + 8)));
+    trackLabelUp.setAttribute('x',    String(-(R + 18)));
+    trackLabelDown.setAttribute('x',  String( (R + 18)));
+    startArrowAnim(false); // left peg: CCW = tune up
   } else {
     trackArcUp.setAttribute('d',   `M 0 ${-R} A ${R} ${R} 0 0 1 0 ${R}`);
     trackArcDown.setAttribute('d', `M 0 ${-R} A ${R} ${R} 0 0 0 0 ${R}`);
-    trackLabelUp.setAttribute('x',    String( (R + 16)));
-    trackLabelDown.setAttribute('x',  String(-(R + 16)));
+    trackLabelUp.setAttribute('x',    String( (R + 18)));
+    trackLabelDown.setAttribute('x',  String(-(R + 18)));
+    startArrowAnim(true); // right peg: CW = tune up
   }
+  pegTurn.overlayOpen = true;
   trackLabelUp.setAttribute('y',   '0');
   trackLabelDown.setAttribute('y', '0');
   trackLabelUp.textContent   = '+';
@@ -925,13 +964,36 @@ document.addEventListener('pointermove', (e) => {
 
 ['pointerup', 'pointercancel'].forEach(ev => {
   document.addEventListener(ev, (e) => {
-    if (pegTurn.active && e.pointerId === pegTurn.pointerId) deactivatePegTurn();
+    if (pegTurn.active && e.pointerId === pegTurn.pointerId) {
+      // Stop drag tracking but keep overlay visible
+      pegTurn.active    = false;
+      pegTurn.pointerId = null;
+      pegTurn.lastAngle = null;
+    }
   });
 });
 
-// Suppress context menu from long-press; right-click dismisses overlay
+// Dismiss overlay on tap outside track circle; restart drag on tap inside
+document.addEventListener('pointerdown', (e) => {
+  if (!pegTurn.overlayOpen) return;
+  const svgPt = clientToSVG(e.clientX, e.clientY);
+  const pp    = PEG_POS[pegTurn.idx];
+  const dx = svgPt.x - pp.x, dy = svgPt.y - pp.y;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist > TRACK_R + 18) {
+    deactivatePegTurn(true); // outside — close overlay
+  } else if (!pegTurn.active) {
+    // Inside track and not already dragging — start a new drag stroke
+    e.preventDefault();
+    pegTurn.active    = true;
+    pegTurn.pointerId = e.pointerId;
+    pegTurn.lastAngle = Math.atan2(svgPt.y - pp.y, svgPt.x - pp.x) * 180 / Math.PI;
+  }
+}, { capture: true });
+
+// Suppress context menu from long-press
 document.addEventListener('contextmenu', (e) => e.preventDefault());
-svg.addEventListener('contextmenu', () => { if (pegTurn.active) deactivatePegTurn(); });
+svg.addEventListener('contextmenu', () => { if (pegTurn.overlayOpen) deactivatePegTurn(true); });
 
 window.addEventListener('message', e => {
   if (e.data?.type === 'taskmodule:init') window.TaskModule.init(e.data.context || {});

@@ -1,5 +1,5 @@
 {
-  "version": "3.34.2",
+  "version": "3.35.1",
   "lastUpdated": "2026-03-24",
-  "description": "Fix peg turn tracking: move pointermove listener to document so dragging outside SVG bounds still accumulates offset and triggers string snap"
+  "description": "Ukulele tuner: larger peg track overlay (TRACK_R 28→45), 3 animated arrowheads orbiting in tune-up direction, overlay persists after finger release, tap inside track restarts drag without long-press"
 }
