@@ -1,5 +1,5 @@
 {
-  "version": "3.31.2",
+  "version": "3.31.3",
   "lastUpdated": "2026-03-24",
-  "description": "Suppress context menu on ukulele peg long-press; right-click dismisses overlay"
+  "description": "Suppress context menu at document level in ukulele tuner iframe"
 }

@@ -918,10 +918,10 @@ svg.addEventListener('pointermove', (e) => {
   });
 });
 
-// Suppress native context menu on long-press / right-click;
-// also use right-click as a dismiss gesture for the overlay
+// Suppress native context menu everywhere in the iframe (long-press triggers it on touch)
+document.addEventListener('contextmenu', (e) => e.preventDefault());
+// Right-click on SVG also dismisses the peg-turn overlay
 svg.addEventListener('contextmenu', (e) => {
-  e.preventDefault();
   if (pegTurn.active) deactivatePegTurn();
 });
 
