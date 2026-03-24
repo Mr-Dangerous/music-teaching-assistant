@@ -1,5 +1,5 @@
 {
-  "version": "3.34.1",
+  "version": "3.34.2",
   "lastUpdated": "2026-03-24",
-  "description": "Ukulele string snaps if tuned more than a full step (200 cents) too high, with fly-apart animation and warning message"
+  "description": "Fix peg turn tracking: move pointermove listener to document so dragging outside SVG bounds still accumulates offset and triggers string snap"
 }

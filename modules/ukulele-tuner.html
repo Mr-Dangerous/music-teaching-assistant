@@ -878,7 +878,7 @@ window.TaskModule = {
 document.getElementById('check-btn').addEventListener('click', checkIntonation);
 
 // Peg rotation tracking via pointer events on the SVG
-svg.addEventListener('pointermove', (e) => {
+document.addEventListener('pointermove', (e) => {
   if (!pegTurn.active || e.pointerId !== pegTurn.pointerId) return;
   e.preventDefault();
 
