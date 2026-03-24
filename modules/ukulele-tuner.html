@@ -439,6 +439,44 @@ async function initAudio() {
   }).connect(reverb);
 }
 
+function playSnapSound() {
+  // Use raw Web Audio API for a sharp percussive snap/twang
+  const ctx = Tone.getContext().rawContext;
+  const now = ctx.currentTime;
+
+  // Sharp "twang" — descending pitch burst
+  const osc = ctx.createOscillator();
+  const oscGain = ctx.createGain();
+  osc.type = 'sawtooth';
+  osc.frequency.setValueAtTime(1800, now);
+  osc.frequency.exponentialRampToValueAtTime(120, now + 0.18);
+  oscGain.gain.setValueAtTime(0.55, now);
+  oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+  osc.connect(oscGain);
+  oscGain.connect(ctx.destination);
+  osc.start(now);
+  osc.stop(now + 0.22);
+
+  // Short noise burst for the "snap" click
+  const bufLen = ctx.sampleRate * 0.07;
+  const buf = ctx.createBuffer(1, bufLen, ctx.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < bufLen; i++) data[i] = (Math.random() * 2 - 1);
+  const noise = ctx.createBufferSource();
+  noise.buffer = buf;
+  const noiseFilter = ctx.createBiquadFilter();
+  noiseFilter.type = 'bandpass';
+  noiseFilter.frequency.value = 3200;
+  noiseFilter.Q.value = 0.6;
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.setValueAtTime(0.7, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+  noise.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(ctx.destination);
+  noise.start(now);
+}
+
 function touchString(idx) {
   initAudio();
   if (!playerSynth) return;
@@ -518,21 +556,52 @@ function snapString(idx) {
   deactivatePegTurn();
   stopPlayerNote();
 
-  // Wild snap animation — string flies apart
+  // Play snap sound
+  initAudio().then(() => { if (playerSynth) playSnapSound(); });
+
+  // Two-piece snap animation
+  // We hide the original string and show two <path> pieces that fly apart
   const x = STR_X[idx];
-  const midY = (NUT_Y + NECK_BOT) / 2;
+  const snapY = NUT_Y + (NECK_BOT - NUT_Y) * (0.35 + Math.random() * 0.3); // random break point
   if (stringAnimFrames[idx]) cancelAnimationFrame(stringAnimFrames[idx]);
+  visStr[idx].setAttribute('opacity', '0'); // hide original
+
+  // Create two snap-piece paths
+  const piece = [0, 1].map(() => {
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('stroke', visStr[idx].getAttribute('stroke') || '#e8d5a0');
+    p.setAttribute('stroke-width', visStr[idx].getAttribute('stroke-width') || '1.5');
+    p.setAttribute('fill', 'none');
+    p.setAttribute('stroke-linecap', 'round');
+    svg.appendChild(p);
+    return p;
+  });
+
+  const dir = (idx < 2) ? -1 : 1; // fly left for G/C strings, right for E/A
   const start = performance.now();
-  const dur = 400;
+  const dur = 500;
+
   function snapFrame(now) {
     const t = Math.min((now - start) / dur, 1);
-    const amp = 18 * t;
-    visStr[idx].setAttribute('d',
-      `M ${x} ${NUT_Y} Q ${x + amp} ${midY - amp * 2} ${x} ${NECK_BOT}`);
+    const ease = 1 - Math.pow(1 - t, 3); // ease-out cubic
+    const fling = ease * 28 * dir;
+    const curl  = ease * 22;
+    const fade  = Math.max(0, 1 - t * 1.4);
+
+    // Top piece: curls up and away
+    const topMidY = snapY - curl * 1.5;
+    piece[0].setAttribute('d', `M ${x} ${NUT_Y} Q ${x + fling} ${topMidY} ${x + fling * 0.6} ${snapY}`);
+    piece[0].setAttribute('opacity', String(fade));
+
+    // Bottom piece: whips down and away the other direction
+    const botMidY = snapY + curl;
+    piece[1].setAttribute('d', `M ${x - fling * 0.6} ${snapY} Q ${x - fling} ${botMidY} ${x} ${NECK_BOT}`);
+    piece[1].setAttribute('opacity', String(fade));
+
     if (t < 1) {
       stringAnimFrames[idx] = requestAnimationFrame(snapFrame);
     } else {
-      visStr[idx].setAttribute('opacity', '0'); // string disappears
+      piece.forEach(p => p.remove());
       delete stringAnimFrames[idx];
     }
   }

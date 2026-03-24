@@ -1,5 +1,5 @@
 {
-  "version": "3.38.2",
+  "version": "3.39.1",
   "lastUpdated": "2026-03-24",
-  "description": "Reduce auto-tune demo overshoot: sharp-string undershoot target narrowed from -35/-65 to -15/-30 cents"
+  "description": "Add snap sound (sawtooth twang + noise burst) and enhanced string snap animation with two pieces flying apart"
 }
