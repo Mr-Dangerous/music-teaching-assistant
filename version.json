@@ -1,5 +1,5 @@
 {
-  "version": "3.36.1",
+  "version": "3.36.2",
   "lastUpdated": "2026-03-24",
-  "description": "Ukulele tuner: add Set to In-Tune and Auto-Tune Demo buttons with animated peg overlay and sequential strumming"
+  "description": "Ukulele tuner: enhance auto-tune demo with reference pitch playback before/during/after each string tuning"
 }

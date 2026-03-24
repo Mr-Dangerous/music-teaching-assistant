@@ -981,33 +981,31 @@ async function tuneStringDemo(idx) {
   const s       = states[idx];
   const dirMult = pp.side === 'left' ? -1 : 1;
 
-  // Show overlay centred on this peg
+  // Play reference pitch so student hears the target before tuning begins
+  playRef(idx);
+  await sleep(900);
+  if (!demoRunning) return;
+
+  // Show overlay
   pegTurn.idx = idx;
   selectedIdx = idx;
   showPegTrackOverlay(idx, null);
   pegTurn.overlayOpen = true;
 
-  // Set arrow direction to match what we're actually doing
-  //  tuning UP  (offset<0) + left peg  → CCW  → not CW
-  //  tuning UP  (offset<0) + right peg → CW   → CW
-  //  tuning DOWN(offset>0) + left peg  → CW   → CW
-  //  tuning DOWN(offset>0) + right peg → CCW  → not CW
   const tuningUp = s.offset < 0;
   const isLeft   = pp.side === 'left';
   stopArrowAnim();
   startArrowAnim((tuningUp && !isLeft) || (!tuningUp && isLeft));
-
   updateUI();
 
-  // Reset thumb to 12 o'clock
   let thumbAngle = -90;
   trackThumb.setAttribute('cx', '0');
   trackThumb.setAttribute('cy', String(-TRACK_R));
 
-  await sleep(700);
+  await sleep(400);
 
+  let pluckCount = 0;
   while (demoRunning && Math.abs(s.offset) > 2) {
-    // Step size: coarse when far, fine when close
     const stepCents = Math.sign(-s.offset) * (Math.abs(s.offset) > 20 ? 14 : 5);
     const da        = stepCents / (CENTS_PER_DEG * dirMult);
 
@@ -1018,39 +1016,79 @@ async function tuneStringDemo(idx) {
     if (Math.abs(s.offset) < 2) s.offset = 0;
     applyPegAngles();
 
+    pluckCount++;
     touchString(idx);
-    await sleep(520);
+
+    // Every third pluck: also play the reference pitch so you can compare
+    if (pluckCount % 3 === 0) {
+      await sleep(220);
+      if (!demoRunning) break;
+      playRef(idx);
+    }
+
+    await sleep(550);
   }
 
   if (demoRunning) {
     s.offset = 0;
     applyPegAngles();
-    touchString(idx);   // final in-tune pluck
-    await sleep(750);
+    touchString(idx);             // final in-tune pluck
+    await sleep(700);
+    playRef(idx);                 // confirm with reference — they should match now
+    await sleep(900);
   }
 }
 
 async function runAutoTuneDemo() {
   if (demoRunning) {
-    // Second tap = stop demo
     demoRunning = false;
     return;
   }
 
   const outOfTune = STRINGS.filter((_, i) => states[i].enabled && !states[i].snapped &&
                                              Math.abs(states[i].offset) > 2);
-  if (outOfTune.length === 0) return; // nothing to do
+  if (outOfTune.length === 0) return;
 
   demoRunning = true;
   const btn = document.getElementById('autotune-btn');
   btn.textContent = '■ Stop Demo';
 
   try {
+    // ① Play all reference pitches — "this is what we're aiming for"
+    for (let i = 0; i < 4; i++) {
+      if (!demoRunning) break;
+      if (!states[i].enabled || states[i].snapped) continue;
+      playRef(i);
+      await sleep(750);
+    }
+    await sleep(400);
+
+    // ② Play each string as it currently sounds (out of tune)
+    for (let i = 0; i < 4; i++) {
+      if (!demoRunning) break;
+      if (!states[i].enabled || states[i].snapped) continue;
+      touchString(i);
+      await sleep(750);
+    }
+    await sleep(600);
+
+    // ③ Tune each string one at a time
     for (let i = 0; i < 4; i++) {
       if (!demoRunning) break;
       if (!states[i].enabled || states[i].snapped) continue;
       if (Math.abs(states[i].offset) <= 2) continue;
       await tuneStringDemo(i);
+    }
+
+    // ④ Final strum — all four strings in tune
+    if (demoRunning) {
+      deactivatePegTurn(true);
+      await sleep(300);
+      for (let i = 0; i < 4; i++) {
+        if (!states[i].enabled || states[i].snapped) continue;
+        touchString(i);
+        await sleep(480);
+      }
     }
   } finally {
     deactivatePegTurn(true);
