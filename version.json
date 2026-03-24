@@ -1,5 +1,5 @@
 {
-  "version": "3.36.5",
+  "version": "3.37.1",
   "lastUpdated": "2026-03-24",
-  "description": "Fix first note skipped in auto-tune demo by making initAudio() async and awaiting Tone.start() before any notes fire"
+  "description": "Add Regenerate Tuning and Disable Sharp toggle buttons to ukulele tuner options panel"
 }
