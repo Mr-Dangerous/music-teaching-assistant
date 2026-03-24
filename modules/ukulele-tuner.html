@@ -744,6 +744,20 @@ function stopArrowAnim() {
   if (arrowAnimFrame) { cancelAnimationFrame(arrowAnimFrame); arrowAnimFrame = null; }
 }
 
+// Update both orbit direction AND arrowhead orientation in one call
+function setArrowDirection(clockwise) {
+  stopArrowAnim();
+  const rotOffset = clockwise ? 180 : 0; // CW orbit → CW tangent (θ+180); CCW → (θ+0)
+  trackArrows.forEach((arrow, i) => {
+    const θ = i * 120;
+    const ax = TRACK_R * Math.cos(θ * Math.PI / 180);
+    const ay = TRACK_R * Math.sin(θ * Math.PI / 180);
+    arrow.setAttribute('transform',
+      `translate(${ax.toFixed(1)},${ay.toFixed(1)}) rotate(${θ + rotOffset})`);
+  });
+  startArrowAnim(clockwise);
+}
+
 // closeOverlay=false: stop drag only (overlay stays); closeOverlay=true: full dismiss
 function deactivatePegTurn(closeOverlay = true) {
   pegTurn.active    = false;
@@ -980,6 +994,7 @@ async function tuneStringDemo(idx) {
   const pp      = PEG_POS[idx];
   const s       = states[idx];
   const dirMult = pp.side === 'left' ? -1 : 1;
+  const isLeft  = pp.side === 'left';
 
   // Play reference pitch so student hears the target before tuning begins
   playRef(idx);
@@ -989,52 +1004,66 @@ async function tuneStringDemo(idx) {
   // Show overlay
   pegTurn.idx = idx;
   selectedIdx = idx;
-  showPegTrackOverlay(idx, null);
+  showPegTrackOverlay(idx, null); // sets arrows for tune-up direction
   pegTurn.overlayOpen = true;
-
-  const tuningUp = s.offset < 0;
-  const isLeft   = pp.side === 'left';
-  stopArrowAnim();
-  startArrowAnim((tuningUp && !isLeft) || (!tuningUp && isLeft));
   updateUI();
 
   let thumbAngle = -90;
   trackThumb.setAttribute('cx', '0');
   trackThumb.setAttribute('cy', String(-TRACK_R));
-
   await sleep(400);
 
+  // Inner helper: step toward a target offset, plucking each step
+  // Returns updated thumbAngle
   let pluckCount = 0;
-  while (demoRunning && Math.abs(s.offset) > 2) {
-    const stepCents = Math.sign(-s.offset) * (Math.abs(s.offset) > 20 ? 14 : 5);
-    const da        = stepCents / (CENTS_PER_DEG * dirMult);
+  async function stepToward(target) {
+    while (demoRunning) {
+      const remaining = target - s.offset;
+      if (Math.abs(remaining) <= 2) break;
+      const stepCents = Math.sign(remaining) * (Math.abs(remaining) > 20 ? 14 : 5);
+      const da = stepCents / (CENTS_PER_DEG * dirMult);
 
-    await animateThumbArc(thumbAngle, thumbAngle + da, 380);
-    thumbAngle += da;
+      await animateThumbArc(thumbAngle, thumbAngle + da, 380);
+      thumbAngle += da;
 
-    s.offset += stepCents;
-    if (Math.abs(s.offset) < 2) s.offset = 0;
-    applyPegAngles();
+      s.offset += stepCents;
+      if (Math.abs(s.offset - target) < 2) s.offset = target;
+      applyPegAngles();
 
-    pluckCount++;
-    touchString(idx);
-
-    // Every third pluck: also play the reference pitch so you can compare
-    if (pluckCount % 3 === 0) {
-      await sleep(220);
-      if (!demoRunning) break;
-      playRef(idx);
+      pluckCount++;
+      touchString(idx);
+      if (pluckCount % 3 === 0) {
+        await sleep(220);
+        if (!demoRunning) return;
+        playRef(idx);
+      }
+      await sleep(550);
     }
-
-    await sleep(550);
   }
+
+  // ── If SHARP: tune DOWN past reference first, then tune up ──
+  if (s.offset > 2) {
+    // Overshoot flat by 35–65 cents so the final approach is always upward
+    const undershoot = -(35 + Math.floor(Math.random() * 30));
+    setArrowDirection(isLeft); // CW for left peg = tune down; CCW for right = tune down
+    await stepToward(undershoot);
+    if (!demoRunning) return;
+
+    // Brief pause so the direction change is noticeable
+    await sleep(550);
+    if (!demoRunning) return;
+  }
+
+  // ── Tune UP to reference ──
+  setArrowDirection(!isLeft); // CCW for left peg = tune up; CW for right = tune up
+  await stepToward(0);
 
   if (demoRunning) {
     s.offset = 0;
     applyPegAngles();
-    touchString(idx);             // final in-tune pluck
+    touchString(idx);   // final in-tune pluck
     await sleep(700);
-    playRef(idx);                 // confirm with reference — they should match now
+    playRef(idx);       // confirm — they should now match
     await sleep(900);
   }
 }
