@@ -1280,7 +1280,6 @@ document.addEventListener('pointerdown', (e) => {
 
 // Suppress context menu from long-press
 document.addEventListener('contextmenu', (e) => e.preventDefault());
-svg.addEventListener('contextmenu', () => { if (pegTurn.overlayOpen) deactivatePegTurn(true); });
 
 window.addEventListener('message', e => {
   if (e.data?.type === 'taskmodule:init') window.TaskModule.init(e.data.context || {});

@@ -1,5 +1,5 @@
 {
-  "version": "3.37.1",
+  "version": "3.37.2",
   "lastUpdated": "2026-03-24",
-  "description": "Add Regenerate Tuning and Disable Sharp toggle buttons to ukulele tuner options panel"
+  "description": "Fix ukulele tuner peg long-press overlay immediately dismissing due to contextmenu event"
 }
