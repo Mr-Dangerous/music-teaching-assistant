@@ -1,5 +1,5 @@
 {
-  "version": "3.33.2",
+  "version": "3.33.3",
   "lastUpdated": "2026-03-24",
-  "description": "Fix ukulele tuner SVG sizing: set explicit 200x260px dimensions so viewBox reduction takes effect, and add padding-top to wrap container to prevent rotated SVG from overlapping ref buttons"
+  "description": "Increase ukulele tuner SVG rendered size 50% (200x260 to 300x390px CSS)"
 }
