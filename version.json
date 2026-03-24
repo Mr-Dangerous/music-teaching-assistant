@@ -1,5 +1,5 @@
 {
-  "version": "3.32.1",
+  "version": "3.33.1",
   "lastUpdated": "2026-03-24",
-  "description": "Major ukulele tuner redesign: wider neck/head, larger tuning pegs, tilted SVG, string vibration animation, string enable/disable buttons, rotation-aware coordinate conversion"
+  "description": "Reduce ukulele tuner SVG size by 50%: all layout constants (VW, VH, HEAD_*, NECK_*, PEG_R, TRACK_R, PEG_POS offsets) and UI button sizes halved proportionally"
 }

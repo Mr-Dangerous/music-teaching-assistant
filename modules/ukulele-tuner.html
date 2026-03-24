@@ -38,11 +38,11 @@
     }
 
     .ref-btn {
-      width: 64px;
-      height: 48px;
-      border-radius: 14px;
-      border: 3px solid transparent;
-      font-size: 22px;
+      width: 44px;
+      height: 34px;
+      border-radius: 10px;
+      border: 2px solid transparent;
+      font-size: 15px;
       font-weight: 800;
       cursor: pointer;
       color: white;
@@ -95,11 +95,11 @@
     }
 
     .str-toggle {
-      width: 52px;
-      height: 52px;
-      border-radius: 14px;
-      border: 3px solid transparent;
-      font-size: 20px;
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      border: 2px solid transparent;
+      font-size: 14px;
       font-weight: 800;
       cursor: pointer;
       color: white;
@@ -197,30 +197,30 @@ const STRINGS = [
 // SVG LAYOUT CONSTANTS
 // ══════════════════════════════════════════════════════════════
 
-const VW = 400, VH = 520;
-const CX = VW / 2; // 200
+const VW = 200, VH = 260;
+const CX = VW / 2; // 100
 
-const HEAD_X = 115, HEAD_Y = 25,  HEAD_W = 170, HEAD_H = 155;
-const NUT_Y  = HEAD_Y + HEAD_H;   // 180
-const NECK_X = CX - 48;           // 152
-const NECK_W = 96;
-const NECK_BOT = 500;
+const HEAD_X = 58, HEAD_Y = 13,  HEAD_W = 85, HEAD_H = 78;
+const NUT_Y  = HEAD_Y + HEAD_H;   // 91
+const NECK_X = CX - 24;           // 76
+const NECK_W = 48;
+const NECK_BOT = 250;
 
 const STR_X = [
-  NECK_X + NECK_W * 0.18,  // G ≈ 169
-  NECK_X + NECK_W * 0.39,  // C ≈ 189
-  NECK_X + NECK_W * 0.61,  // E ≈ 211
-  NECK_X + NECK_W * 0.82,  // A ≈ 231
+  NECK_X + NECK_W * 0.18,  // G ≈ 85
+  NECK_X + NECK_W * 0.39,  // C ≈ 95
+  NECK_X + NECK_W * 0.61,  // E ≈ 105
+  NECK_X + NECK_W * 0.82,  // A ≈ 115
 ];
 
-const PEG_R = 24; // tuning peg cap radius (doubled from original)
+const PEG_R = 12; // tuning peg cap radius
 
 // G lower-left, C upper-left — matches real instrument layout
 const PEG_POS = [
-  { x: HEAD_X - 70, y: HEAD_Y + 110, side: 'left'  }, // G
-  { x: HEAD_X - 70, y: HEAD_Y + 40,  side: 'left'  }, // C
-  { x: HEAD_X + HEAD_W + 70, y: HEAD_Y + 40,  side: 'right' }, // E
-  { x: HEAD_X + HEAD_W + 70, y: HEAD_Y + 110, side: 'right' }, // A
+  { x: HEAD_X - 35, y: HEAD_Y + 55, side: 'left'  }, // G
+  { x: HEAD_X - 35, y: HEAD_Y + 20, side: 'left'  }, // C
+  { x: HEAD_X + HEAD_W + 35, y: HEAD_Y + 20, side: 'right' }, // E
+  { x: HEAD_X + HEAD_W + 35, y: HEAD_Y + 55, side: 'right' }, // A
 ];
 
 const FRET_RATIOS = [0, 0.0561, 0.1091, 0.1591, 0.2063, 0.2508,
@@ -259,7 +259,7 @@ function centsToFreq(base, cents) {
 const pegTurn = { active: false, idx: -1, pointerId: null, lastAngle: null };
 const longPressTimers  = {};
 const longPressOrigins = {};
-const TRACK_R       = 55;
+const TRACK_R       = 28;
 const CENTS_PER_DEG = 100 / 360; // one semitone per full revolution
 
 // ── String animation ───────────────────────────────────────
@@ -341,7 +341,7 @@ function animateStringPluck(idx) {
   const midY = (NUT_Y + NECK_BOT) / 2;
   const start = performance.now();
   const dur   = 1800;  // ms total
-  const maxA  = 8;     // max lateral displacement in SVG units
+  const maxA  = 4;     // max lateral displacement in SVG units
 
   function frame(now) {
     const t   = Math.min((now - start) / dur, 1);
@@ -425,7 +425,7 @@ function buildSVG() {
     // Wide transparent hitbox for easy touch
     const hit = mkEl('line', {
       x1: x, y1: NUT_Y, x2: x, y2: NECK_BOT,
-      stroke: 'transparent', 'stroke-width': 30,
+      stroke: 'transparent', 'stroke-width': 15,
     }, svg);
     hit.style.cursor = 'pointer';
     // pointerup so a second finger can pluck while peg-turning
@@ -440,18 +440,18 @@ function buildSVG() {
 
   // ── Headstock ──────────────────────────────────────────
   const hp = [
-    `M ${HEAD_X + 18} ${HEAD_Y}`,
-    `Q ${HEAD_X} ${HEAD_Y} ${HEAD_X} ${HEAD_Y + 22}`,
+    `M ${HEAD_X + 9} ${HEAD_Y}`,
+    `Q ${HEAD_X} ${HEAD_Y} ${HEAD_X} ${HEAD_Y + 11}`,
     `L ${HEAD_X} ${HEAD_Y + HEAD_H}`,
     `L ${HEAD_X + HEAD_W} ${HEAD_Y + HEAD_H}`,
-    `L ${HEAD_X + HEAD_W} ${HEAD_Y + 22}`,
-    `Q ${HEAD_X + HEAD_W} ${HEAD_Y} ${HEAD_X + HEAD_W - 18} ${HEAD_Y}`,
+    `L ${HEAD_X + HEAD_W} ${HEAD_Y + 11}`,
+    `Q ${HEAD_X + HEAD_W} ${HEAD_Y} ${HEAD_X + HEAD_W - 9} ${HEAD_Y}`,
     'Z',
   ].join(' ');
   mkEl('path', { d: hp, fill: '#3d1e09', stroke: '#1a0a00', 'stroke-width': 2 }, svg);
   for (let i = 1; i <= 5; i++) {
     const gx = HEAD_X + i * (HEAD_W / 6);
-    mkEl('line', { x1: gx, y1: HEAD_Y + 8, x2: gx, y2: HEAD_Y + HEAD_H - 8,
+    mkEl('line', { x1: gx, y1: HEAD_Y + 4, x2: gx, y2: HEAD_Y + HEAD_H - 4,
                    stroke: 'rgba(255,180,80,0.05)', 'stroke-width': 2 }, svg);
   }
 
@@ -470,7 +470,7 @@ function buildSVG() {
     const edgeX   = pp.side === 'left' ? HEAD_X                  : HEAD_X + HEAD_W;
     const barrelX = pp.side === 'left' ? pp.x + PEG_R + 2        : pp.x - PEG_R - 2;
     mkEl('line', { x1: edgeX, y1: pp.y, x2: barrelX, y2: pp.y,
-                   stroke: '#7a6020', 'stroke-width': 7 }, svg);
+                   stroke: '#7a6020', 'stroke-width': 3.5 }, svg);
   });
 
   // ── Tuning pegs ────────────────────────────────────────
@@ -481,13 +481,13 @@ function buildSVG() {
     // Peg cap
     mkEl('circle', { r: PEG_R, fill: '#C8A830', stroke: '#7a601a', 'stroke-width': 2 }, g);
     // Gloss highlight
-    mkEl('ellipse', { cx: -7, cy: -7, rx: 9, ry: 6,
+    mkEl('ellipse', { cx: -4, cy: -4, rx: 5, ry: 3,
                       fill: 'rgba(255,255,200,0.35)' }, g);
     // Rotation indicator arm — points UP (12 o'clock) when in tune
-    mkEl('line', { x1: 0, y1: 3, x2: 0, y2: -(PEG_R - 5),
-                   stroke: '#2a1400', 'stroke-width': 3.5,
+    mkEl('line', { x1: 0, y1: 1.5, x2: 0, y2: -(PEG_R - 3),
+                   stroke: '#2a1400', 'stroke-width': 2,
                    'stroke-linecap': 'round' }, g);
-    mkEl('circle', { r: 3.5, fill: '#2a1400' }, g);
+    mkEl('circle', { r: 2, fill: '#2a1400' }, g);
 
     pegGroups.push(g);
 
@@ -520,21 +520,21 @@ function buildSVG() {
 
   // ── Peg-turn track overlay (hidden until long press) ───
   trackGroup = mkEl('g', { visibility: 'hidden' }, svg);
-  mkEl('circle', { r: TRACK_R + 12, fill: 'rgba(0,0,0,0.52)' }, trackGroup);
+  mkEl('circle', { r: TRACK_R + 6, fill: 'rgba(0,0,0,0.52)' }, trackGroup);
   trackArcUp   = mkEl('path', { fill: 'none', stroke: '#4ade80',
-                                 'stroke-width': 6, 'stroke-linecap': 'round' }, trackGroup);
+                                 'stroke-width': 3, 'stroke-linecap': 'round' }, trackGroup);
   trackArcDown = mkEl('path', { fill: 'none', stroke: '#f87171',
-                                 'stroke-width': 6, 'stroke-linecap': 'round' }, trackGroup);
+                                 'stroke-width': 3, 'stroke-linecap': 'round' }, trackGroup);
   mkEl('circle', { r: TRACK_R, fill: 'none', stroke: 'rgba(255,255,255,0.32)',
-                   'stroke-dasharray': '6,5', 'stroke-width': 2 }, trackGroup);
+                   'stroke-dasharray': '3,2.5', 'stroke-width': 1.5 }, trackGroup);
   trackLabelUp   = mkEl('text', { 'text-anchor': 'middle', 'dominant-baseline': 'middle',
-                                   'font-size': '16', 'font-weight': 'bold',
+                                   'font-size': '9', 'font-weight': 'bold',
                                    fill: '#4ade80' }, trackGroup);
   trackLabelDown = mkEl('text', { 'text-anchor': 'middle', 'dominant-baseline': 'middle',
-                                   'font-size': '16', 'font-weight': 'bold',
+                                   'font-size': '9', 'font-weight': 'bold',
                                    fill: '#f87171' }, trackGroup);
-  trackThumb = mkEl('circle', { r: 9, fill: 'white', stroke: '#1e293b',
-                                 'stroke-width': 2, cx: 0, cy: -TRACK_R }, trackGroup);
+  trackThumb = mkEl('circle', { r: 5, fill: 'white', stroke: '#1e293b',
+                                 'stroke-width': 1.5, cx: 0, cy: -TRACK_R }, trackGroup);
 
   applyPegAngles();
   applyStringVisuals();
@@ -641,8 +641,8 @@ function showPegTrackOverlay(idx, initialSvgPt) {
   if (isLeft) {
     trackArcUp.setAttribute('d',   `M 0 ${-R} A ${R} ${R} 0 0 0 0 ${R}`);
     trackArcDown.setAttribute('d', `M 0 ${-R} A ${R} ${R} 0 0 1 0 ${R}`);
-    trackLabelUp.setAttribute('x',    String(-(R + 16)));
-    trackLabelDown.setAttribute('x',  String( (R + 16)));
+    trackLabelUp.setAttribute('x',    String(-(R + 8)));
+    trackLabelDown.setAttribute('x',  String( (R + 8)));
   } else {
     trackArcUp.setAttribute('d',   `M 0 ${-R} A ${R} ${R} 0 0 1 0 ${R}`);
     trackArcDown.setAttribute('d', `M 0 ${-R} A ${R} ${R} 0 0 0 0 ${R}`);
