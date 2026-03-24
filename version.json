@@ -1,5 +1,5 @@
 {
-  "version": "3.40.1",
+  "version": "3.41.1",
   "lastUpdated": "2026-03-24",
-  "description": "Randomise initial peg rotation per string so each peg starts at a unique visual angle, matching real ukulele pegs"
+  "description": "Rescale fret positions to fill 82% of neck height, add fret 12, and reposition fingerboard dots to standard ukulele positions (frets 5, 7, 10)"
 }

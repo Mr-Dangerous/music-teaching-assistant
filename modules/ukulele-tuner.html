@@ -364,9 +364,12 @@ const PEG_POS = [
   { x: HEAD_X + HEAD_W + 35, y: HEAD_Y + 55, side: 'right' }, // A
 ];
 
-const FRET_RATIOS = [0, 0.0561, 0.1091, 0.1591, 0.2063, 0.2508,
-                     0.2929, 0.3325, 0.3699, 0.4052, 0.4384, 0.4697];
-const DOT_FRETS = [4, 6, 9];
+// Equal-temperament fret positions scaled so fret 12 sits at ~82% of neck height
+// (real ukulele: frets get progressively closer toward the body)
+const FRET_RATIOS = [0, 0.092, 0.179, 0.261, 0.338, 0.411,
+                     0.480, 0.545, 0.607, 0.665, 0.719, 0.770, 0.820];
+// Standard ukulele dot positions: frets 5, 7, 10 (placed between fret lines)
+const DOT_FRETS = [5, 7, 10];
 
 // ══════════════════════════════════════════════════════════════
 // STATE
@@ -678,8 +681,9 @@ function buildSVG() {
                    'stroke-width': i === 0 ? 6 : 1.8 }, svg);
   });
   DOT_FRETS.forEach(fi => {
-    const y = NUT_Y + FRET_RATIOS[fi] * neckH;
-    mkEl('circle', { cx: CX, cy: y + 16, r: 6, fill: '#c8893a', opacity: 0.75 }, svg);
+    const y1 = NUT_Y + FRET_RATIOS[fi]     * neckH;
+    const y2 = NUT_Y + FRET_RATIOS[fi + 1] * neckH;
+    mkEl('circle', { cx: CX, cy: (y1 + y2) / 2, r: 5, fill: '#c8893a', opacity: 0.75 }, svg);
   });
 
   // ── Strings (path elements enable vibration animation) ──
