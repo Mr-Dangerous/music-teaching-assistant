@@ -455,6 +455,7 @@ let trackThumb      = null;
 let trackLabelUp    = null;
 let trackLabelDown  = null;
 let trackArrowGroup = null;
+let trackArrows     = []; // the 3 arrow polygon elements
 let arrowAnimFrame  = null;
 let arrowAngle      = 0;
 let arrowDir        = 1; // +1 = CW (right peg), -1 = CCW (left peg)
@@ -611,14 +612,11 @@ function buildSVG() {
   // Rotating arrows — orbiting in "tune up" direction
   trackArrowGroup = mkEl('g', {}, trackGroup);
   for (let i = 0; i < 3; i++) {
-    const θ = i * 120;
-    const ax = TRACK_R * Math.cos(θ * Math.PI / 180);
-    const ay = TRACK_R * Math.sin(θ * Math.PI / 180);
-    mkEl('polygon', {
+    const arrow = mkEl('polygon', {
       points: '-5,4 0,-9 5,4',
       fill: '#fbbf24', opacity: '0.9',
-      transform: `translate(${ax.toFixed(1)},${ay.toFixed(1)}) rotate(${θ + 90})`
     }, trackArrowGroup);
+    trackArrows.push(arrow);
   }
   trackLabelUp   = mkEl('text', { 'text-anchor': 'middle', 'dominant-baseline': 'middle',
                                    'font-size': '13', 'font-weight': 'bold',
@@ -764,6 +762,18 @@ function showPegTrackOverlay(idx, initialSvgPt) {
     trackLabelDown.setAttribute('x',  String(-(R + 18)));
     startArrowAnim(true); // right peg: CW = tune up
   }
+
+  // CCW orbit: arrowhead at θ° points in CCW tangent direction = rotate(θ)
+  // CW  orbit: arrowhead at θ° points in CW  tangent direction = rotate(θ+180)
+  const rotOffset = isLeft ? 0 : 180;
+  trackArrows.forEach((arrow, i) => {
+    const θ = i * 120;
+    const ax = TRACK_R * Math.cos(θ * Math.PI / 180);
+    const ay = TRACK_R * Math.sin(θ * Math.PI / 180);
+    arrow.setAttribute('transform',
+      `translate(${ax.toFixed(1)},${ay.toFixed(1)}) rotate(${θ + rotOffset})`);
+  });
+
   pegTurn.overlayOpen = true;
   trackLabelUp.setAttribute('y',   '0');
   trackLabelDown.setAttribute('y', '0');
@@ -973,22 +983,27 @@ document.addEventListener('pointermove', (e) => {
   });
 });
 
-// Dismiss overlay on tap outside track circle; restart drag on tap inside
+// Overlay dismissal and drag-restart on tap
 document.addEventListener('pointerdown', (e) => {
   if (!pegTurn.overlayOpen) return;
-  const svgPt = clientToSVG(e.clientX, e.clientY);
-  const pp    = PEG_POS[pegTurn.idx];
-  const dx = svgPt.x - pp.x, dy = svgPt.y - pp.y;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  if (dist > TRACK_R + 18) {
-    deactivatePegTurn(true); // outside — close overlay
-  } else if (!pegTurn.active) {
-    // Inside track and not already dragging — start a new drag stroke
+
+  const svgPt  = clientToSVG(e.clientX, e.clientY);
+  const pp     = PEG_POS[pegTurn.idx];
+  const dx     = svgPt.x - pp.x, dy = svgPt.y - pp.y;
+  const dist   = Math.sqrt(dx * dx + dy * dy);
+  const onSVG  = e.composedPath().some(el => el === svg);
+
+  if (dist <= TRACK_R + 18 && !pegTurn.active) {
+    // Inside track circle — restart a drag stroke
     e.preventDefault();
     pegTurn.active    = true;
     pegTurn.pointerId = e.pointerId;
-    pegTurn.lastAngle = Math.atan2(svgPt.y - pp.y, svgPt.x - pp.x) * 180 / Math.PI;
+    pegTurn.lastAngle = Math.atan2(dy, dx) * 180 / Math.PI;
+  } else if (!onSVG) {
+    // Tap is completely outside the SVG (e.g. background) — close overlay
+    deactivatePegTurn(true);
   }
+  // Tap on SVG but outside track circle (e.g. string pluck) — keep overlay open
 }, { capture: true });
 
 // Suppress context menu from long-press

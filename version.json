@@ -1,5 +1,5 @@
 {
-  "version": "3.35.1",
+  "version": "3.35.2",
   "lastUpdated": "2026-03-24",
-  "description": "Ukulele tuner: larger peg track overlay (TRACK_R 28→45), 3 animated arrowheads orbiting in tune-up direction, overlay persists after finger release, tap inside track restarts drag without long-press"
+  "description": "Ukulele tuner bug fixes: correct arrow direction for left/right pegs (CCW vs CW tangent), overlay only dismisses on touch outside SVG, arrows positioned dynamically per peg side"
 }
