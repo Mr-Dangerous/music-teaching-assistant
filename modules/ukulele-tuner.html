@@ -73,6 +73,7 @@
     #uke-svg {
       height: 100%;
       width: auto;
+      touch-action: none; /* required for pointer events during peg turning */
     }
 
     /* ── Pitch controls ── */
@@ -227,11 +228,12 @@ const STR_X = [
 ];
 
 // Tuning peg centres: G & C on left, E & A on right
+// G is lower-left, C is upper-left (matching real instrument layout)
 const PEG_POS = [
-  { x: HEAD_X - 44, y: HEAD_Y + 30,  side: 'left'  }, // G
-  { x: HEAD_X - 44, y: HEAD_Y + 90,  side: 'left'  }, // C
-  { x: HEAD_X + HEAD_W + 44, y: HEAD_Y + 30,  side: 'right' }, // E
-  { x: HEAD_X + HEAD_W + 44, y: HEAD_Y + 90,  side: 'right' }, // A
+  { x: HEAD_X - 44, y: HEAD_Y + 90,  side: 'left'  }, // G — lower left
+  { x: HEAD_X - 44, y: HEAD_Y + 30,  side: 'left'  }, // C — upper left
+  { x: HEAD_X + HEAD_W + 44, y: HEAD_Y + 30,  side: 'right' }, // E — upper right
+  { x: HEAD_X + HEAD_W + 44, y: HEAD_Y + 90,  side: 'right' }, // A — lower right
 ];
 
 // Fret positions as fraction of neck length (equal temperament)
@@ -246,6 +248,13 @@ const DOT_FRETS = [4, 6, 9]; // position markers at fret indices
 let selectedIdx = 0;
 let lastResult  = null;
 let checking    = false;
+
+// ── Peg turning state ──────────────────────────────────
+const pegTurn = { active: false, idx: -1, pointerId: null, lastAngle: null };
+const longPressTimers  = {};  // keyed by string index
+const longPressOrigins = {};  // { x, y } per pointerId, for movement threshold
+const TRACK_R       = 35;          // circular track radius in SVG units
+const CENTS_PER_DEG = 100 / 360;  // one semitone per full revolution
 
 function freshStates() {
   return STRINGS.map(() => ({
@@ -357,9 +366,17 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 const NS  = 'http://www.w3.org/2000/svg';
 const svg = document.getElementById('uke-svg');
 
-let pegGroups = [];  // <g> elements rotated for peg angle
-let visStr    = [];  // visible string <line> elements
-let cbElems   = [];  // { bg, mark } checkbox elements per string
+let pegGroups    = [];  // <g> elements rotated for peg angle
+let visStr       = [];  // visible string <line> elements
+let cbElems      = [];  // { bg, mark } checkbox elements per string
+
+// Track overlay elements (populated in buildSVG)
+let trackGroup    = null;
+let trackArcUp    = null;
+let trackArcDown  = null;
+let trackThumb    = null;
+let trackLabelUp  = null;
+let trackLabelDown = null;
 
 function mkEl(tag, attrs, parent) {
   const e = document.createElementNS(NS, tag);
@@ -414,8 +431,10 @@ function buildSVG() {
       stroke: 'transparent', 'stroke-width': 28,
     }, svg);
     hit.style.cursor = 'pointer';
-    hit.addEventListener('click', () => {
+    // Use pointerup so a second finger can pluck a string while peg-turning
+    hit.addEventListener('pointerup', (e) => {
       if (!states[i].enabled) return;
+      if (e.pointerId === pegTurn.pointerId) return; // ignore peg-turn pointer
       selectedIdx = i;
       touchString(i);
       updateUI();
@@ -475,6 +494,32 @@ function buildSVG() {
 
     pegGroups.push(g);
 
+    // ── Long press → circular peg turning ──────────────
+    g.style.cursor = 'grab';
+    g.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      longPressOrigins[e.pointerId] = { x: e.clientX, y: e.clientY };
+      longPressTimers[i] = setTimeout(() => {
+        delete longPressTimers[i];
+        activatePegTurn(i, e.pointerId, e.clientX, e.clientY);
+      }, 350);
+    });
+    g.addEventListener('pointermove', (e) => {
+      if (!longPressTimers[i]) return;
+      const o  = longPressOrigins[e.pointerId] || { x: e.clientX, y: e.clientY };
+      const dx = e.clientX - o.x, dy = e.clientY - o.y;
+      if (dx * dx + dy * dy > 64) { // cancel if moved > 8px before timer fires
+        clearTimeout(longPressTimers[i]);
+        delete longPressTimers[i];
+      }
+    });
+    ['pointerup', 'pointercancel'].forEach(ev => {
+      g.addEventListener(ev, () => {
+        if (longPressTimers[i]) { clearTimeout(longPressTimers[i]); delete longPressTimers[i]; }
+      });
+    });
+
     // ── Instructor checkbox (above each peg) ───────────
     const cbX = pp.x - 10;
     const cbY = pp.y - 30;
@@ -495,6 +540,31 @@ function buildSVG() {
   applyPegAngles();
   applyStringVisuals();
   applyCheckboxVisuals();
+
+  // ── Circular peg-turn track overlay (hidden until long press) ──
+  trackGroup = mkEl('g', { visibility: 'hidden' }, svg);
+
+  // Dark halo so the overlay reads over any background
+  mkEl('circle', { r: TRACK_R + 10, fill: 'rgba(0,0,0,0.50)' }, trackGroup);
+  // Higher-pitch arc (green)
+  trackArcUp   = mkEl('path', { fill: 'none', stroke: '#4ade80',
+                                 'stroke-width': 5, 'stroke-linecap': 'round' }, trackGroup);
+  // Lower-pitch arc (red)
+  trackArcDown = mkEl('path', { fill: 'none', stroke: '#f87171',
+                                 'stroke-width': 5, 'stroke-linecap': 'round' }, trackGroup);
+  // Full dashed track guide
+  mkEl('circle', { r: TRACK_R, fill: 'none', stroke: 'rgba(255,255,255,0.35)',
+                   'stroke-dasharray': '5,4', 'stroke-width': 1.5 }, trackGroup);
+  // Direction labels
+  trackLabelUp   = mkEl('text', { 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+                                   'font-size': '13', 'font-weight': 'bold',
+                                   fill: '#4ade80' }, trackGroup);
+  trackLabelDown = mkEl('text', { 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+                                   'font-size': '13', 'font-weight': 'bold',
+                                   fill: '#f87171' }, trackGroup);
+  // Finger position indicator dot
+  trackThumb = mkEl('circle', { r: 7, fill: 'white', stroke: '#1e293b',
+                                 'stroke-width': 1.5, cx: 0, cy: -TRACK_R }, trackGroup);
 }
 
 // 1 degree per cent of offset — indicator arm at 12 o'clock = in tune
@@ -533,6 +603,81 @@ function toggleString(idx) {
   applyStringVisuals();
   applyCheckboxVisuals();
   updateRefButtons();
+}
+
+// ══════════════════════════════════════════════════════════════
+// PEG TURNING  (circular drag gesture)
+// ══════════════════════════════════════════════════════════════
+
+function clientToSVG(clientX, clientY) {
+  const rect = svg.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left) * (VW / rect.width),
+    y: (clientY - rect.top)  * (VH / rect.height),
+  };
+}
+
+function activatePegTurn(idx, pointerId, clientX, clientY) {
+  if (!states[idx].enabled) return;
+  selectedIdx = idx;
+
+  const svgPt = clientToSVG(clientX, clientY);
+  const pp    = PEG_POS[idx];
+
+  pegTurn.active    = true;
+  pegTurn.idx       = idx;
+  pegTurn.pointerId = pointerId;
+  pegTurn.lastAngle = Math.atan2(svgPt.y - pp.y, svgPt.x - pp.x) * 180 / Math.PI;
+
+  showPegTrackOverlay(idx, svgPt);
+  updateUI();
+}
+
+function deactivatePegTurn() {
+  pegTurn.active    = false;
+  pegTurn.idx       = -1;
+  pegTurn.pointerId = null;
+  pegTurn.lastAngle = null;
+  if (trackGroup) trackGroup.setAttribute('visibility', 'hidden');
+}
+
+function showPegTrackOverlay(idx, initialSvgPt) {
+  const pp     = PEG_POS[idx];
+  const isLeft = pp.side === 'left';
+  const R      = TRACK_R;
+
+  trackGroup.setAttribute('transform', `translate(${pp.x},${pp.y})`);
+
+  // Left peg:  CCW = higher → green arc = left semicircle  (sweep-flag 0 = CCW)
+  // Right peg: CW  = higher → green arc = right semicircle (sweep-flag 1 = CW)
+  if (isLeft) {
+    trackArcUp.setAttribute('d',   `M 0 ${-R} A ${R} ${R} 0 0 0 0 ${R}`);
+    trackArcDown.setAttribute('d', `M 0 ${-R} A ${R} ${R} 0 0 1 0 ${R}`);
+    trackLabelUp.setAttribute('x',    String(-(R + 13)));
+    trackLabelDown.setAttribute('x',  String( (R + 13)));
+  } else {
+    trackArcUp.setAttribute('d',   `M 0 ${-R} A ${R} ${R} 0 0 1 0 ${R}`);
+    trackArcDown.setAttribute('d', `M 0 ${-R} A ${R} ${R} 0 0 0 0 ${R}`);
+    trackLabelUp.setAttribute('x',    String( (R + 13)));
+    trackLabelDown.setAttribute('x',  String(-(R + 13)));
+  }
+  trackLabelUp.setAttribute('y',   '0');
+  trackLabelDown.setAttribute('y', '0');
+  trackLabelUp.textContent   = '+';
+  trackLabelDown.textContent = '−';
+
+  // Snap thumb to initial touch position
+  if (initialSvgPt) {
+    const dx = initialSvgPt.x - pp.x, dy = initialSvgPt.y - pp.y;
+    const d  = Math.sqrt(dx*dx + dy*dy) || 1;
+    trackThumb.setAttribute('cx', String((dx / d) * R));
+    trackThumb.setAttribute('cy', String((dy / d) * R));
+  } else {
+    trackThumb.setAttribute('cx', '0');
+    trackThumb.setAttribute('cy', String(-R));
+  }
+
+  trackGroup.setAttribute('visibility', 'visible');
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -725,6 +870,52 @@ sharpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startHold('
 });
 
 document.getElementById('check-btn').addEventListener('click', checkIntonation);
+
+// ── Peg rotation tracking ───────────────────────────────────
+svg.addEventListener('pointermove', (e) => {
+  if (!pegTurn.active || e.pointerId !== pegTurn.pointerId) return;
+  e.preventDefault();
+
+  const svgPt = clientToSVG(e.clientX, e.clientY);
+  const pp    = PEG_POS[pegTurn.idx];
+  const angle = Math.atan2(svgPt.y - pp.y, svgPt.x - pp.x) * 180 / Math.PI;
+
+  let da = angle - pegTurn.lastAngle;
+  if (da >  180) da -= 360; // normalise to −180…+180
+  if (da < -180) da += 360;
+  pegTurn.lastAngle = angle;
+
+  // Left pegs: CCW (da < 0) = pitch up  → dirMult = −1
+  // Right pegs: CW (da > 0) = pitch up  → dirMult = +1
+  const dirMult    = pp.side === 'left' ? -1 : 1;
+  const centsDelta = da * CENTS_PER_DEG * dirMult;
+
+  const s  = states[pegTurn.idx];
+  s.offset = Math.max(-300, Math.min(250, s.offset + centsDelta));
+  if (Math.abs(centsDelta) > 0.01)
+    s.lastAction = centsDelta > 0 ? 'up' : 'down';
+
+  applyPegAngles();
+
+  // Move thumb dot to current finger position on the track ring
+  const dx = svgPt.x - pp.x, dy = svgPt.y - pp.y;
+  const d  = Math.sqrt(dx*dx + dy*dy) || 1;
+  trackThumb.setAttribute('cx', String((dx / d) * TRACK_R));
+  trackThumb.setAttribute('cy', String((dy / d) * TRACK_R));
+
+  // Glide pitch if this string is currently ringing
+  if (soundingIdx === pegTurn.idx && playerSynth) {
+    playerSynth.frequency.rampTo(
+      centsToFreq(STRINGS[pegTurn.idx].freq, s.offset), 0.02
+    );
+  }
+}, { passive: false });
+
+['pointerup', 'pointercancel'].forEach(ev => {
+  document.addEventListener(ev, (e) => {
+    if (pegTurn.active && e.pointerId === pegTurn.pointerId) deactivatePegTurn();
+  });
+});
 
 window.addEventListener('message', e => {
   if (e.data?.type === 'taskmodule:init') {
