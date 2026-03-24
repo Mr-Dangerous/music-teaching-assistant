@@ -4,7 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ukulele Tuner</title>
-  <!-- Tone.js — requires internet connection -->
   <script src="https://cdn.jsdelivr.net/npm/tone@14/build/Tone.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -31,7 +30,7 @@
       gap: 6px;
     }
 
-    /* ── Reference string buttons (top row) ── */
+    /* ── Reference string buttons ── */
     #ref-buttons {
       display: flex;
       gap: 12px;
@@ -57,60 +56,59 @@
       box-shadow: 0 0 12px rgba(255,255,255,0.3);
     }
 
-    .ref-btn.str-disabled {
-      opacity: 0.28;
-      cursor: default;
+    .ref-btn.str-disabled { opacity: 0.28; cursor: default; }
+
+    /* ── Main area: SVG + string toggles ── */
+    #main-area {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      justify-content: center;
     }
 
-    /* ── Ukulele SVG ── */
     #uke-wrap {
       flex: 1;
       min-height: 0;
       display: flex;
       justify-content: center;
+      overflow: visible;
     }
 
     #uke-svg {
       height: 100%;
       width: auto;
-      touch-action: none; /* required for pointer events during peg turning */
-      -webkit-touch-callout: none; /* suppress iOS long-press callout */
+      touch-action: none;
+      -webkit-touch-callout: none;
+      transform: rotate(15deg);
+      overflow: visible;
     }
 
-    /* ── Pitch controls ── */
-    #controls {
+    /* ── String toggle buttons (right panel) ── */
+    #str-toggles {
       display: flex;
-      align-items: center;
-      gap: 20px;
+      flex-direction: column;
+      gap: 10px;
       flex-shrink: 0;
     }
 
-    .pitch-btn {
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      border: none;
-      font-size: 24px;
-      font-weight: 900;
+    .str-toggle {
+      width: 52px;
+      height: 52px;
+      border-radius: 14px;
+      border: 3px solid transparent;
+      font-size: 20px;
+      font-weight: 800;
       cursor: pointer;
       color: white;
-      transition: transform 0.08s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      line-height: 1;
+      background: rgba(255,255,255,0.1);
+      transition: all 0.15s;
     }
-    .pitch-btn:active { transform: scale(0.88); }
 
-    #btn-flat  { background: linear-gradient(135deg, #b91c1c, #ef4444); }
-    #btn-sharp { background: linear-gradient(135deg, #15803d, #22c55e); }
-
-    #sel-label {
-      font-size: 28px;
-      font-weight: 800;
-      width: 60px;
-      text-align: center;
-    }
+    .str-toggle.active  { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.18); }
+    .str-toggle.inactive { opacity: 0.28; background: rgba(255,255,255,0.04); }
 
     /* ── Check intonation button ── */
     #check-btn {
@@ -125,10 +123,10 @@
       transition: transform 0.1s;
       flex-shrink: 0;
     }
-    #check-btn:active { transform: scale(0.96); }
+    #check-btn:active   { transform: scale(0.96); }
     #check-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
 
-    /* ── Results area ── */
+    /* ── Results ── */
     #results {
       display: flex;
       flex-direction: column;
@@ -139,12 +137,7 @@
       width: 100%;
     }
 
-    .result-row {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      justify-content: center;
-    }
+    .result-row  { display: flex; align-items: center; gap: 10px; justify-content: center; }
 
     .result-pill {
       padding: 5px 16px;
@@ -156,13 +149,8 @@
       text-align: center;
     }
 
-    .tune-up-warn {
-      font-size: 12px;
-      color: #fbbf24;
-      font-style: italic;
-    }
+    .tune-up-warn { font-size: 12px; color: #fbbf24; font-style: italic; }
 
-    /* ── Tone.js load error ── */
     #tone-error {
       display: none;
       position: absolute;
@@ -180,13 +168,11 @@
 <body>
 <div id="app">
   <div id="ref-buttons"></div>
-  <div id="uke-wrap">
-    <svg id="uke-svg" xmlns="http://www.w3.org/2000/svg"></svg>
-  </div>
-  <div id="controls">
-    <button class="pitch-btn" id="btn-flat">♭</button>
-    <div id="sel-label">–</div>
-    <button class="pitch-btn" id="btn-sharp">♯</button>
+  <div id="main-area">
+    <div id="uke-wrap">
+      <svg id="uke-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+    <div id="str-toggles"></div>
   </div>
   <button id="check-btn">Check Intonation</button>
   <div id="results"></div>
@@ -197,50 +183,49 @@
 'use strict';
 
 // ══════════════════════════════════════════════════════════════
-// STRING DEFINITIONS  — standard re-entrant GCEA tuning
+// STRING DEFINITIONS
 // ══════════════════════════════════════════════════════════════
 
 const STRINGS = [
-  { name: 'G', freq: 392.00, color: '#f87171', thickness: 1.9 },
-  { name: 'C', freq: 261.63, color: '#fb923c', thickness: 2.7 },
-  { name: 'E', freq: 329.63, color: '#4ade80', thickness: 2.1 },
-  { name: 'A', freq: 440.00, color: '#60a5fa', thickness: 1.7 },
+  { name: 'G', freq: 392.00, color: '#f87171', thickness: 2.2 },
+  { name: 'C', freq: 261.63, color: '#fb923c', thickness: 3.2 },
+  { name: 'E', freq: 329.63, color: '#4ade80', thickness: 2.5 },
+  { name: 'A', freq: 440.00, color: '#60a5fa', thickness: 2.0 },
 ];
 
 // ══════════════════════════════════════════════════════════════
 // SVG LAYOUT CONSTANTS
 // ══════════════════════════════════════════════════════════════
 
-const VW = 320, VH = 500;
-const CX = VW / 2;
+const VW = 400, VH = 520;
+const CX = VW / 2; // 200
 
-const HEAD_X = 105, HEAD_Y = 22, HEAD_W = 110, HEAD_H = 130;
-const NUT_Y   = HEAD_Y + HEAD_H;    // 152
-const NECK_X  = CX - 35;            // 125
-const NECK_W  = 70;
-const NECK_BOT = 480;
+const HEAD_X = 115, HEAD_Y = 25,  HEAD_W = 170, HEAD_H = 155;
+const NUT_Y  = HEAD_Y + HEAD_H;   // 180
+const NECK_X = CX - 48;           // 152
+const NECK_W = 96;
+const NECK_BOT = 500;
 
-// String x positions — evenly distributed across neck
 const STR_X = [
-  NECK_X + NECK_W * 0.18,  // G ≈ 138
-  NECK_X + NECK_W * 0.39,  // C ≈ 152
-  NECK_X + NECK_W * 0.61,  // E ≈ 168
-  NECK_X + NECK_W * 0.82,  // A ≈ 182
+  NECK_X + NECK_W * 0.18,  // G ≈ 169
+  NECK_X + NECK_W * 0.39,  // C ≈ 189
+  NECK_X + NECK_W * 0.61,  // E ≈ 211
+  NECK_X + NECK_W * 0.82,  // A ≈ 231
 ];
 
-// Tuning peg centres: G & C on left, E & A on right
-// G is lower-left, C is upper-left (matching real instrument layout)
+const PEG_R = 24; // tuning peg cap radius (doubled from original)
+
+// G lower-left, C upper-left — matches real instrument layout
 const PEG_POS = [
-  { x: HEAD_X - 44, y: HEAD_Y + 90,  side: 'left'  }, // G — lower left
-  { x: HEAD_X - 44, y: HEAD_Y + 30,  side: 'left'  }, // C — upper left
-  { x: HEAD_X + HEAD_W + 44, y: HEAD_Y + 30,  side: 'right' }, // E — upper right
-  { x: HEAD_X + HEAD_W + 44, y: HEAD_Y + 90,  side: 'right' }, // A — lower right
+  { x: HEAD_X - 70, y: HEAD_Y + 110, side: 'left'  }, // G
+  { x: HEAD_X - 70, y: HEAD_Y + 40,  side: 'left'  }, // C
+  { x: HEAD_X + HEAD_W + 70, y: HEAD_Y + 40,  side: 'right' }, // E
+  { x: HEAD_X + HEAD_W + 70, y: HEAD_Y + 110, side: 'right' }, // A
 ];
 
-// Fret positions as fraction of neck length (equal temperament)
 const FRET_RATIOS = [0, 0.0561, 0.1091, 0.1591, 0.2063, 0.2508,
                      0.2929, 0.3325, 0.3699, 0.4052, 0.4384, 0.4697];
-const DOT_FRETS = [4, 6, 9]; // position markers at fret indices
+const DOT_FRETS = [4, 6, 9];
 
 // ══════════════════════════════════════════════════════════════
 // STATE
@@ -250,26 +235,17 @@ let selectedIdx = 0;
 let lastResult  = null;
 let checking    = false;
 
-// ── Peg turning state ──────────────────────────────────
-const pegTurn = { active: false, idx: -1, pointerId: null, lastAngle: null };
-const longPressTimers  = {};  // keyed by string index
-const longPressOrigins = {};  // { x, y } per pointerId, for movement threshold
-const TRACK_R       = 35;          // circular track radius in SVG units
-const CENTS_PER_DEG = 100 / 360;  // one semitone per full revolution
-
 function freshStates() {
   return STRINGS.map(() => ({
     enabled:    true,
-    offset:     randomOffset(), // cents from reference
-    lastAction: null,           // 'up' | 'down'
+    offset:     randomOffset(),
+    lastAction: null,
   }));
 }
 
 let states = freshStates();
 
 function randomOffset() {
-  // ~70% chance flat (more natural for real ukuleles), ~30% sharp.
-  // Always at least 12 cents off. Range: -12 to -200 flat, +12 to +100 sharp.
   const flat  = () => -(Math.floor(Math.random() * 189) + 12);
   const sharp = () =>   Math.floor(Math.random() *  89) + 12;
   return Math.random() < 0.7 ? flat() : sharp();
@@ -279,44 +255,41 @@ function centsToFreq(base, cents) {
   return base * Math.pow(2, cents / 1200);
 }
 
+// ── Peg turning ────────────────────────────────────────────
+const pegTurn = { active: false, idx: -1, pointerId: null, lastAngle: null };
+const longPressTimers  = {};
+const longPressOrigins = {};
+const TRACK_R       = 55;
+const CENTS_PER_DEG = 100 / 360; // one semitone per full revolution
+
+// ── String animation ───────────────────────────────────────
+const stringAnimFrames = {};
+
 // ══════════════════════════════════════════════════════════════
 // AUDIO  (Tone.js)
-//   playerSynth — plays student's adjusted pitch; supports live
-//                 frequency glide via frequency.rampTo()
-//   refSynth    — Karplus-Strong pluck for reference pitches
 // ══════════════════════════════════════════════════════════════
 
-let playerSynth  = null;
-let refSynth     = null;
-let reverb       = null;
-let soundingIdx  = -1;   // string index currently ringing in playerSynth
+let playerSynth = null;
+let refSynth    = null;
+let reverb      = null;
+let soundingIdx = -1;
 let releaseTimer = null;
 
 function initAudio() {
   if (playerSynth) return;
-
   if (typeof Tone === 'undefined') {
     document.getElementById('tone-error').style.display = 'block';
     return;
   }
-
   Tone.start();
-
   reverb = new Tone.Reverb({ decay: 1.3, wet: 0.16 }).toDestination();
-
-  // Triangle oscillator with 8 harmonics + plucky envelope
   playerSynth = new Tone.Synth({
     oscillator: { type: 'triangle8' },
     envelope:   { attack: 0.005, decay: 0.55, sustain: 0.07, release: 2.8 },
-    volume:     -4,
+    volume: -4,
   }).connect(reverb);
-
-  // Karplus-Strong pluck — distinctly different timbre for reference
   refSynth = new Tone.PluckSynth({
-    attackNoise: 1.0,
-    dampening:   3600,
-    resonance:   0.97,
-    volume:      -2,
+    attackNoise: 1.0, dampening: 3600, resonance: 0.97, volume: -2,
   }).connect(reverb);
 }
 
@@ -325,15 +298,12 @@ function touchString(idx) {
   if (!playerSynth) return;
 
   const freq = centsToFreq(STRINGS[idx].freq, states[idx].offset);
-
-  // Stop any existing note first
   stopPlayerNote();
-
   playerSynth.triggerAttack(freq);
-  soundingIdx = idx;
-
-  // Auto-release after 2.5 s
+  soundingIdx  = idx;
   releaseTimer = setTimeout(stopPlayerNote, 2500);
+
+  animateStringPluck(idx);
 }
 
 function stopPlayerNote() {
@@ -361,21 +331,50 @@ async function playAllRef() {
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 // ══════════════════════════════════════════════════════════════
+// STRING VIBRATION ANIMATION
+// ══════════════════════════════════════════════════════════════
+
+function animateStringPluck(idx) {
+  if (stringAnimFrames[idx]) cancelAnimationFrame(stringAnimFrames[idx]);
+
+  const x    = STR_X[idx];
+  const midY = (NUT_Y + NECK_BOT) / 2;
+  const start = performance.now();
+  const dur   = 1800;  // ms total
+  const maxA  = 8;     // max lateral displacement in SVG units
+
+  function frame(now) {
+    const t   = Math.min((now - start) / dur, 1);
+    const amp = maxA * Math.pow(1 - t, 1.8);
+    // ~11 oscillation cycles over the duration
+    const w   = amp * Math.sin(t * Math.PI * 22);
+    visStr[idx].setAttribute('d',
+      `M ${x} ${NUT_Y} Q ${x + w} ${midY} ${x} ${NECK_BOT}`
+    );
+    if (t < 1) {
+      stringAnimFrames[idx] = requestAnimationFrame(frame);
+    } else {
+      visStr[idx].setAttribute('d', `M ${x} ${NUT_Y} L ${x} ${NECK_BOT}`);
+      delete stringAnimFrames[idx];
+    }
+  }
+
+  stringAnimFrames[idx] = requestAnimationFrame(frame);
+}
+
+// ══════════════════════════════════════════════════════════════
 // SVG CONSTRUCTION
 // ══════════════════════════════════════════════════════════════
 
 const NS  = 'http://www.w3.org/2000/svg';
 const svg = document.getElementById('uke-svg');
 
-let pegGroups    = [];  // <g> elements rotated for peg angle
-let visStr       = [];  // visible string <line> elements
-let cbElems      = [];  // { bg, mark } checkbox elements per string
-
-// Track overlay elements (populated in buildSVG)
-let trackGroup    = null;
-let trackArcUp    = null;
-let trackArcDown  = null;
-let trackThumb    = null;
+let pegGroups    = [];
+let visStr       = [];
+let trackGroup   = null;
+let trackArcUp   = null;
+let trackArcDown = null;
+let trackThumb   = null;
 let trackLabelUp  = null;
 let trackLabelDown = null;
 
@@ -389,17 +388,16 @@ function mkEl(tag, attrs, parent) {
 function buildSVG() {
   svg.innerHTML = '';
   svg.setAttribute('viewBox', `0 0 ${VW} ${VH}`);
-  pegGroups = []; visStr = []; cbElems = [];
+  pegGroups = []; visStr = [];
 
   const neckH = NECK_BOT - NUT_Y;
 
-  // ── Neck body ──────────────────────────────────────────
+  // ── Neck ───────────────────────────────────────────────
   mkEl('rect', { x: NECK_X, y: NUT_Y, width: NECK_W, height: neckH,
                  fill: '#7c4f1e', rx: 3 }, svg);
-  // Edge shading
-  mkEl('rect', { x: NECK_X,              y: NUT_Y, width: 5, height: neckH,
+  mkEl('rect', { x: NECK_X,              y: NUT_Y, width: 6, height: neckH,
                  fill: 'rgba(0,0,0,0.22)', rx: 2 }, svg);
-  mkEl('rect', { x: NECK_X + NECK_W - 5, y: NUT_Y, width: 5, height: neckH,
+  mkEl('rect', { x: NECK_X + NECK_W - 6, y: NUT_Y, width: 6, height: neckH,
                  fill: 'rgba(0,0,0,0.22)', rx: 2 }, svg);
 
   // ── Frets ──────────────────────────────────────────────
@@ -407,35 +405,33 @@ function buildSVG() {
     const y = NUT_Y + r * neckH;
     mkEl('line', { x1: NECK_X - 2, y1: y, x2: NECK_X + NECK_W + 2, y2: y,
                    stroke: i === 0 ? '#e8d5a0' : '#bbb',
-                   'stroke-width': i === 0 ? 5 : 1.5 }, svg);
+                   'stroke-width': i === 0 ? 6 : 1.8 }, svg);
   });
-
-  // Fret position dots
   DOT_FRETS.forEach(fi => {
     const y = NUT_Y + FRET_RATIOS[fi] * neckH;
-    mkEl('circle', { cx: CX, cy: y + 14, r: 5,
-                     fill: '#c8893a', opacity: 0.75 }, svg);
+    mkEl('circle', { cx: CX, cy: y + 16, r: 6, fill: '#c8893a', opacity: 0.75 }, svg);
   });
 
-  // ── Strings ────────────────────────────────────────────
+  // ── Strings (path elements enable vibration animation) ──
   STRINGS.forEach((s, i) => {
-    const x    = STR_X[i];
-    const line = mkEl('line', {
-      x1: x, y1: NUT_Y, x2: x, y2: NECK_BOT,
-      stroke: s.color, 'stroke-width': s.thickness, 'stroke-linecap': 'round',
+    const x = STR_X[i];
+    const path = mkEl('path', {
+      d: `M ${x} ${NUT_Y} L ${x} ${NECK_BOT}`,
+      stroke: s.color, 'stroke-width': s.thickness,
+      'stroke-linecap': 'round', fill: 'none',
     }, svg);
-    visStr.push(line);
+    visStr.push(path);
 
     // Wide transparent hitbox for easy touch
     const hit = mkEl('line', {
       x1: x, y1: NUT_Y, x2: x, y2: NECK_BOT,
-      stroke: 'transparent', 'stroke-width': 28,
+      stroke: 'transparent', 'stroke-width': 30,
     }, svg);
     hit.style.cursor = 'pointer';
-    // Use pointerup so a second finger can pluck a string while peg-turning
+    // pointerup so a second finger can pluck while peg-turning
     hit.addEventListener('pointerup', (e) => {
       if (!states[i].enabled) return;
-      if (e.pointerId === pegTurn.pointerId) return; // ignore peg-turn pointer
+      if (e.pointerId === pegTurn.pointerId) return;
       selectedIdx = i;
       touchString(i);
       updateUI();
@@ -444,21 +440,19 @@ function buildSVG() {
 
   // ── Headstock ──────────────────────────────────────────
   const hp = [
-    `M ${HEAD_X + 16} ${HEAD_Y}`,
-    `Q ${HEAD_X} ${HEAD_Y} ${HEAD_X} ${HEAD_Y + 20}`,
+    `M ${HEAD_X + 18} ${HEAD_Y}`,
+    `Q ${HEAD_X} ${HEAD_Y} ${HEAD_X} ${HEAD_Y + 22}`,
     `L ${HEAD_X} ${HEAD_Y + HEAD_H}`,
     `L ${HEAD_X + HEAD_W} ${HEAD_Y + HEAD_H}`,
-    `L ${HEAD_X + HEAD_W} ${HEAD_Y + 20}`,
-    `Q ${HEAD_X + HEAD_W} ${HEAD_Y} ${HEAD_X + HEAD_W - 16} ${HEAD_Y}`,
+    `L ${HEAD_X + HEAD_W} ${HEAD_Y + 22}`,
+    `Q ${HEAD_X + HEAD_W} ${HEAD_Y} ${HEAD_X + HEAD_W - 18} ${HEAD_Y}`,
     'Z',
   ].join(' ');
   mkEl('path', { d: hp, fill: '#3d1e09', stroke: '#1a0a00', 'stroke-width': 2 }, svg);
-
-  // Subtle wood grain
-  for (let i = 1; i <= 4; i++) {
-    const gx = HEAD_X + i * (HEAD_W / 5);
+  for (let i = 1; i <= 5; i++) {
+    const gx = HEAD_X + i * (HEAD_W / 6);
     mkEl('line', { x1: gx, y1: HEAD_Y + 8, x2: gx, y2: HEAD_Y + HEAD_H - 8,
-                   stroke: 'rgba(255,180,80,0.055)', 'stroke-width': 2 }, svg);
+                   stroke: 'rgba(255,180,80,0.05)', 'stroke-width': 2 }, svg);
   }
 
   // ── String channels: nut → headstock interior ──────────
@@ -466,17 +460,17 @@ function buildSVG() {
     const pp    = PEG_POS[i];
     const edgeX = pp.side === 'left' ? HEAD_X : HEAD_X + HEAD_W;
     mkEl('line', { x1: STR_X[i], y1: NUT_Y, x2: edgeX, y2: pp.y,
-                   stroke: s.color, 'stroke-width': 1.4,
+                   stroke: s.color, 'stroke-width': 1.5,
                    'stroke-dasharray': '4,3', opacity: 0.5 }, svg);
   });
 
   // ── Peg posts: headstock edge → barrel ─────────────────
   STRINGS.forEach((_, i) => {
     const pp      = PEG_POS[i];
-    const edgeX   = pp.side === 'left' ? HEAD_X          : HEAD_X + HEAD_W;
-    const barrelX = pp.side === 'left' ? pp.x + 13       : pp.x - 13;
+    const edgeX   = pp.side === 'left' ? HEAD_X                  : HEAD_X + HEAD_W;
+    const barrelX = pp.side === 'left' ? pp.x + PEG_R + 2        : pp.x - PEG_R - 2;
     mkEl('line', { x1: edgeX, y1: pp.y, x2: barrelX, y2: pp.y,
-                   stroke: '#7a6020', 'stroke-width': 5 }, svg);
+                   stroke: '#7a6020', 'stroke-width': 7 }, svg);
   });
 
   // ── Tuning pegs ────────────────────────────────────────
@@ -484,18 +478,20 @@ function buildSVG() {
     const pp = PEG_POS[i];
     const g  = mkEl('g', { transform: `translate(${pp.x},${pp.y})` }, svg);
 
-    // Peg cap (circle face)
-    mkEl('circle', { r: 12, fill: '#C8A830', stroke: '#7a601a', 'stroke-width': 1.5 }, g);
-    // Glossy highlight
-    mkEl('ellipse', { cx: -4, cy: -4, rx: 5, ry: 3, fill: 'rgba(255,255,200,0.38)' }, g);
-    // Rotation indicator arm — points UP when in tune (offset = 0)
-    mkEl('line', { x1: 0, y1: 2, x2: 0, y2: -9,
-                   stroke: '#2a1400', 'stroke-width': 2.5, 'stroke-linecap': 'round' }, g);
-    mkEl('circle', { r: 2, fill: '#2a1400' }, g);
+    // Peg cap
+    mkEl('circle', { r: PEG_R, fill: '#C8A830', stroke: '#7a601a', 'stroke-width': 2 }, g);
+    // Gloss highlight
+    mkEl('ellipse', { cx: -7, cy: -7, rx: 9, ry: 6,
+                      fill: 'rgba(255,255,200,0.35)' }, g);
+    // Rotation indicator arm — points UP (12 o'clock) when in tune
+    mkEl('line', { x1: 0, y1: 3, x2: 0, y2: -(PEG_R - 5),
+                   stroke: '#2a1400', 'stroke-width': 3.5,
+                   'stroke-linecap': 'round' }, g);
+    mkEl('circle', { r: 3.5, fill: '#2a1400' }, g);
 
     pegGroups.push(g);
 
-    // ── Long press → circular peg turning ──────────────
+    // Long press activates circular peg-turning gesture
     g.style.cursor = 'grab';
     g.addEventListener('pointerdown', (e) => {
       e.preventDefault();
@@ -510,7 +506,7 @@ function buildSVG() {
       if (!longPressTimers[i]) return;
       const o  = longPressOrigins[e.pointerId] || { x: e.clientX, y: e.clientY };
       const dx = e.clientX - o.x, dy = e.clientY - o.y;
-      if (dx * dx + dy * dy > 64) { // cancel if moved > 8px before timer fires
+      if (dx * dx + dy * dy > 64) { // cancel if moved > 8 px
         clearTimeout(longPressTimers[i]);
         delete longPressTimers[i];
       }
@@ -520,55 +516,30 @@ function buildSVG() {
         if (longPressTimers[i]) { clearTimeout(longPressTimers[i]); delete longPressTimers[i]; }
       });
     });
-
-    // ── Instructor checkbox (above each peg) ───────────
-    const cbX = pp.x - 10;
-    const cbY = pp.y - 30;
-
-    const cbG = mkEl('g', {}, svg);
-    cbG.style.cursor = 'pointer';
-    cbG.addEventListener('click', () => toggleString(i));
-
-    const bg   = mkEl('rect',  { x: cbX, y: cbY, width: 20, height: 20, rx: 4,
-                                  fill: 'white', stroke: '#475569', 'stroke-width': 1.5 }, cbG);
-    const mark = mkEl('text',  { x: cbX + 10, y: cbY + 15, 'text-anchor': 'middle',
-                                  'font-size': '14', 'font-weight': 'bold', fill: '#16a34a' }, cbG);
-    mark.textContent = '✓';
-
-    cbElems.push({ bg, mark });
   });
+
+  // ── Peg-turn track overlay (hidden until long press) ───
+  trackGroup = mkEl('g', { visibility: 'hidden' }, svg);
+  mkEl('circle', { r: TRACK_R + 12, fill: 'rgba(0,0,0,0.52)' }, trackGroup);
+  trackArcUp   = mkEl('path', { fill: 'none', stroke: '#4ade80',
+                                 'stroke-width': 6, 'stroke-linecap': 'round' }, trackGroup);
+  trackArcDown = mkEl('path', { fill: 'none', stroke: '#f87171',
+                                 'stroke-width': 6, 'stroke-linecap': 'round' }, trackGroup);
+  mkEl('circle', { r: TRACK_R, fill: 'none', stroke: 'rgba(255,255,255,0.32)',
+                   'stroke-dasharray': '6,5', 'stroke-width': 2 }, trackGroup);
+  trackLabelUp   = mkEl('text', { 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+                                   'font-size': '16', 'font-weight': 'bold',
+                                   fill: '#4ade80' }, trackGroup);
+  trackLabelDown = mkEl('text', { 'text-anchor': 'middle', 'dominant-baseline': 'middle',
+                                   'font-size': '16', 'font-weight': 'bold',
+                                   fill: '#f87171' }, trackGroup);
+  trackThumb = mkEl('circle', { r: 9, fill: 'white', stroke: '#1e293b',
+                                 'stroke-width': 2, cx: 0, cy: -TRACK_R }, trackGroup);
 
   applyPegAngles();
   applyStringVisuals();
-  applyCheckboxVisuals();
-
-  // ── Circular peg-turn track overlay (hidden until long press) ──
-  trackGroup = mkEl('g', { visibility: 'hidden' }, svg);
-
-  // Dark halo so the overlay reads over any background
-  mkEl('circle', { r: TRACK_R + 10, fill: 'rgba(0,0,0,0.50)' }, trackGroup);
-  // Higher-pitch arc (green)
-  trackArcUp   = mkEl('path', { fill: 'none', stroke: '#4ade80',
-                                 'stroke-width': 5, 'stroke-linecap': 'round' }, trackGroup);
-  // Lower-pitch arc (red)
-  trackArcDown = mkEl('path', { fill: 'none', stroke: '#f87171',
-                                 'stroke-width': 5, 'stroke-linecap': 'round' }, trackGroup);
-  // Full dashed track guide
-  mkEl('circle', { r: TRACK_R, fill: 'none', stroke: 'rgba(255,255,255,0.35)',
-                   'stroke-dasharray': '5,4', 'stroke-width': 1.5 }, trackGroup);
-  // Direction labels
-  trackLabelUp   = mkEl('text', { 'text-anchor': 'middle', 'dominant-baseline': 'middle',
-                                   'font-size': '13', 'font-weight': 'bold',
-                                   fill: '#4ade80' }, trackGroup);
-  trackLabelDown = mkEl('text', { 'text-anchor': 'middle', 'dominant-baseline': 'middle',
-                                   'font-size': '13', 'font-weight': 'bold',
-                                   fill: '#f87171' }, trackGroup);
-  // Finger position indicator dot
-  trackThumb = mkEl('circle', { r: 7, fill: 'white', stroke: '#1e293b',
-                                 'stroke-width': 1.5, cx: 0, cy: -TRACK_R }, trackGroup);
 }
 
-// 1 degree per cent of offset — indicator arm at 12 o'clock = in tune
 function applyPegAngles() {
   pegGroups.forEach((g, i) => {
     const angle = Math.max(-180, Math.min(180, states[i].offset));
@@ -579,21 +550,37 @@ function applyPegAngles() {
 
 function applyStringVisuals() {
   STRINGS.forEach((s, i) => {
-    visStr[i].setAttribute('stroke',  states[i].enabled ? s.color   : '#334155');
-    visStr[i].setAttribute('opacity', states[i].enabled ? '1'       : '0.25');
-  });
-}
-
-function applyCheckboxVisuals() {
-  cbElems.forEach(({ bg, mark }, i) => {
-    const on = states[i].enabled;
-    bg.setAttribute('fill',   on ? 'white'    : '#1e293b');
-    mark.setAttribute('fill', on ? '#16a34a'  : 'transparent');
+    visStr[i].setAttribute('stroke',  states[i].enabled ? s.color  : '#334155');
+    visStr[i].setAttribute('opacity', states[i].enabled ? '1'      : '0.25');
   });
 }
 
 // ══════════════════════════════════════════════════════════════
-// STRING TOGGLE  (instructor control)
+// STRING TOGGLE BUTTONS  (right panel)
+// ══════════════════════════════════════════════════════════════
+
+function buildStrToggles() {
+  const cont = document.getElementById('str-toggles');
+  cont.innerHTML = '';
+  STRINGS.forEach((s, i) => {
+    const btn = document.createElement('button');
+    btn.className        = 'str-toggle active';
+    btn.textContent      = s.name;
+    btn.style.color      = s.color;
+    btn.addEventListener('click', () => toggleString(i));
+    cont.appendChild(btn);
+  });
+}
+
+function updateStrToggles() {
+  document.querySelectorAll('.str-toggle').forEach((btn, i) => {
+    btn.classList.toggle('active',   states[i].enabled);
+    btn.classList.toggle('inactive', !states[i].enabled);
+  });
+}
+
+// ══════════════════════════════════════════════════════════════
+// STRING TOGGLE
 // ══════════════════════════════════════════════════════════════
 
 function toggleString(idx) {
@@ -602,7 +589,7 @@ function toggleString(idx) {
   states[idx].lastAction = null;
   applyPegAngles();
   applyStringVisuals();
-  applyCheckboxVisuals();
+  updateStrToggles();
   updateRefButtons();
 }
 
@@ -611,11 +598,11 @@ function toggleString(idx) {
 // ══════════════════════════════════════════════════════════════
 
 function clientToSVG(clientX, clientY) {
-  const rect = svg.getBoundingClientRect();
-  return {
-    x: (clientX - rect.left) * (VW / rect.width),
-    y: (clientY - rect.top)  * (VH / rect.height),
-  };
+  // getScreenCTM accounts for CSS transforms (including the 15° rotation)
+  const pt = svg.createSVGPoint();
+  pt.x = clientX;
+  pt.y = clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
 }
 
 function activatePegTurn(idx, pointerId, clientX, clientY) {
@@ -649,28 +636,27 @@ function showPegTrackOverlay(idx, initialSvgPt) {
 
   trackGroup.setAttribute('transform', `translate(${pp.x},${pp.y})`);
 
-  // Left peg:  CCW = higher → green arc = left semicircle  (sweep-flag 0 = CCW)
-  // Right peg: CW  = higher → green arc = right semicircle (sweep-flag 1 = CW)
+  // Left:  CCW = higher → green = left semicircle  (SVG sweep=0)
+  // Right: CW  = higher → green = right semicircle (SVG sweep=1)
   if (isLeft) {
     trackArcUp.setAttribute('d',   `M 0 ${-R} A ${R} ${R} 0 0 0 0 ${R}`);
     trackArcDown.setAttribute('d', `M 0 ${-R} A ${R} ${R} 0 0 1 0 ${R}`);
-    trackLabelUp.setAttribute('x',    String(-(R + 13)));
-    trackLabelDown.setAttribute('x',  String( (R + 13)));
+    trackLabelUp.setAttribute('x',    String(-(R + 16)));
+    trackLabelDown.setAttribute('x',  String( (R + 16)));
   } else {
     trackArcUp.setAttribute('d',   `M 0 ${-R} A ${R} ${R} 0 0 1 0 ${R}`);
     trackArcDown.setAttribute('d', `M 0 ${-R} A ${R} ${R} 0 0 0 0 ${R}`);
-    trackLabelUp.setAttribute('x',    String( (R + 13)));
-    trackLabelDown.setAttribute('x',  String(-(R + 13)));
+    trackLabelUp.setAttribute('x',    String( (R + 16)));
+    trackLabelDown.setAttribute('x',  String(-(R + 16)));
   }
   trackLabelUp.setAttribute('y',   '0');
   trackLabelDown.setAttribute('y', '0');
   trackLabelUp.textContent   = '+';
   trackLabelDown.textContent = '−';
 
-  // Snap thumb to initial touch position
   if (initialSvgPt) {
     const dx = initialSvgPt.x - pp.x, dy = initialSvgPt.y - pp.y;
-    const d  = Math.sqrt(dx*dx + dy*dy) || 1;
+    const d  = Math.sqrt(dx * dx + dy * dy) || 1;
     trackThumb.setAttribute('cx', String((dx / d) * R));
     trackThumb.setAttribute('cy', String((dy / d) * R));
   } else {
@@ -679,37 +665,6 @@ function showPegTrackOverlay(idx, initialSvgPt) {
   }
 
   trackGroup.setAttribute('visibility', 'visible');
-}
-
-// ══════════════════════════════════════════════════════════════
-// PITCH ADJUSTMENT
-// ══════════════════════════════════════════════════════════════
-
-function adjustPitch(dir) {
-  const s = states[selectedIdx];
-  if (!s.enabled) return;
-
-  s.offset    = Math.max(-300, Math.min(250, s.offset + (dir === 'up' ? 1 : -1)));
-  s.lastAction = dir;
-
-  applyPegAngles();
-
-  // If this string is currently ringing, glide its pitch in real time
-  if (soundingIdx === selectedIdx && playerSynth) {
-    const newFreq = centsToFreq(STRINGS[selectedIdx].freq, s.offset);
-    playerSynth.frequency.rampTo(newFreq, 0.03);
-  }
-}
-
-let holdTimer = null;
-
-function startHold(dir) {
-  adjustPitch(dir);
-  holdTimer = setInterval(() => adjustPitch(dir), 65);
-}
-
-function stopHold() {
-  if (holdTimer) { clearInterval(holdTimer); holdTimer = null; }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -729,7 +684,6 @@ async function checkIntonation() {
 
   const container = document.getElementById('results');
   container.innerHTML = '';
-
   const parts = [];
 
   STRINGS.forEach((s, i) => {
@@ -748,12 +702,11 @@ async function checkIntonation() {
     row.className = 'result-row';
 
     const pill = document.createElement('div');
-    pill.className      = 'result-pill';
+    pill.className        = 'result-pill';
     pill.style.background = bg;
-    pill.textContent    = `${s.name} ${icon}  ${score} pts`;
+    pill.textContent      = `${s.name} ${icon}  ${score} pts`;
     row.appendChild(pill);
 
-    // Warn if the student tuned DOWN to reach the target
     if (ab <= 10 && down) {
       const w = document.createElement('span');
       w.className   = 'tune-up-warn';
@@ -808,18 +761,8 @@ function updateRefButtons() {
 
 function updateUI() {
   updateRefButtons();
-
-  const label = document.getElementById('sel-label');
-  label.textContent = STRINGS[selectedIdx].name;
-  label.style.color = states[selectedIdx].enabled
-    ? STRINGS[selectedIdx].color : '#475569';
-
-  const active = states[selectedIdx].enabled;
-  document.getElementById('btn-flat').style.opacity  = active ? '1' : '0.3';
-  document.getElementById('btn-sharp').style.opacity = active ? '1' : '0.3';
-
+  updateStrToggles();
   applyStringVisuals();
-  applyCheckboxVisuals();
   applyPegAngles();
 }
 
@@ -840,12 +783,11 @@ window.TaskModule = {
     lastResult = null;
     states     = freshStates();
     buildRefButtons();
+    buildStrToggles();
     buildSVG();
     updateUI();
     document.getElementById('results').innerHTML = '';
-    if (context?.existingResponse) {
-      lastResult = context.existingResponse;
-    }
+    if (context?.existingResponse) lastResult = context.existingResponse;
   },
   getResponse() { return lastResult || ''; },
   isComplete()  { return !!lastResult; },
@@ -856,23 +798,9 @@ window.TaskModule = {
 // EVENTS
 // ══════════════════════════════════════════════════════════════
 
-const flatBtn  = document.getElementById('btn-flat');
-const sharpBtn = document.getElementById('btn-sharp');
-
-// Hold-to-repeat for pitch buttons (no sound during repeat — only on string touch)
-flatBtn.addEventListener('mousedown',   () => startHold('down'));
-flatBtn.addEventListener('touchstart',  (e) => { e.preventDefault(); startHold('down'); }, { passive: false });
-sharpBtn.addEventListener('mousedown',  () => startHold('up'));
-sharpBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startHold('up'); },  { passive: false });
-
-['mouseup', 'mouseleave', 'touchend', 'touchcancel'].forEach(ev => {
-  flatBtn.addEventListener(ev,  stopHold);
-  sharpBtn.addEventListener(ev, stopHold);
-});
-
 document.getElementById('check-btn').addEventListener('click', checkIntonation);
 
-// ── Peg rotation tracking ───────────────────────────────────
+// Peg rotation tracking via pointer events on the SVG
 svg.addEventListener('pointermove', (e) => {
   if (!pegTurn.active || e.pointerId !== pegTurn.pointerId) return;
   e.preventDefault();
@@ -882,12 +810,12 @@ svg.addEventListener('pointermove', (e) => {
   const angle = Math.atan2(svgPt.y - pp.y, svgPt.x - pp.x) * 180 / Math.PI;
 
   let da = angle - pegTurn.lastAngle;
-  if (da >  180) da -= 360; // normalise to −180…+180
+  if (da >  180) da -= 360;
   if (da < -180) da += 360;
   pegTurn.lastAngle = angle;
 
-  // Left pegs: CCW (da < 0) = pitch up  → dirMult = −1
-  // Right pegs: CW (da > 0) = pitch up  → dirMult = +1
+  // Left peg: CCW (da<0) = pitch up → dirMult = −1
+  // Right peg: CW  (da>0) = pitch up → dirMult = +1
   const dirMult    = pp.side === 'left' ? -1 : 1;
   const centsDelta = da * CENTS_PER_DEG * dirMult;
 
@@ -898,13 +826,11 @@ svg.addEventListener('pointermove', (e) => {
 
   applyPegAngles();
 
-  // Move thumb dot to current finger position on the track ring
   const dx = svgPt.x - pp.x, dy = svgPt.y - pp.y;
-  const d  = Math.sqrt(dx*dx + dy*dy) || 1;
+  const d  = Math.sqrt(dx * dx + dy * dy) || 1;
   trackThumb.setAttribute('cx', String((dx / d) * TRACK_R));
   trackThumb.setAttribute('cy', String((dy / d) * TRACK_R));
 
-  // Glide pitch if this string is currently ringing
   if (soundingIdx === pegTurn.idx && playerSynth) {
     playerSynth.frequency.rampTo(
       centsToFreq(STRINGS[pegTurn.idx].freq, s.offset), 0.02
@@ -918,17 +844,12 @@ svg.addEventListener('pointermove', (e) => {
   });
 });
 
-// Suppress native context menu everywhere in the iframe (long-press triggers it on touch)
+// Suppress context menu from long-press; right-click dismisses overlay
 document.addEventListener('contextmenu', (e) => e.preventDefault());
-// Right-click on SVG also dismisses the peg-turn overlay
-svg.addEventListener('contextmenu', (e) => {
-  if (pegTurn.active) deactivatePegTurn();
-});
+svg.addEventListener('contextmenu', () => { if (pegTurn.active) deactivatePegTurn(); });
 
 window.addEventListener('message', e => {
-  if (e.data?.type === 'taskmodule:init') {
-    window.TaskModule.init(e.data.context || {});
-  }
+  if (e.data?.type === 'taskmodule:init') window.TaskModule.init(e.data.context || {});
 });
 
 // ══════════════════════════════════════════════════════════════
@@ -936,6 +857,7 @@ window.addEventListener('message', e => {
 // ══════════════════════════════════════════════════════════════
 
 buildRefButtons();
+buildStrToggles();
 buildSVG();
 updateUI();
 </script>
