@@ -321,13 +321,13 @@ let reverb      = null;
 let soundingIdx = -1;
 let releaseTimer = null;
 
-function initAudio() {
+async function initAudio() {
   if (playerSynth) return;
   if (typeof Tone === 'undefined') {
     document.getElementById('tone-error').style.display = 'block';
     return;
   }
-  Tone.start();
+  await Tone.start(); // wait for AudioContext to move from 'suspended' → 'running'
   reverb = new Tone.Reverb({ decay: 1.3, wet: 0.16 }).toDestination();
   playerSynth = new Tone.Synth({
     oscillator: { type: 'triangle8' },
@@ -956,8 +956,9 @@ window.TaskModule = {
 // SET TO IN-TUNE  &  AUTO-TUNE DEMO
 // ══════════════════════════════════════════════════════════════
 
-function setToInTune() {
+async function setToInTune() {
   if (demoRunning) return;
+  await initAudio();
   deactivatePegTurn(true);
   STRINGS.forEach((_, i) => {
     if (!states[i].enabled || states[i].snapped) return;
@@ -1083,6 +1084,8 @@ async function runAutoTuneDemo() {
   demoRunning = true;
   const btn = document.getElementById('autotune-btn');
   btn.textContent = '■ Stop Demo';
+
+  await initAudio(); // ensure AudioContext is running before any sounds fire
 
   try {
     // ① Play all reference pitches — "this is what we're aiming for"
