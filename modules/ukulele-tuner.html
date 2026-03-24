@@ -74,15 +74,19 @@
       min-height: 0;
       display: flex;
       justify-content: center;
+      align-items: center;
       overflow: visible;
+      padding-top: 30px; /* room for rotated SVG overflow above */
     }
 
     #uke-svg {
-      height: 100%;
-      width: auto;
+      width: 200px;
+      height: 260px;
+      flex-shrink: 0;
       touch-action: none;
       -webkit-touch-callout: none;
       transform: rotate(15deg);
+      transform-origin: center center;
       overflow: visible;
     }
 
