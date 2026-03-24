@@ -1,5 +1,5 @@
 {
-  "version": "3.35.2",
+  "version": "3.36.1",
   "lastUpdated": "2026-03-24",
-  "description": "Ukulele tuner bug fixes: correct arrow direction for left/right pegs (CCW vs CW tangent), overlay only dismisses on touch outside SVG, arrows positioned dynamically per peg side"
+  "description": "Ukulele tuner: add Set to In-Tune and Auto-Tune Demo buttons with animated peg overlay and sequential strumming"
 }

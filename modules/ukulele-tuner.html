@@ -114,21 +114,32 @@
     .str-toggle.active  { border-color: rgba(255,255,255,0.6); background: rgba(255,255,255,0.18); }
     .str-toggle.inactive { opacity: 0.28; background: rgba(255,255,255,0.04); }
 
-    /* ── Check intonation button ── */
-    #check-btn {
-      padding: 10px 30px;
-      border-radius: 24px;
+    /* ── Action button row ── */
+    #action-row {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .action-btn {
+      padding: 8px 18px;
+      border-radius: 20px;
       border: none;
-      background: linear-gradient(135deg, #6d28d9, #a855f7);
       color: white;
-      font-size: 17px;
+      font-size: 14px;
       font-weight: 700;
       cursor: pointer;
-      transition: transform 0.1s;
+      transition: transform 0.1s, opacity 0.15s;
       flex-shrink: 0;
     }
-    #check-btn:active   { transform: scale(0.96); }
-    #check-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+    .action-btn:active   { transform: scale(0.96); }
+    .action-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    #set-intune-btn  { background: linear-gradient(135deg, #0891b2, #06b6d4); }
+    #autotune-btn    { background: linear-gradient(135deg, #b45309, #f59e0b); }
+    #check-btn       { background: linear-gradient(135deg, #6d28d9, #a855f7); }
 
     /* ── Results ── */
     #results {
@@ -202,7 +213,11 @@
     </div>
     <div id="str-toggles"></div>
   </div>
-  <button id="check-btn">Check Intonation</button>
+  <div id="action-row">
+    <button id="set-intune-btn"  class="action-btn">Set to In-Tune</button>
+    <button id="autotune-btn"    class="action-btn">Auto-Tune Demo</button>
+    <button id="check-btn"       class="action-btn">Check Intonation</button>
+  </div>
   <div id="results"></div>
 </div>
 <div id="tone-error">⚠ Audio unavailable — check internet connection</div>
@@ -260,9 +275,10 @@ const DOT_FRETS = [4, 6, 9];
 // STATE
 // ══════════════════════════════════════════════════════════════
 
-let selectedIdx = 0;
-let lastResult  = null;
-let checking    = false;
+let selectedIdx  = 0;
+let lastResult   = null;
+let checking     = false;
+let demoRunning  = false;
 
 function freshStates() {
   return STRINGS.map(() => ({
@@ -698,6 +714,7 @@ function clientToSVG(clientX, clientY) {
 
 function activatePegTurn(idx, pointerId, clientX, clientY) {
   if (!states[idx].enabled || states[idx].snapped) return;
+  if (demoRunning) { demoRunning = false; return; }
   selectedIdx = idx;
 
   const svgPt = clientToSVG(clientX, clientY);
@@ -906,8 +923,9 @@ function notifyParent(value, isComplete) {
 
 window.TaskModule = {
   init(context) {
-    lastResult = null;
-    states     = freshStates();
+    demoRunning = false;
+    lastResult  = null;
+    states      = freshStates();
     buildRefButtons();
     buildStrToggles();
     buildSVG();
@@ -921,10 +939,133 @@ window.TaskModule = {
 };
 
 // ══════════════════════════════════════════════════════════════
+// SET TO IN-TUNE  &  AUTO-TUNE DEMO
+// ══════════════════════════════════════════════════════════════
+
+function setToInTune() {
+  if (demoRunning) return;
+  deactivatePegTurn(true);
+  STRINGS.forEach((_, i) => {
+    if (!states[i].enabled || states[i].snapped) return;
+    states[i].offset     = 0;
+    states[i].lastAction = null;
+  });
+  applyPegAngles();
+  // Strum each enabled string in sequence
+  STRINGS.forEach((_, i) => {
+    if (!states[i].enabled || states[i].snapped) return;
+    setTimeout(() => touchString(i), i * 180);
+  });
+}
+
+function easeInOut(t) { return t < 0.5 ? 2*t*t : -1+(4-2*t)*t; }
+
+function animateThumbArc(fromAngle, toAngle, duration) {
+  return new Promise(resolve => {
+    const start = performance.now();
+    function frame(now) {
+      if (!demoRunning) { resolve(); return; }
+      const t  = Math.min((now - start) / duration, 1);
+      const a  = fromAngle + (toAngle - fromAngle) * easeInOut(t);
+      trackThumb.setAttribute('cx', (TRACK_R * Math.cos(a * Math.PI / 180)).toFixed(1));
+      trackThumb.setAttribute('cy', (TRACK_R * Math.sin(a * Math.PI / 180)).toFixed(1));
+      if (t < 1) requestAnimationFrame(frame);
+      else resolve();
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
+async function tuneStringDemo(idx) {
+  const pp      = PEG_POS[idx];
+  const s       = states[idx];
+  const dirMult = pp.side === 'left' ? -1 : 1;
+
+  // Show overlay centred on this peg
+  pegTurn.idx = idx;
+  selectedIdx = idx;
+  showPegTrackOverlay(idx, null);
+  pegTurn.overlayOpen = true;
+
+  // Set arrow direction to match what we're actually doing
+  //  tuning UP  (offset<0) + left peg  → CCW  → not CW
+  //  tuning UP  (offset<0) + right peg → CW   → CW
+  //  tuning DOWN(offset>0) + left peg  → CW   → CW
+  //  tuning DOWN(offset>0) + right peg → CCW  → not CW
+  const tuningUp = s.offset < 0;
+  const isLeft   = pp.side === 'left';
+  stopArrowAnim();
+  startArrowAnim((tuningUp && !isLeft) || (!tuningUp && isLeft));
+
+  updateUI();
+
+  // Reset thumb to 12 o'clock
+  let thumbAngle = -90;
+  trackThumb.setAttribute('cx', '0');
+  trackThumb.setAttribute('cy', String(-TRACK_R));
+
+  await sleep(700);
+
+  while (demoRunning && Math.abs(s.offset) > 2) {
+    // Step size: coarse when far, fine when close
+    const stepCents = Math.sign(-s.offset) * (Math.abs(s.offset) > 20 ? 14 : 5);
+    const da        = stepCents / (CENTS_PER_DEG * dirMult);
+
+    await animateThumbArc(thumbAngle, thumbAngle + da, 380);
+    thumbAngle += da;
+
+    s.offset += stepCents;
+    if (Math.abs(s.offset) < 2) s.offset = 0;
+    applyPegAngles();
+
+    touchString(idx);
+    await sleep(520);
+  }
+
+  if (demoRunning) {
+    s.offset = 0;
+    applyPegAngles();
+    touchString(idx);   // final in-tune pluck
+    await sleep(750);
+  }
+}
+
+async function runAutoTuneDemo() {
+  if (demoRunning) {
+    // Second tap = stop demo
+    demoRunning = false;
+    return;
+  }
+
+  const outOfTune = STRINGS.filter((_, i) => states[i].enabled && !states[i].snapped &&
+                                             Math.abs(states[i].offset) > 2);
+  if (outOfTune.length === 0) return; // nothing to do
+
+  demoRunning = true;
+  const btn = document.getElementById('autotune-btn');
+  btn.textContent = '■ Stop Demo';
+
+  try {
+    for (let i = 0; i < 4; i++) {
+      if (!demoRunning) break;
+      if (!states[i].enabled || states[i].snapped) continue;
+      if (Math.abs(states[i].offset) <= 2) continue;
+      await tuneStringDemo(i);
+    }
+  } finally {
+    deactivatePegTurn(true);
+    demoRunning = false;
+    btn.textContent = 'Auto-Tune Demo';
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
 // EVENTS
 // ══════════════════════════════════════════════════════════════
 
 document.getElementById('check-btn').addEventListener('click', checkIntonation);
+document.getElementById('set-intune-btn').addEventListener('click', setToInTune);
+document.getElementById('autotune-btn').addEventListener('click', runAutoTuneDemo);
 
 // Peg rotation tracking via pointer events on the SVG
 document.addEventListener('pointermove', (e) => {
