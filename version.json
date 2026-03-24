@@ -1,5 +1,5 @@
 {
-  "version": "3.38.1",
+  "version": "3.38.2",
   "lastUpdated": "2026-03-24",
-  "description": "Add toggleable pitch meter visual to ukulele tuner showing real-time pitch offset with color-coded accuracy indicator"
+  "description": "Reduce auto-tune demo overshoot: sharp-string undershoot target narrowed from -35/-65 to -15/-30 cents"
 }

@@ -1150,7 +1150,7 @@ async function tuneStringDemo(idx) {
   // ── If SHARP: tune DOWN past reference first, then tune up ──
   if (s.offset > 2) {
     // Overshoot flat by 35–65 cents so the final approach is always upward
-    const undershoot = -(35 + Math.floor(Math.random() * 30));
+    const undershoot = -(15 + Math.floor(Math.random() * 15));
     setArrowDirection(isLeft); // CW for left peg = tune down; CCW for right = tune down
     await stepToward(undershoot);
     if (!demoRunning) return;
