@@ -1,5 +1,5 @@
 {
-  "version": "3.36.3",
+  "version": "3.36.4",
   "lastUpdated": "2026-03-24",
-  "description": "Ukulele tuner: auto-tune demo uses tune-up technique, overshooting sharp strings then returning to pitch"
+  "description": "Fix auto-tune demo infinite loop when offset was just past 2-cent threshold; cap step to never overshoot target and change snap condition to <= 2"
 }

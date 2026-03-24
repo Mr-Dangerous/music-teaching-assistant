@@ -1020,14 +1020,16 @@ async function tuneStringDemo(idx) {
     while (demoRunning) {
       const remaining = target - s.offset;
       if (Math.abs(remaining) <= 2) break;
-      const stepCents = Math.sign(remaining) * (Math.abs(remaining) > 20 ? 14 : 5);
+      // Cap step so we never overshoot — prevents ping-pong loop near target
+      const stepCents = Math.sign(remaining) *
+                        Math.min(Math.abs(remaining) > 20 ? 14 : 5, Math.abs(remaining));
       const da = stepCents / (CENTS_PER_DEG * dirMult);
 
       await animateThumbArc(thumbAngle, thumbAngle + da, 380);
       thumbAngle += da;
 
       s.offset += stepCents;
-      if (Math.abs(s.offset - target) < 2) s.offset = target;
+      if (Math.abs(s.offset - target) <= 2) s.offset = target;
       applyPegAngles();
 
       pluckCount++;
