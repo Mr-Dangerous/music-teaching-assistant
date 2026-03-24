@@ -1,5 +1,5 @@
 {
-  "version": "3.31.1",
+  "version": "3.31.2",
   "lastUpdated": "2026-03-24",
-  "description": "Add circular peg-turning gesture to ukulele tuner; fix G/C peg positions"
+  "description": "Suppress context menu on ukulele peg long-press; right-click dismisses overlay"
 }

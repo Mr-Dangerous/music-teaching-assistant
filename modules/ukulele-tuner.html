@@ -74,6 +74,7 @@
       height: 100%;
       width: auto;
       touch-action: none; /* required for pointer events during peg turning */
+      -webkit-touch-callout: none; /* suppress iOS long-press callout */
     }
 
     /* ── Pitch controls ── */
@@ -915,6 +916,13 @@ svg.addEventListener('pointermove', (e) => {
   document.addEventListener(ev, (e) => {
     if (pegTurn.active && e.pointerId === pegTurn.pointerId) deactivatePegTurn();
   });
+});
+
+// Suppress native context menu on long-press / right-click;
+// also use right-click as a dismiss gesture for the overlay
+svg.addEventListener('contextmenu', (e) => {
+  e.preventDefault();
+  if (pegTurn.active) deactivatePegTurn();
 });
 
 window.addEventListener('message', e => {
