@@ -58,6 +58,61 @@
 
     .ref-btn.str-disabled { opacity: 0.28; cursor: default; }
 
+    /* ── Pitch meter ── */
+    #pitch-meter {
+      display: none; /* hidden until toggled on */
+      flex-shrink: 0;
+      width: 300px;
+      height: 28px;
+      position: relative;
+      background: rgba(0,0,0,0.35);
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,0.12);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+      overflow: visible;
+    }
+    #pitch-meter.visible { display: block; }
+
+    /* flat / sharp labels */
+    #pitch-meter::before { content: '♭'; position: absolute; left: 8px;  top: 50%; transform: translateY(-50%); font-size: 13px; color: rgba(255,255,255,0.4); pointer-events: none; }
+    #pitch-meter::after  { content: '♯'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 13px; color: rgba(255,255,255,0.4); pointer-events: none; }
+
+    #pitch-center {
+      position: absolute;
+      left: 50%;
+      top: -3px;
+      bottom: -3px;
+      width: 2px;
+      background: rgba(255,255,255,0.55);
+      transform: translateX(-50%);
+      border-radius: 1px;
+      pointer-events: none;
+    }
+
+    #pitch-indicator {
+      position: absolute;
+      top: 3px;
+      bottom: 3px;
+      width: 10px;
+      border-radius: 5px;
+      transform: translateX(-50%);
+      left: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 8px currentColor;
+      transition: left 0.08s ease-out, background-color 0.15s;
+      pointer-events: none;
+    }
+
+    /* tick marks at ±25¢ and ±50¢ */
+    .pitch-tick {
+      position: absolute;
+      top: 6px;
+      bottom: 6px;
+      width: 1px;
+      background: rgba(255,255,255,0.18);
+      pointer-events: none;
+    }
+
     /* ── Main area: SVG + string toggles ── */
     #main-area {
       flex: 1;
@@ -236,10 +291,19 @@
 <body>
 <div id="app">
   <div id="ref-buttons"></div>
+  <div id="pitch-meter">
+    <div id="pitch-center"></div>
+    <div class="pitch-tick" style="left:25%"></div>
+    <div class="pitch-tick" style="left:37.5%"></div>
+    <div class="pitch-tick" style="left:62.5%"></div>
+    <div class="pitch-tick" style="left:75%"></div>
+    <div id="pitch-indicator"></div>
+  </div>
   <div id="main-area">
     <div id="options-panel">
       <button id="regen-btn"         class="option-btn">Regenerate Tuning</button>
       <button id="disable-sharp-btn" class="option-btn">Disable Sharp</button>
+      <button id="meter-toggle-btn"  class="option-btn">Pitch Meter</button>
     </div>
     <div id="uke-wrap">
       <svg id="uke-svg" xmlns="http://www.w3.org/2000/svg"></svg>
@@ -308,11 +372,12 @@ const DOT_FRETS = [4, 6, 9];
 // STATE
 // ══════════════════════════════════════════════════════════════
 
-let selectedIdx  = 0;
-let lastResult   = null;
-let checking     = false;
-let demoRunning  = false;
-let disableSharp = false;
+let selectedIdx   = 0;
+let lastResult    = null;
+let checking      = false;
+let demoRunning   = false;
+let disableSharp  = false;
+let meterVisible  = false;
 
 function freshStates() {
   return STRINGS.map(() => ({
@@ -378,6 +443,7 @@ function touchString(idx) {
   initAudio();
   if (!playerSynth) return;
 
+  selectedIdx = idx;
   const freq = centsToFreq(STRINGS[idx].freq, states[idx].offset);
   stopPlayerNote();
   playerSynth.triggerAttack(freq);
@@ -385,6 +451,7 @@ function touchString(idx) {
   releaseTimer = setTimeout(stopPlayerNote, 2500);
 
   animateStringPluck(idx);
+  updatePitchMeter();
 }
 
 function stopPlayerNote() {
@@ -1171,6 +1238,27 @@ async function runAutoTuneDemo() {
 // EVENTS
 // ══════════════════════════════════════════════════════════════
 
+function updatePitchMeter() {
+  if (!meterVisible) return;
+  const s = states[selectedIdx];
+  if (!s || !s.enabled || s.snapped) return;
+  const RANGE = 75; // cents displayed each side (±75¢ = full bar)
+  const pct   = 50 + (Math.max(-RANGE, Math.min(RANGE, s.offset)) / RANGE) * 50;
+  const ind   = document.getElementById('pitch-indicator');
+  ind.style.left = pct + '%';
+  const abs = Math.abs(s.offset);
+  ind.style.background = abs <= 5 ? '#4ade80' : abs <= 20 ? '#fbbf24' : '#f87171';
+}
+
+function toggleMeter() {
+  meterVisible = !meterVisible;
+  const meter = document.getElementById('pitch-meter');
+  meter.classList.toggle('visible', meterVisible);
+  const btn = document.getElementById('meter-toggle-btn');
+  btn.classList.toggle('on', meterVisible);
+  if (meterVisible) updatePitchMeter();
+}
+
 function regenerateTuning() {
   if (demoRunning) return;
   deactivatePegTurn(true);
@@ -1197,6 +1285,7 @@ document.getElementById('set-intune-btn').addEventListener('click', setToInTune)
 document.getElementById('autotune-btn').addEventListener('click', runAutoTuneDemo);
 document.getElementById('regen-btn').addEventListener('click', regenerateTuning);
 document.getElementById('disable-sharp-btn').addEventListener('click', toggleDisableSharp);
+document.getElementById('meter-toggle-btn').addEventListener('click', toggleMeter);
 
 // Peg rotation tracking via pointer events on the SVG
 document.addEventListener('pointermove', (e) => {
@@ -1231,6 +1320,7 @@ document.addEventListener('pointermove', (e) => {
     s.lastAction = centsDelta > 0 ? 'up' : 'down';
 
   applyPegAngles();
+  updatePitchMeter();
 
   const dx = svgPt.x - pp.x, dy = svgPt.y - pp.y;
   const d  = Math.sqrt(dx * dx + dy * dy) || 1;

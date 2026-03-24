@@ -1,5 +1,5 @@
 {
-  "version": "3.37.2",
+  "version": "3.38.1",
   "lastUpdated": "2026-03-24",
-  "description": "Fix ukulele tuner peg long-press overlay immediately dismissing due to contextmenu event"
+  "description": "Add toggleable pitch meter visual to ukulele tuner showing real-time pitch offset with color-coded accuracy indicator"
 }
