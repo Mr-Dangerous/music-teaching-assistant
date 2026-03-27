@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Host MVP — Music Teaching Assistant</title>
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea, #764ba2, #f093fb, #f5576c, #fda085);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+      padding: 14px;
+      color: white;
+    }
+
+    @keyframes gradientShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .glass {
+      background: rgba(255,255,255,0.15);
+      backdrop-filter: blur(10px);
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,0.3);
+      padding: 14px;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    h1 { font-size: 1.3rem; font-weight: 700; flex: 1; }
+
+    .room-id {
+      font-family: monospace;
+      font-size: 0.75rem;
+      opacity: 0.65;
+      display: block;
+      margin-top: 2px;
+    }
+
+    .status-pill {
+      padding: 5px 14px;
+      border-radius: 999px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(0,0,0,0.25);
+      white-space: nowrap;
+    }
+    .status-pill.open  { background: rgba(40,180,80,0.5); }
+    .status-pill.error { background: rgba(220,50,50,0.5); }
+
+    /* ── Buttons ── */
+    .btn {
+      padding: 9px 18px;
+      border: none;
+      border-radius: 12px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.1s, filter 0.15s;
+      white-space: nowrap;
+    }
+    .btn:hover  { filter: brightness(1.1); }
+    .btn:active { transform: scale(0.96); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-purple { background: linear-gradient(135deg, #6c63ff, #9b59b6); color: #fff; }
+    .btn-green  { background: linear-gradient(135deg, #11998e, #38ef7d); color: #fff; }
+    .btn-orange { background: linear-gradient(135deg, #f7971e, #ffd200); color: #333; }
+    .btn-red    { background: linear-gradient(135deg, #f5576c, #f093fb); color: #fff; }
+
+    /* ── Layout ── */
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 14px;
+    }
+
+    .panel-title {
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      opacity: 0.75;
+      margin-bottom: 10px;
+    }
+
+    /* ── Student roster ── */
+    .connected-count {
+      font-size: 0.8rem;
+      opacity: 0.75;
+      margin-bottom: 10px;
+    }
+
+    .student-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    .student-tile {
+      padding: 9px 7px;
+      border-radius: 10px;
+      border: 2px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.08);
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-align: center;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .student-tile::before {
+      content: '';
+      display: inline-block;
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      flex-shrink: 0;
+      transition: background 0.3s;
+    }
+
+    .student-tile.identified {
+      border-color: rgba(100,255,150,0.7);
+      background: rgba(50,200,100,0.2);
+    }
+    .student-tile.identified::before { background: #64ff96; }
+
+    .student-tile.completed {
+      border-color: #38ef7d;
+      background: linear-gradient(135deg, rgba(17,153,142,0.5), rgba(56,239,125,0.5));
+    }
+    .student-tile.completed::before { background: #38ef7d; }
+
+    /* ── Task panel ── */
+    select {
+      width: 100%;
+      padding: 9px 10px;
+      border-radius: 10px;
+      border: none;
+      background: rgba(255,255,255,0.92);
+      color: #333;
+      font-size: 0.95rem;
+      margin-bottom: 10px;
+    }
+
+    .task-status {
+      font-size: 0.8rem;
+      opacity: 0.75;
+      margin-top: 10px;
+      min-height: 1.2em;
+    }
+
+    /* ── Responses panel ── */
+    .response-list {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      max-height: 320px;
+      overflow-y: auto;
+    }
+
+    .response-item {
+      background: rgba(255,255,255,0.15);
+      border-radius: 10px;
+      padding: 8px 11px;
+    }
+
+    .response-name  { font-size: 0.85rem; font-weight: 700; }
+    .response-value {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      margin-top: 3px;
+      word-break: break-all;
+      white-space: pre-wrap;
+    }
+
+    .empty { font-size: 0.82rem; opacity: 0.5; font-style: italic; }
+
+    /* ── Notes box ── */
+    .notes {
+      margin-top: 14px;
+      font-size: 0.78rem;
+      opacity: 0.6;
+      line-height: 1.6;
+    }
+    .notes strong { opacity: 1; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>🎵 Host MVP</h1>
+    <span class="room-id" id="room-id-display">Room: not open</span>
+  </div>
+  <span class="status-pill" id="status-pill">Not connected</span>
+  <button class="btn btn-purple" id="connect-btn" onclick="toggleRoom()">Connect Clients</button>
+</header>
+
+<div class="layout">
+
+  <!-- Panel 1: Students -->
+  <div class="glass">
+    <div class="panel-title">Students</div>
+    <div class="connected-count" id="connected-count">0 connected · 0 identified</div>
+    <div class="student-grid" id="student-grid"></div>
+  </div>
+
+  <!-- Panel 2: Task -->
+  <div class="glass">
+    <div class="panel-title">Task</div>
+    <select id="task-select">
+      <option value="">— Select a task —</option>
+    </select>
+    <button class="btn btn-green" style="width:100%; margin-bottom:8px;" onclick="sendTask()">
+      ▶ Send Task to Students
+    </button>
+    <button class="btn btn-orange" style="width:100%; font-size:0.85rem;" onclick="clearTask()">
+      ✕ Clear Task
+    </button>
+    <div class="task-status" id="task-status"></div>
+  </div>
+
+  <!-- Panel 3: Responses -->
+  <div class="glass">
+    <div class="panel-title">
+      Responses &nbsp;<span id="response-count" style="opacity:0.55; font-weight:400;">(0)</span>
+    </div>
+    <div class="response-list" id="response-list">
+      <div class="empty">No responses yet</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="notes">
+  <strong>MVP note:</strong> Roster and tasks below are hardcoded for testing.
+  In production, these come from <code>app.js this.students[]</code> and <code>this.tasks[]</code>.
+  The <code>handleModuleResponse()</code> call is marked in the source where it would slot in.
+</div>
+
+<script>
+  // ─── Configuration ──────────────────────────────────────────────────────────
+  // Both mvp_host.html and client.html must share the same ROOM_ID
+  const ROOM_ID = 'mr-dangerous-music-mvp';
+
+  // ─── Test data (replace with live app.js data in production) ───────────────
+  const ROSTER = [
+    { student_id: 's1', name: 'Emma Wilson',    grade: '5' },
+    { student_id: 's2', name: 'Liam Chen',      grade: '5' },
+    { student_id: 's3', name: 'Sofia Martinez', grade: '5' },
+    { student_id: 's4', name: 'Noah Johnson',   grade: '5' },
+    { student_id: 's5', name: 'Ava Thompson',   grade: '5' },
+    { student_id: 's6', name: 'James Lee',      grade: '5' },
+  ];
+
+  const TASKS = [
+    { task_id: 'so_la_mi',  question: 'So-La-Mi Trainer',        module_path: 'modules/so_la_mi_trainer.html' },
+    { task_id: 'rhythm',    question: 'Rhythm Dictation',         module_path: 'modules/rhythm_dictation_trainer.html' },
+    { task_id: 'pentatonic',question: 'Pentatonic Trainer',       module_path: 'modules/pentatonic_trainer.html' },
+    { task_id: 'slmrd',     question: 'So-La-Mi-Re-Do Trainer',   module_path: 'modules/so_la_mi_re_do_trainer.html' },
+  ];
+
+  // ─── State ─────────────────────────────────────────────────────────────────
+  let hostPeer   = null;
+  let roomOpen   = false;
+  let currentTask = null;
+
+  // Map: peerId → { conn, student: {student_id, name} | null }
+  const peers = new Map();
+  const responses = [];   // Accumulated for this session
+
+  // ─── Init ──────────────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', () => {
+    renderRoster();
+    populateTaskSelector();
+  });
+
+  function renderRoster() {
+    const grid = document.getElementById('student-grid');
+    grid.innerHTML = '';
+    // Compute display names (add last initial for duplicate first names)
+    const firstNameCounts = {};
+    ROSTER.forEach(s => {
+      const fn = s.name.split(' ')[0];
+      firstNameCounts[fn] = (firstNameCounts[fn] || 0) + 1;
+    });
+    ROSTER.forEach(student => {
+      const fn    = student.name.split(' ')[0];
+      const parts = student.name.split(' ');
+      const display = firstNameCounts[fn] > 1 && parts.length > 1
+        ? `${fn} ${parts[parts.length - 1][0]}`
+        : fn;
+      student._displayName = display;
+
+      const tile = document.createElement('div');
+      tile.className = 'student-tile';
+      tile.id = 'tile-' + student.student_id;
+      tile.textContent = display;
+      grid.appendChild(tile);
+    });
+  }
+
+  function populateTaskSelector() {
+    const sel = document.getElementById('task-select');
+    TASKS.forEach(t => {
+      const opt = document.createElement('option');
+      opt.value = t.task_id;
+      opt.textContent = t.question;
+      sel.appendChild(opt);
+    });
+  }
+
+  // ─── Room ──────────────────────────────────────────────────────────────────
+  function toggleRoom() {
+    roomOpen ? closeRoom() : openRoom();
+  }
+
+  function openRoom() {
+    setStatus('Opening...', '');
+    document.getElementById('connect-btn').disabled = true;
+
+    hostPeer = new Peer(ROOM_ID);
+
+    hostPeer.on('open', id => {
+      roomOpen = true;
+      document.getElementById('room-id-display').textContent = `Room ID: ${id}`;
+      setStatus('Room open', 'open');
+      document.getElementById('connect-btn').textContent  = 'Close Room';
+      document.getElementById('connect-btn').className    = 'btn btn-red';
+      document.getElementById('connect-btn').disabled     = false;
+    });
+
+    hostPeer.on('connection', handleNewConnection);
+
+    hostPeer.on('error', err => {
+      document.getElementById('connect-btn').disabled = false;
+      if (err.type === 'unavailable-id') {
+        setStatus('Room ID busy — wait a few seconds and try again', 'error');
+      } else {
+        setStatus('Error: ' + err.type, 'error');
+      }
+      hostPeer.destroy();
+      hostPeer = null;
+    });
+
+    hostPeer.on('disconnected', () => setStatus('Server disconnected', 'error'));
+  }
+
+  function closeRoom() {
+    peers.forEach(({ conn }) => conn.close());
+    peers.clear();
+    if (hostPeer) { hostPeer.destroy(); hostPeer = null; }
+    roomOpen    = false;
+    currentTask = null;
+    setStatus('Room closed', '');
+    document.getElementById('connect-btn').textContent = 'Connect Clients';
+    document.getElementById('connect-btn').className   = 'btn btn-purple';
+    document.getElementById('room-id-display').textContent = 'Room: not open';
+    document.getElementById('task-status').textContent = '';
+    renderRoster();       // reset all tile states
+    updateConnectedCount();
+  }
+
+  // ─── Connections ───────────────────────────────────────────────────────────
+  function handleNewConnection(conn) {
+    const peerId = conn.peer;
+    peers.set(peerId, { conn, student: null });
+
+    conn.on('open', () => {
+      // Send roster with pre-computed display names
+      conn.send({
+        type: 'roster',
+        students: ROSTER.map(s => ({
+          student_id:  s.student_id,
+          name:        s.name,
+          displayName: s._displayName,
+          grade:       s.grade,
+        }))
+      });
+      updateConnectedCount();
+    });
+
+    conn.on('data',  data  => handleClientMessage(peerId, data));
+
+    conn.on('close', () => {
+      const pd = peers.get(peerId);
+      if (pd?.student) setTileState(pd.student.student_id, '');
+      peers.delete(peerId);
+      updateConnectedCount();
+    });
+
+    conn.on('error', () => {
+      peers.delete(peerId);
+      updateConnectedCount();
+    });
+  }
+
+  function handleClientMessage(peerId, data) {
+    const pd = peers.get(peerId);
+    if (!pd) return;
+
+    if (data.type === 'identify') {
+      pd.student = { student_id: data.student_id, name: data.name };
+      setTileState(data.student_id, 'identified');
+      updateConnectedCount();
+
+      // If a task is already active, push it to this newly-identified student
+      if (currentTask) {
+        sendTaskToPeer(pd.conn, pd.student);
+      }
+    }
+
+    else if (data.type === 'response' && data.isComplete) {
+      // ── In production this is where app.handleModuleResponse() is called ──
+      // app.handleModuleResponse({
+      //   student_id: data.student_id,
+      //   value:      data.value,
+      //   isComplete: true,
+      // });
+      // ── For MVP we record the response locally ──────────────────────────────
+      responses.push({
+        student_id: data.student_id,
+        name:  pd.student?.name || 'Unknown',
+        taskId: data.taskId,
+        value:  data.value,
+      });
+      setTileState(data.student_id, 'completed');
+      renderResponses();
+    }
+  }
+
+  // ─── Task management ───────────────────────────────────────────────────────
+  function sendTask() {
+    const taskId = document.getElementById('task-select').value;
+    if (!taskId) { alert('Select a task first.'); return; }
+
+    currentTask = TASKS.find(t => t.task_id === taskId);
+    if (!currentTask) return;
+
+    let sent = 0;
+    peers.forEach(pd => {
+      if (!pd.student) return;
+      sendTaskToPeer(pd.conn, pd.student);
+      // Reset completed → identified when a new task is pushed
+      const tile = document.getElementById('tile-' + pd.student.student_id);
+      if (tile?.classList.contains('completed')) setTileState(pd.student.student_id, 'identified');
+      sent++;
+    });
+
+    document.getElementById('task-status').textContent = sent > 0
+      ? `✓ Sent to ${sent} student${sent !== 1 ? 's' : ''}`
+      : 'No identified students connected yet';
+  }
+
+  function sendTaskToPeer(conn, student) {
+    const rosterEntry = ROSTER.find(s => s.student_id === student.student_id);
+    conn.send({
+      type:          'task',
+      taskId:        currentTask.task_id,
+      taskQuestion:  currentTask.question,
+      modulePath:    currentTask.module_path,
+      studentId:     student.student_id,
+      studentName:   student.name,
+      grade:         rosterEntry?.grade || '5',
+    });
+  }
+
+  function clearTask() {
+    currentTask = null;
+    peers.forEach(({ conn, student }) => {
+      if (student) conn.send({ type: 'task-clear' });
+    });
+    document.getElementById('task-status').textContent = 'Task cleared';
+  }
+
+  // ─── UI helpers ────────────────────────────────────────────────────────────
+  function setStatus(text, cls) {
+    const pill = document.getElementById('status-pill');
+    pill.textContent = text;
+    pill.className = 'status-pill' + (cls ? ' ' + cls : '');
+  }
+
+  function setTileState(studentId, state) {
+    const el = document.getElementById('tile-' + studentId);
+    if (!el) return;
+    const student = ROSTER.find(s => s.student_id === studentId);
+    el.className = 'student-tile' + (state ? ' ' + state : '');
+    // Re-set text (class change wipes ::before but not content)
+    el.textContent = student?._displayName || studentId;
+  }
+
+  function updateConnectedCount() {
+    let connected = 0, identified = 0;
+    peers.forEach(pd => { connected++; if (pd.student) identified++; });
+    document.getElementById('connected-count').textContent =
+      `${connected} connected · ${identified} identified`;
+  }
+
+  function renderResponses() {
+    const list = document.getElementById('response-list');
+    document.getElementById('response-count').textContent = `(${responses.length})`;
+
+    if (responses.length === 0) {
+      list.innerHTML = '<div class="empty">No responses yet</div>';
+      return;
+    }
+
+    list.innerHTML = [...responses].reverse().map(r => {
+      const preview = typeof r.value === 'object'
+        ? JSON.stringify(r.value).slice(0, 120)
+        : String(r.value).slice(0, 120);
+      return `
+        <div class="response-item">
+          <div class="response-name">✓ ${r.name}</div>
+          <div class="response-value">${preview}</div>
+        </div>`;
+    }).join('');
+  }
+</script>
+</body>
+</html>

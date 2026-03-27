@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Student — Music Teaching Assistant</title>
+  <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea, #764ba2, #f093fb, #f5576c, #fda085);
+      background-size: 400% 400%;
+      animation: gradientShift 15s ease infinite;
+      color: white;
+    }
+
+    @keyframes gradientShift {
+      0%   { background-position: 0% 50%; }
+      50%  { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    /* ── Screen system ─────────────────────────────────────────────────────── */
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .screen.active { display: flex; }
+
+    /* Module screen has no padding — iframe fills it */
+    #module-screen {
+      padding: 0;
+      background: #fff;
+    }
+
+    /* ── Glass card ────────────────────────────────────────────────────────── */
+    .card {
+      background: rgba(255,255,255,0.18);
+      backdrop-filter: blur(14px);
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,0.35);
+      padding: 32px 28px;
+      text-align: center;
+      width: 100%;
+      max-width: 460px;
+    }
+
+    h2 { font-size: 1.9rem; margin-bottom: 8px; }
+    .subtitle { opacity: 0.8; margin-bottom: 22px; font-size: 1rem; }
+
+    /* ── Spinner (connecting) ──────────────────────────────────────────────── */
+    .spinner {
+      width: 52px;
+      height: 52px;
+      border: 5px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 22px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .error-msg {
+      color: #ffd700;
+      font-size: 0.88rem;
+      margin-top: 10px;
+      min-height: 1.2em;
+    }
+
+    /* ── Name grid ─────────────────────────────────────────────────────────── */
+    .name-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .name-btn {
+      padding: 20px 10px;
+      border-radius: 16px;
+      border: none;
+      background: rgba(255,255,255,0.22);
+      color: white;
+      font-size: 1.15rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .name-btn:hover  { background: rgba(255,255,255,0.38); }
+    .name-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.45); }
+
+    /* ── Waiting ───────────────────────────────────────────────────────────── */
+    .pulse-ring {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.25);
+      margin: 0 auto 26px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.4rem;
+      animation: pulse 2.2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { transform: scale(1);    opacity: 0.7; }
+      50%      { transform: scale(1.08); opacity: 1;   }
+    }
+
+    /* ── Module iframe ─────────────────────────────────────────────────────── */
+    #module-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+      display: block;
+    }
+
+    /* ── Submitted ─────────────────────────────────────────────────────────── */
+    .checkmark {
+      font-size: 4.5rem;
+      display: block;
+      margin-bottom: 14px;
+      animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+    @keyframes pop {
+      0%   { transform: scale(0); }
+      100% { transform: scale(1); }
+    }
+
+    .small-note {
+      font-size: 0.82rem;
+      opacity: 0.6;
+      margin-top: 6px;
+    }
+
+    /* ── Name badge (top-right on waiting/submitted screens) ──────────────── */
+    .name-badge {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+      background: rgba(255,255,255,0.22);
+      border-radius: 12px;
+      padding: 5px 14px;
+      font-size: 0.88rem;
+      font-weight: 700;
+      backdrop-filter: blur(6px);
+      cursor: pointer;
+      user-select: none;
+    }
+    .name-badge:hover { background: rgba(255,255,255,0.35); }
+    .name-badge title-attr {}  /* tooltip */
+  </style>
+</head>
+<body>
+
+<!-- ── Screen 1: Connecting ─────────────────────────────────────────────── -->
+<div id="connecting-screen" class="screen active">
+  <div class="card">
+    <div class="spinner"></div>
+    <h2>Connecting…</h2>
+    <p class="subtitle">Joining the classroom</p>
+    <div class="error-msg" id="connect-error"></div>
+  </div>
+</div>
+
+<!-- ── Screen 2: Name picker ─────────────────────────────────────────────── -->
+<div id="name-screen" class="screen">
+  <div class="card">
+    <h2>Who are you?</h2>
+    <p class="subtitle">Tap your name to join</p>
+    <div class="name-grid" id="name-grid"></div>
+  </div>
+</div>
+
+<!-- ── Screen 3: Waiting ──────────────────────────────────────────────────── -->
+<div id="waiting-screen" class="screen">
+  <div class="name-badge" id="waiting-badge" title="Tap to change name"></div>
+  <div class="card">
+    <div class="pulse-ring">🎵</div>
+    <h2>Ready!</h2>
+    <p class="subtitle" id="waiting-subtitle">Waiting for your teacher to send a task…</p>
+  </div>
+</div>
+
+<!-- ── Screen 4: Module active ────────────────────────────────────────────── -->
+<div id="module-screen" class="screen">
+  <iframe
+    id="module-frame"
+    sandbox="allow-scripts allow-same-origin allow-forms allow-fullscreen"
+    allowfullscreen
+  ></iframe>
+</div>
+
+<!-- ── Screen 5: Submitted ───────────────────────────────────────────────── -->
+<div id="submitted-screen" class="screen">
+  <div class="name-badge" id="submitted-badge"></div>
+  <div class="card">
+    <span class="checkmark">✅</span>
+    <h2>Submitted!</h2>
+    <p class="subtitle">Your teacher received your answer.</p>
+    <p class="small-note">Waiting for the next task…</p>
+  </div>
+</div>
+
+<script>
+  // ─── Configuration ──────────────────────────────────────────────────────────
+  // Must match ROOM_ID in mvp_host.html
+  const ROOM_ID = 'mr-dangerous-music-mvp';
+
+  // How long (ms) to wait before retrying when host isn't found yet
+  const RETRY_DELAY = 4000;
+
+  // ─── State ─────────────────────────────────────────────────────────────────
+  let clientPeer       = null;
+  let conn             = null;
+  let roster           = [];          // Received from host
+  let identifiedStudent = null;       // { student_id, name, displayName, grade }
+  let currentTaskId    = null;
+
+  // ─── Screen management ─────────────────────────────────────────────────────
+  function showScreen(id) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(id + '-screen').classList.add('active');
+  }
+
+  // ─── Connection ─────────────────────────────────────────────────────────────
+  function connect() {
+    // Destroy any lingering peer before starting fresh
+    if (clientPeer) { clientPeer.destroy(); clientPeer = null; }
+    conn = null;
+
+    showScreen('connecting');
+    setError('');
+
+    clientPeer = new Peer();   // Random client ID — host only needs to know its own fixed ID
+
+    clientPeer.on('open', () => {
+      conn = clientPeer.connect(ROOM_ID, { reliable: true });
+
+      conn.on('open', () => {
+        setError('');
+        // Connection open — wait for roster message from host
+      });
+
+      conn.on('data', handleHostMessage);
+
+      conn.on('close', () => {
+        setError('Disconnected from teacher. Reconnecting…');
+        setTimeout(connect, RETRY_DELAY);
+      });
+
+      conn.on('error', err => {
+        setError('Connection error: ' + err.message);
+      });
+    });
+
+    clientPeer.on('error', err => {
+      if (err.type === 'peer-unavailable') {
+        setError('Teacher hasn\'t opened the room yet. Retrying…');
+      } else {
+        setError('Error (' + err.type + '). Retrying…');
+      }
+      setTimeout(connect, RETRY_DELAY);
+    });
+  }
+
+  // ─── Messages from host ─────────────────────────────────────────────────────
+  function handleHostMessage(data) {
+
+    if (data.type === 'roster') {
+      roster = data.students;
+
+      // If we were already identified (e.g. after a reconnect), re-identify automatically
+      if (identifiedStudent) {
+        conn.send({ type: 'identify', student_id: identifiedStudent.student_id, name: identifiedStudent.name });
+        showScreen('waiting');
+      } else {
+        renderNamePicker(roster);
+        showScreen('name');
+      }
+    }
+
+    else if (data.type === 'task') {
+      currentTaskId = data.taskId;
+      loadModule(data.modulePath, {
+        studentId:        data.studentId,
+        taskId:           data.taskId,
+        grade:            data.grade,
+        existingResponse: '',
+        studentName:      data.studentName,
+      });
+    }
+
+    else if (data.type === 'task-clear') {
+      currentTaskId = null;
+      // Blank the iframe
+      document.getElementById('module-frame').src = 'about:blank';
+      document.getElementById('waiting-subtitle').textContent = 'Task cleared — waiting for the next one…';
+      showScreen('waiting');
+    }
+  }
+
+  // ─── Name picker ───────────────────────────────────────────────────────────
+  function renderNamePicker(students) {
+    const grid = document.getElementById('name-grid');
+    grid.innerHTML = '';
+    students.forEach(student => {
+      const btn = document.createElement('button');
+      btn.className = 'name-btn';
+      btn.textContent = student.displayName || student.name.split(' ')[0];
+      btn.onclick = () => identifySelf(student);
+      grid.appendChild(btn);
+    });
+  }
+
+  function identifySelf(student) {
+    identifiedStudent = student;
+
+    // Update name badges on all screens that show them
+    const badge = student.displayName || student.name.split(' ')[0];
+    document.getElementById('waiting-badge').textContent   = badge;
+    document.getElementById('submitted-badge').textContent = badge;
+
+    // Tapping the badge on the waiting screen lets a student re-pick their name
+    document.getElementById('waiting-badge').onclick = resetIdentity;
+
+    // Tell the host
+    conn.send({ type: 'identify', student_id: student.student_id, name: student.name });
+
+    document.getElementById('waiting-subtitle').textContent = 'Waiting for your teacher to send a task…';
+    showScreen('waiting');
+  }
+
+  function resetIdentity() {
+    identifiedStudent = null;
+    renderNamePicker(roster);
+    showScreen('name');
+  }
+
+  // ─── Module loading ────────────────────────────────────────────────────────
+  function loadModule(path, context) {
+    const iframe = document.getElementById('module-frame');
+
+    // Show module screen first so the iframe is visible and has dimensions
+    showScreen('module');
+
+    iframe.src = path;
+    iframe.onload = () => {
+      // Mirror the 100ms delay used by module-loader.js so modules initialise correctly
+      setTimeout(() => {
+        iframe.contentWindow.postMessage({
+          type:         'taskmodule:init',
+          context:      context,
+          savedSettings: null,
+        }, '*');
+      }, 100);
+    };
+  }
+
+  // ─── Module response relay ─────────────────────────────────────────────────
+  window.addEventListener('message', event => {
+    if (event.data.type === 'taskmodule:response' && event.data.isComplete && identifiedStudent && conn) {
+      // Relay to host — host's handleClientMessage() will call app.handleModuleResponse()
+      conn.send({
+        type:       'response',
+        student_id: identifiedStudent.student_id,
+        taskId:     currentTaskId,
+        value:      event.data.value,
+        isComplete: true,
+      });
+
+      // Blank iframe (free memory) then show confirmation
+      document.getElementById('module-frame').src = 'about:blank';
+      showScreen('submitted');
+    }
+  });
+
+  // ─── UI helpers ────────────────────────────────────────────────────────────
+  function setError(msg) {
+    document.getElementById('connect-error').textContent = msg;
+  }
+
+  // ─── Start ─────────────────────────────────────────────────────────────────
+  connect();
+</script>
+</body>
+</html>

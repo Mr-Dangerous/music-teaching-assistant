@@ -1,5 +1,5 @@
 {
-  "version": "3.41.1",
-  "lastUpdated": "2026-03-24",
-  "description": "Rescale fret positions to fill 82% of neck height, add fret 12, and reposition fingerboard dots to standard ukulele positions (frets 5, 7, 10)"
+  "version": "3.42.1",
+  "lastUpdated": "2026-03-27",
+  "description": "Add WebRTC MVP host and client pages for peer-manager integration and student auto-connect"
 }
