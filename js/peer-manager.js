@@ -69,13 +69,14 @@ class PeerManager {
    * @param {Object} taskData - { task_id, question, module_path }
    * @param {Object|null} savedSettings - module settings from app.getModuleSettings()
    */
-  broadcastTask(taskData, savedSettings = null) {
+  broadcastTask(taskData, savedSettings = null, existingResponse = '') {
     this.currentTask = {
-      type:          'task',
-      taskId:        taskData.task_id,
-      taskQuestion:  taskData.question,
-      modulePath:    taskData.module_path,
-      savedSettings: savedSettings,
+      type:             'task',
+      taskId:           taskData.task_id,
+      taskQuestion:     taskData.question,
+      modulePath:       taskData.module_path,
+      savedSettings:    savedSettings,
+      existingResponse: existingResponse,
     };
     this.peers.forEach(pd => {
       if (pd.students.length > 0) pd.conn.send(this.currentTask);

@@ -138,9 +138,11 @@ class TeachingAssistantApp {
         if (!this.peerManager.isOpen || !this.selectedTask) return;
         const taskData = this.getTask(this.selectedTask);
         if (taskData) {
-          const savedSettings = this.getModuleSettings(taskData.module_path.split('/').pop());
-          this.peerManager.broadcastTask(taskData, savedSettings);
-          this.showNotification('Task pushed to all client devices', 'success');
+          const savedSettings    = this.getModuleSettings(taskData.module_path.split('/').pop());
+          // Capture the exact current module state so clients restore the same problem
+          const existingResponse = this.moduleLoader.getResponse() ?? this.currentResponse ?? '';
+          this.peerManager.broadcastTask(taskData, savedSettings, existingResponse);
+          this.showNotification('Current problem pushed to all client devices', 'success');
         }
       });
     }

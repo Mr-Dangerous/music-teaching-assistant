@@ -538,7 +538,7 @@
             studentId:        s?.student_id || 'unknown',
             taskId:           currentTask?.taskId || '',
             grade:            s?.grade || '5',
-            existingResponse: '',
+            existingResponse: currentTask?.existingResponse || '',
             studentName:      s?.name || '',
           },
           savedSettings: savedSettings || null,
@@ -556,31 +556,28 @@
     updateBadges();
 
     const iframe = document.getElementById('module-frame');
-    // Reload same module — randomises a new problem on init
-    if (iframe.src && iframe.src !== 'about:blank') {
-      // Force reload by toggling src
-      const path = currentTask.modulePath;
-      iframe.src = 'about:blank';
-      requestAnimationFrame(() => {
-        iframe.src = path;
-        iframe.onload = () => {
-          const s = activeStudent();
-          setTimeout(() => {
-            iframe.contentWindow.postMessage({
-              type:    'taskmodule:init',
-              context: {
-                studentId:        s?.student_id || 'unknown',
-                taskId:           currentTask?.taskId || '',
-                grade:            s?.grade || '5',
-                existingResponse: '',
-                studentName:      s?.name || '',
-              },
-              savedSettings: currentTask.savedSettings || null,
-            }, '*');
-          }, 100);
-        };
-      });
-    }
+    // Reload same module — randomises a new problem on init (no existingResponse in practice)
+    const path = currentTask.modulePath;
+    iframe.src = 'about:blank';
+    requestAnimationFrame(() => {
+      iframe.src = path;
+      iframe.onload = () => {
+        const s = activeStudent();
+        setTimeout(() => {
+          iframe.contentWindow.postMessage({
+            type:    'taskmodule:init',
+            context: {
+              studentId:        s?.student_id || 'unknown',
+              taskId:           currentTask?.taskId || '',
+              grade:            s?.grade || '5',
+              existingResponse: '',   // Fresh problem in practice mode
+              studentName:      s?.name || '',
+            },
+            savedSettings: currentTask.savedSettings || null,
+          }, '*');
+        }, 100);
+      };
+    });
   }
 
   function endPractice() {
