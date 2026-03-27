@@ -1,5 +1,5 @@
 {
-  "version": "3.42.1",
+  "version": "3.43.1",
   "lastUpdated": "2026-03-27",
-  "description": "Add WebRTC MVP host and client pages for peer-manager integration and student auto-connect"
+  "description": "Integrate WebRTC classroom hosting into main app with peer-manager, Begin Host button, client multi-student cycling, and practice mode"
 }

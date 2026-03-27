@@ -8,11 +8,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
-    html, body {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
+    html, body { width: 100%; height: 100%; overflow: hidden; }
 
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -36,79 +32,110 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 24px;
+      padding: 20px;
     }
     .screen.active { display: flex; }
 
-    /* Module screen has no padding — iframe fills it */
-    #module-screen {
-      padding: 0;
-      background: #fff;
-    }
+    /* Module screen: no padding, white bg, iframe fills it */
+    #module-screen { padding: 0; background: #fff; }
 
-    /* ── Glass card ────────────────────────────────────────────────────────── */
+    /* ── Glass card ─────────────────────────────────────────────────────────── */
     .card {
       background: rgba(255,255,255,0.18);
       backdrop-filter: blur(14px);
       border-radius: 22px;
       border: 1px solid rgba(255,255,255,0.35);
-      padding: 32px 28px;
+      padding: 28px 24px;
       text-align: center;
       width: 100%;
-      max-width: 460px;
+      max-width: 480px;
     }
 
-    h2 { font-size: 1.9rem; margin-bottom: 8px; }
-    .subtitle { opacity: 0.8; margin-bottom: 22px; font-size: 1rem; }
+    h2 { font-size: 1.8rem; margin-bottom: 6px; }
 
-    /* ── Spinner (connecting) ──────────────────────────────────────────────── */
+    .subtitle {
+      opacity: 0.8;
+      margin-bottom: 20px;
+      font-size: 0.97rem;
+      line-height: 1.4;
+    }
+
+    /* ── Buttons ─────────────────────────────────────────────────────────────  */
+    .btn {
+      padding: 14px 22px;
+      border: none;
+      border-radius: 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.1s, filter 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .btn:hover  { filter: brightness(1.1); }
+    .btn:active { transform: scale(0.95); }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .btn-green  { background: linear-gradient(135deg, #11998e, #38ef7d); color: #fff; }
+    .btn-purple { background: linear-gradient(135deg, #6c63ff, #9b59b6); color: #fff; }
+    .btn-orange { background: linear-gradient(135deg, #f7971e, #ffd200); color: #333; }
+    .btn-ghost  {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 1px solid rgba(255,255,255,0.4);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.35); }
+
+    /* ── Spinner ─────────────────────────────────────────────────────────────  */
     .spinner {
-      width: 52px;
-      height: 52px;
+      width: 52px; height: 52px;
       border: 5px solid rgba(255,255,255,0.3);
       border-top-color: white;
       border-radius: 50%;
       animation: spin 0.8s linear infinite;
-      margin: 0 auto 22px;
+      margin: 0 auto 20px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    .error-msg {
-      color: #ffd700;
-      font-size: 0.88rem;
-      margin-top: 10px;
-      min-height: 1.2em;
-    }
+    .error-msg { color: #ffd700; font-size: 0.88rem; margin-top: 10px; min-height: 1.2em; }
 
-    /* ── Name grid ─────────────────────────────────────────────────────────── */
+    /* ── Name picker ─────────────────────────────────────────────────────────  */
     .name-grid {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 12px;
+      gap: 10px;
+      margin-bottom: 14px;
     }
 
     .name-btn {
-      padding: 20px 10px;
-      border-radius: 16px;
-      border: none;
-      background: rgba(255,255,255,0.22);
+      padding: 18px 10px;
+      border-radius: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.15);
       color: white;
-      font-size: 1.15rem;
+      font-size: 1.05rem;
       font-weight: 700;
       cursor: pointer;
-      transition: background 0.15s, transform 0.1s;
+      transition: all 0.15s;
       -webkit-tap-highlight-color: transparent;
     }
-    .name-btn:hover  { background: rgba(255,255,255,0.38); }
-    .name-btn:active { transform: scale(0.95); background: rgba(255,255,255,0.45); }
+    .name-btn:active { transform: scale(0.95); }
+    .name-btn.selected {
+      background: rgba(56, 239, 125, 0.35);
+      border-color: #38ef7d;
+    }
 
-    /* ── Waiting ───────────────────────────────────────────────────────────── */
+    .selection-hint {
+      font-size: 0.82rem;
+      opacity: 0.7;
+      margin-bottom: 10px;
+    }
+
+    /* ── Waiting screen ──────────────────────────────────────────────────────  */
     .pulse-ring {
-      width: 90px;
-      height: 90px;
+      width: 88px; height: 88px;
       border-radius: 50%;
-      background: rgba(255,255,255,0.25);
-      margin: 0 auto 26px;
+      background: rgba(255,255,255,0.22);
+      margin: 0 auto 22px;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -120,7 +147,52 @@
       50%      { transform: scale(1.08); opacity: 1;   }
     }
 
-    /* ── Module iframe ─────────────────────────────────────────────────────── */
+    /* ── Active student badge ────────────────────────────────────────────────  */
+    .student-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: rgba(0,0,0,0.45);
+      border-radius: 20px;
+      padding: 6px 14px 6px 10px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(6px);
+      z-index: 10;
+      cursor: pointer;
+      user-select: none;
+    }
+    .student-badge:hover { background: rgba(0,0,0,0.6); }
+
+    .badge-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: #38ef7d;
+      flex-shrink: 0;
+    }
+
+    .next-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(255,255,255,0.2);
+      border: 1px solid rgba(255,255,255,0.4);
+      border-radius: 12px;
+      color: white;
+      font-size: 0.82rem;
+      font-weight: 700;
+      padding: 6px 12px;
+      cursor: pointer;
+      z-index: 10;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .next-btn:active { transform: scale(0.95); }
+    .next-btn.hidden { display: none; }
+
+    /* ── Module iframe ───────────────────────────────────────────────────────  */
     #module-frame {
       width: 100%;
       height: 100%;
@@ -128,45 +200,56 @@
       display: block;
     }
 
-    /* ── Submitted ─────────────────────────────────────────────────────────── */
-    .checkmark {
-      font-size: 4.5rem;
-      display: block;
-      margin-bottom: 14px;
-      animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
-    @keyframes pop {
-      0%   { transform: scale(0); }
-      100% { transform: scale(1); }
-    }
-
-    .small-note {
-      font-size: 0.82rem;
-      opacity: 0.6;
-      margin-top: 6px;
-    }
-
-    /* ── Name badge (top-right on waiting/submitted screens) ──────────────── */
-    .name-badge {
+    /* ── Practice badge (shown inside module screen) ─────────────────────────  */
+    #practice-badge {
       position: absolute;
-      top: 14px;
-      right: 14px;
-      background: rgba(255,255,255,0.22);
+      top: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(108, 99, 255, 0.85);
       border-radius: 12px;
-      padding: 5px 14px;
-      font-size: 0.88rem;
+      padding: 4px 14px;
+      font-size: 0.78rem;
       font-weight: 700;
-      backdrop-filter: blur(6px);
-      cursor: pointer;
-      user-select: none;
+      z-index: 10;
+      pointer-events: none;
+      display: none;
     }
-    .name-badge:hover { background: rgba(255,255,255,0.35); }
-    .name-badge title-attr {}  /* tooltip */
+    #practice-badge.visible { display: block; }
+
+    /* ── Overlay (task complete / practice complete) ─────────────────────────  */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      z-index: 20;
+    }
+    .overlay.active { display: flex; }
+
+    .checkmark { font-size: 4.5rem; display: block; margin-bottom: 12px;
+      animation: pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275); }
+    @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+
+    .overlay h2   { font-size: 2rem; margin-bottom: 6px; }
+    .overlay .sub { opacity: 0.8; margin-bottom: 24px; font-size: 0.97rem; }
+
+    .overlay-btns {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
   </style>
 </head>
 <body>
 
-<!-- ── Screen 1: Connecting ─────────────────────────────────────────────── -->
+<!-- ── Screen 1: Connecting ───────────────────────────────────────────────── -->
 <div id="connecting-screen" class="screen active">
   <div class="card">
     <div class="spinner"></div>
@@ -176,117 +259,161 @@
   </div>
 </div>
 
-<!-- ── Screen 2: Name picker ─────────────────────────────────────────────── -->
+<!-- ── Screen 2: Name picker ──────────────────────────────────────────────── -->
 <div id="name-screen" class="screen">
   <div class="card">
-    <h2>Who are you?</h2>
-    <p class="subtitle">Tap your name to join</p>
+    <h2>Who's here?</h2>
+    <p class="subtitle">Select everyone sharing this device, then tap <strong>Start</strong></p>
+    <p class="selection-hint" id="selection-hint">No one selected</p>
     <div class="name-grid" id="name-grid"></div>
+    <button class="btn btn-green" id="start-btn" style="width:100%;" disabled onclick="confirmIdentity()">
+      Start →
+    </button>
   </div>
 </div>
 
-<!-- ── Screen 3: Waiting ──────────────────────────────────────────────────── -->
+<!-- ── Screen 3: Waiting ───────────────────────────────────────────────────── -->
 <div id="waiting-screen" class="screen">
-  <div class="name-badge" id="waiting-badge" title="Tap to change name"></div>
+  <div class="student-badge" id="waiting-badge" onclick="resetIdentity()" title="Tap to change names">
+    <span class="badge-dot"></span>
+    <span id="waiting-badge-name"></span>
+  </div>
+  <button class="next-btn hidden" id="waiting-next-btn" onclick="cycleStudent()">
+    Next Student ›
+  </button>
   <div class="card">
     <div class="pulse-ring">🎵</div>
-    <h2>Ready!</h2>
+    <h2 id="waiting-title">Ready!</h2>
     <p class="subtitle" id="waiting-subtitle">Waiting for your teacher to send a task…</p>
   </div>
 </div>
 
 <!-- ── Screen 4: Module active ────────────────────────────────────────────── -->
 <div id="module-screen" class="screen">
+  <!-- Student badge and next-student button float over iframe -->
+  <div class="student-badge" id="module-badge" onclick="resetIdentity()">
+    <span class="badge-dot"></span>
+    <span id="module-badge-name"></span>
+  </div>
+  <button class="next-btn hidden" id="module-next-btn" onclick="cycleStudentMidTask()">
+    Next Student ›
+  </button>
+  <div id="practice-badge">🎵 Practice Mode</div>
+
   <iframe
     id="module-frame"
     sandbox="allow-scripts allow-same-origin allow-forms allow-fullscreen"
     allowfullscreen
   ></iframe>
-</div>
 
-<!-- ── Screen 5: Submitted ───────────────────────────────────────────────── -->
-<div id="submitted-screen" class="screen">
-  <div class="name-badge" id="submitted-badge"></div>
-  <div class="card">
+  <!-- Task complete overlay (shown inside module screen after real submission) -->
+  <div class="overlay" id="complete-overlay">
     <span class="checkmark">✅</span>
     <h2>Submitted!</h2>
-    <p class="subtitle">Your teacher received your answer.</p>
-    <p class="small-note">Waiting for the next task…</p>
+    <p class="sub" id="complete-student-name"></p>
+    <div class="overlay-btns">
+      <button class="btn btn-green" id="next-student-btn" onclick="nextStudentAfterComplete()">
+        Next Student ›
+      </button>
+      <button class="btn btn-purple" onclick="startPractice()">
+        🎵 Practice
+      </button>
+    </div>
+  </div>
+
+  <!-- Practice complete overlay -->
+  <div class="overlay" id="practice-overlay">
+    <span class="checkmark">🎵</span>
+    <h2>Nice work!</h2>
+    <p class="sub">Practice complete</p>
+    <div class="overlay-btns">
+      <button class="btn btn-orange" onclick="startPractice()">
+        Practice Again
+      </button>
+      <button class="btn btn-ghost" onclick="endPractice()">
+        Done
+      </button>
+    </div>
   </div>
 </div>
 
 <script>
-  // ─── Configuration ──────────────────────────────────────────────────────────
-  // Must match ROOM_ID in mvp_host.html
-  const ROOM_ID = 'mr-dangerous-music-mvp';
-
-  // How long (ms) to wait before retrying when host isn't found yet
+  // ─── Config ─────────────────────────────────────────────────────────────────
+  const ROOM_ID    = 'mr-dangerous-music-mvp';
   const RETRY_DELAY = 4000;
 
-  // ─── State ─────────────────────────────────────────────────────────────────
-  let clientPeer       = null;
-  let conn             = null;
-  let roster           = [];          // Received from host
-  let identifiedStudent = null;       // { student_id, name, displayName, grade }
-  let currentTaskId    = null;
+  // ─── State ───────────────────────────────────────────────────────────────────
+  let clientPeer    = null;
+  let conn          = null;
+  let roster        = [];             // [{student_id, name, displayName, grade}]
+  let groupStudents = [];             // Students on this device (subset of roster)
+  let activeIndex   = 0;             // Which group member is currently active
+  let currentTask   = null;          // { taskId, taskQuestion, modulePath, savedSettings }
+  let practiceMode  = false;
 
-  // ─── Screen management ─────────────────────────────────────────────────────
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
   function showScreen(id) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     document.getElementById(id + '-screen').classList.add('active');
   }
 
-  // ─── Connection ─────────────────────────────────────────────────────────────
-  function connect() {
-    // Destroy any lingering peer before starting fresh
-    if (clientPeer) { clientPeer.destroy(); clientPeer = null; }
-    conn = null;
+  function setError(msg) {
+    document.getElementById('connect-error').textContent = msg;
+  }
 
+  function activeStudent() {
+    return groupStudents[activeIndex] || null;
+  }
+
+  function updateBadges() {
+    const s = activeStudent();
+    if (!s) return;
+    const name = s.displayName || s.name.split(' ')[0];
+    document.getElementById('waiting-badge-name').textContent  = name;
+    document.getElementById('module-badge-name').textContent   = name;
+
+    // Show "Next Student" button only when there are multiple group members
+    const multi = groupStudents.length > 1;
+    document.getElementById('waiting-next-btn').classList.toggle('hidden', !multi);
+    document.getElementById('module-next-btn').classList.toggle('hidden', !multi);
+    document.getElementById('next-student-btn').style.display = multi ? '' : 'none';
+  }
+
+  // ─── Connection ──────────────────────────────────────────────────────────────
+  function connect() {
+    if (clientPeer) { try { clientPeer.destroy(); } catch (_) {} clientPeer = null; }
+    conn = null;
     showScreen('connecting');
     setError('');
 
-    clientPeer = new Peer();   // Random client ID — host only needs to know its own fixed ID
+    clientPeer = new Peer();
 
     clientPeer.on('open', () => {
       conn = clientPeer.connect(ROOM_ID, { reliable: true });
 
-      conn.on('open', () => {
-        setError('');
-        // Connection open — wait for roster message from host
-      });
-
-      conn.on('data', handleHostMessage);
-
-      conn.on('close', () => {
-        setError('Disconnected from teacher. Reconnecting…');
-        setTimeout(connect, RETRY_DELAY);
-      });
-
-      conn.on('error', err => {
-        setError('Connection error: ' + err.message);
-      });
+      conn.on('open',  ()     => setError(''));
+      conn.on('data',  data   => handleHostMessage(data));
+      conn.on('close', ()     => { setError('Disconnected. Reconnecting…'); setTimeout(connect, RETRY_DELAY); });
+      conn.on('error', err   => setError('Connection error: ' + err.message));
     });
 
     clientPeer.on('error', err => {
-      if (err.type === 'peer-unavailable') {
-        setError('Teacher hasn\'t opened the room yet. Retrying…');
-      } else {
-        setError('Error (' + err.type + '). Retrying…');
-      }
+      setError(err.type === 'peer-unavailable'
+        ? 'Teacher hasn\'t opened the room yet. Retrying…'
+        : 'Error (' + err.type + '). Retrying…');
       setTimeout(connect, RETRY_DELAY);
     });
   }
 
-  // ─── Messages from host ─────────────────────────────────────────────────────
+  // ─── Host messages ────────────────────────────────────────────────────────────
   function handleHostMessage(data) {
-
     if (data.type === 'roster') {
       roster = data.students;
-
-      // If we were already identified (e.g. after a reconnect), re-identify automatically
-      if (identifiedStudent) {
-        conn.send({ type: 'identify', student_id: identifiedStudent.student_id, name: identifiedStudent.name });
+      // Auto-re-identify on reconnect
+      if (groupStudents.length > 0) {
+        sendIdentify();
         showScreen('waiting');
+        updateBadges();
       } else {
         renderNamePicker(roster);
         showScreen('name');
@@ -294,106 +421,216 @@
     }
 
     else if (data.type === 'task') {
-      currentTaskId = data.taskId;
-      loadModule(data.modulePath, {
-        studentId:        data.studentId,
-        taskId:           data.taskId,
-        grade:            data.grade,
-        existingResponse: '',
-        studentName:      data.studentName,
-      });
+      currentTask  = data;
+      practiceMode = false;
+      loadModule(data.modulePath, data.savedSettings);
     }
 
     else if (data.type === 'task-clear') {
-      currentTaskId = null;
-      // Blank the iframe
-      document.getElementById('module-frame').src = 'about:blank';
+      currentTask = null;
+      practiceMode = false;
+      unloadModule();
       document.getElementById('waiting-subtitle').textContent = 'Task cleared — waiting for the next one…';
+      showScreen('waiting');
+      updateBadges();
+    }
+  }
+
+  // ─── Name picker ─────────────────────────────────────────────────────────────
+  function renderNamePicker(students) {
+    const grid = document.getElementById('name-grid');
+    grid.innerHTML = '';
+    // Reset any previous group selection
+    students.forEach(student => {
+      const btn = document.createElement('button');
+      btn.className  = 'name-btn';
+      btn.textContent = student.displayName || student.name.split(' ')[0];
+      btn.dataset.studentId = student.student_id;
+      btn.onclick = () => toggleNameSelect(btn, student);
+      grid.appendChild(btn);
+    });
+    updateSelectionHint();
+  }
+
+  function toggleNameSelect(btn, student) {
+    const alreadySelected = groupStudents.some(s => s.student_id === student.student_id);
+    if (alreadySelected) {
+      groupStudents = groupStudents.filter(s => s.student_id !== student.student_id);
+      btn.classList.remove('selected');
+    } else {
+      groupStudents.push(student);
+      btn.classList.add('selected');
+    }
+    updateSelectionHint();
+    document.getElementById('start-btn').disabled = groupStudents.length === 0;
+  }
+
+  function updateSelectionHint() {
+    const n = groupStudents.length;
+    const hint = document.getElementById('selection-hint');
+    if (n === 0)      hint.textContent = 'No one selected';
+    else if (n === 1) hint.textContent = `1 person selected`;
+    else              hint.textContent = `${n} people selected — they'll take turns`;
+  }
+
+  function confirmIdentity() {
+    if (groupStudents.length === 0) return;
+    activeIndex = 0;
+    sendIdentify();
+    updateBadges();
+    if (currentTask) {
+      loadModule(currentTask.modulePath, currentTask.savedSettings);
+    } else {
+      document.getElementById('waiting-subtitle').textContent = 'Waiting for your teacher to send a task…';
       showScreen('waiting');
     }
   }
 
-  // ─── Name picker ───────────────────────────────────────────────────────────
-  function renderNamePicker(students) {
-    const grid = document.getElementById('name-grid');
-    grid.innerHTML = '';
-    students.forEach(student => {
-      const btn = document.createElement('button');
-      btn.className = 'name-btn';
-      btn.textContent = student.displayName || student.name.split(' ')[0];
-      btn.onclick = () => identifySelf(student);
-      grid.appendChild(btn);
-    });
-  }
-
-  function identifySelf(student) {
-    identifiedStudent = student;
-
-    // Update name badges on all screens that show them
-    const badge = student.displayName || student.name.split(' ')[0];
-    document.getElementById('waiting-badge').textContent   = badge;
-    document.getElementById('submitted-badge').textContent = badge;
-
-    // Tapping the badge on the waiting screen lets a student re-pick their name
-    document.getElementById('waiting-badge').onclick = resetIdentity;
-
-    // Tell the host
-    conn.send({ type: 'identify', student_id: student.student_id, name: student.name });
-
-    document.getElementById('waiting-subtitle').textContent = 'Waiting for your teacher to send a task…';
-    showScreen('waiting');
+  function sendIdentify() {
+    conn?.send({ type: 'identify', students: groupStudents });
   }
 
   function resetIdentity() {
-    identifiedStudent = null;
+    groupStudents = [];
+    activeIndex   = 0;
     renderNamePicker(roster);
     showScreen('name');
   }
 
-  // ─── Module loading ────────────────────────────────────────────────────────
-  function loadModule(path, context) {
-    const iframe = document.getElementById('module-frame');
+  // ─── Student cycling ─────────────────────────────────────────────────────────
+  function cycleStudent() {
+    // Cycle on waiting screen — just update badge
+    activeIndex = (activeIndex + 1) % groupStudents.length;
+    updateBadges();
+  }
 
-    // Show module screen first so the iframe is visible and has dimensions
+  function cycleStudentMidTask() {
+    // Cycle while a module is showing — reload for the new active student
+    activeIndex = (activeIndex + 1) % groupStudents.length;
+    updateBadges();
+    if (currentTask) loadModule(currentTask.modulePath, currentTask.savedSettings);
+  }
+
+  function nextStudentAfterComplete() {
+    // Called from task-complete overlay — cycle and reload task for next student
+    activeIndex = (activeIndex + 1) % groupStudents.length;
+    hideOverlays();
+    updateBadges();
+    if (currentTask) loadModule(currentTask.modulePath, currentTask.savedSettings);
+  }
+
+  // ─── Module management ────────────────────────────────────────────────────────
+  function loadModule(path, savedSettings) {
+    hideOverlays();
+    practiceMode = false;
+    document.getElementById('practice-badge').classList.remove('visible');
     showScreen('module');
+    updateBadges();
 
+    const iframe = document.getElementById('module-frame');
     iframe.src = path;
     iframe.onload = () => {
-      // Mirror the 100ms delay used by module-loader.js so modules initialise correctly
+      const s = activeStudent();
       setTimeout(() => {
         iframe.contentWindow.postMessage({
           type:         'taskmodule:init',
-          context:      context,
-          savedSettings: null,
+          context: {
+            studentId:        s?.student_id || 'unknown',
+            taskId:           currentTask?.taskId || '',
+            grade:            s?.grade || '5',
+            existingResponse: '',
+            studentName:      s?.name || '',
+          },
+          savedSettings: savedSettings || null,
         }, '*');
       }, 100);
     };
   }
 
-  // ─── Module response relay ─────────────────────────────────────────────────
+  function startPractice() {
+    if (!currentTask) return;
+    hideOverlays();
+    practiceMode = true;
+    document.getElementById('practice-badge').classList.add('visible');
+    showScreen('module');
+    updateBadges();
+
+    const iframe = document.getElementById('module-frame');
+    // Reload same module — randomises a new problem on init
+    if (iframe.src && iframe.src !== 'about:blank') {
+      // Force reload by toggling src
+      const path = currentTask.modulePath;
+      iframe.src = 'about:blank';
+      requestAnimationFrame(() => {
+        iframe.src = path;
+        iframe.onload = () => {
+          const s = activeStudent();
+          setTimeout(() => {
+            iframe.contentWindow.postMessage({
+              type:    'taskmodule:init',
+              context: {
+                studentId:        s?.student_id || 'unknown',
+                taskId:           currentTask?.taskId || '',
+                grade:            s?.grade || '5',
+                existingResponse: '',
+                studentName:      s?.name || '',
+              },
+              savedSettings: currentTask.savedSettings || null,
+            }, '*');
+          }, 100);
+        };
+      });
+    }
+  }
+
+  function endPractice() {
+    practiceMode = false;
+    hideOverlays();
+    unloadModule();
+    document.getElementById('waiting-subtitle').textContent =
+      currentTask ? 'Task ready — pick who\'s up next' : 'Waiting for your teacher to send a task…';
+    showScreen('waiting');
+    updateBadges();
+  }
+
+  function unloadModule() {
+    document.getElementById('module-frame').src = 'about:blank';
+    document.getElementById('practice-badge').classList.remove('visible');
+  }
+
+  function hideOverlays() {
+    document.getElementById('complete-overlay').classList.remove('active');
+    document.getElementById('practice-overlay').classList.remove('active');
+  }
+
+  // ─── Module response relay ────────────────────────────────────────────────────
   window.addEventListener('message', event => {
-    if (event.data.type === 'taskmodule:response' && event.data.isComplete && identifiedStudent && conn) {
-      // Relay to host — host's handleClientMessage() will call app.handleModuleResponse()
+    if (event.data.type !== 'taskmodule:response' || !event.data.isComplete) return;
+    const s = activeStudent();
+    if (!s || !conn) return;
+
+    if (practiceMode) {
+      // Practice: don't relay to host, show practice-complete overlay
+      hideOverlays();
+      document.getElementById('practice-overlay').classList.add('active');
+    } else {
+      // Real task: relay to host
       conn.send({
         type:       'response',
-        student_id: identifiedStudent.student_id,
-        taskId:     currentTaskId,
+        student_id: s.student_id,
+        taskId:     currentTask?.taskId || '',
         value:      event.data.value,
         isComplete: true,
       });
-
-      // Blank iframe (free memory) then show confirmation
-      document.getElementById('module-frame').src = 'about:blank';
-      showScreen('submitted');
+      // Show task-complete overlay
+      const name = s.displayName || s.name.split(' ')[0];
+      document.getElementById('complete-student-name').textContent = `${name}'s answer was sent ✓`;
+      hideOverlays();
+      document.getElementById('complete-overlay').classList.add('active');
     }
   });
 
-  // ─── UI helpers ────────────────────────────────────────────────────────────
-  function setError(msg) {
-    document.getElementById('connect-error').textContent = msg;
-  }
-
-  // ─── Start ─────────────────────────────────────────────────────────────────
+  // ─── Start ───────────────────────────────────────────────────────────────────
   connect();
 </script>
 </body>

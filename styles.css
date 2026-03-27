@@ -2025,6 +2025,39 @@ body.snow-theme .app-header {
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
+/* === WebRTC Host Button === */
+.btn-host {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+  color: #fff;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: none;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: filter 0.15s, transform 0.1s;
+}
+.btn-host:hover  { filter: brightness(1.1); }
+.btn-host:active { transform: scale(0.96); }
+
+.btn-host.hosting {
+  background: linear-gradient(135deg, #f5576c 0%, #f093fb 100%);
+}
+
+.hosting-status {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #38ef7d;
+  white-space: nowrap;
+  padding: 4px 10px;
+  background: rgba(17, 153, 142, 0.2);
+  border-radius: 12px;
+  border: 1px solid rgba(56, 239, 125, 0.4);
+}
+
 .btn-seat-assign {
   background: linear-gradient(135deg, #10b981 0%, #059669 100%);
   color: white;

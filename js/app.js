@@ -9,6 +9,7 @@ class TeachingAssistantApp {
     this.moduleLoader = new ModuleLoader();
     this.audioManager = new AudioManager(this.fileManager, this.csvHandler);
     this.videoManager = new VideoManager(this.fileManager, this.csvHandler);
+    this.peerManager  = new PeerManager();
 
     // New data structure: separate students and results
     this.students = [];        // From students.csv
@@ -113,8 +114,33 @@ class TeachingAssistantApp {
         if (this.currentScreen === 'student-select' && this.selectedClass) {
           this.showStudentScreen();
         }
+        // Broadcast to client devices if hosting
+        if (this.peerManager.isOpen && this.selectedTask) {
+          const taskData = this.getTask(this.selectedTask);
+          if (taskData) {
+            const savedSettings = this.getModuleSettings(taskData.module_path.split('/').pop());
+            this.peerManager.broadcastTask(taskData, savedSettings);
+          }
+        }
       });
     }
+
+    // Begin Host button
+    const beginHostBtn = document.getElementById('begin-host-btn');
+    if (beginHostBtn) {
+      beginHostBtn.addEventListener('click', () => this.toggleHost());
+    }
+
+    // Wire up peer manager callbacks
+    this.peerManager.onCountChange((connected, identified) => {
+      this.updateHostingStatus(connected, identified);
+    });
+    this.peerManager.onResponse(data => {
+      this.handlePeerResponse(data);
+    });
+    this.peerManager.onError(msg => {
+      this.showNotification(msg, 'error');
+    });
 
 
 
@@ -426,6 +452,9 @@ class TeachingAssistantApp {
       if (taskSelector && this.tasks.length > 0) {
         taskSelector.style.display = 'inline-block';
       }
+
+      const beginHostBtn = document.getElementById('begin-host-btn');
+      if (beginHostBtn) beginHostBtn.style.display = 'inline-flex';
       // Show header elements after file load
       document.getElementById('recording-btn').style.display = 'block';
       document.getElementById('mic-gain-control').style.display = 'flex';
@@ -2620,6 +2649,95 @@ class TeachingAssistantApp {
       this.startCountdown();
     }
   }
+
+  // ── WebRTC Host ────────────────────────────────────────────────────────────
+
+  /**
+   * Toggle the WebRTC classroom hosting session on/off
+   */
+  async toggleHost() {
+    const btn = document.getElementById('begin-host-btn');
+
+    if (this.peerManager.isOpen) {
+      this.peerManager.close();
+      if (btn) { btn.textContent = '▶ Begin Host'; btn.classList.remove('hosting'); }
+      const status = document.getElementById('hosting-status');
+      if (status) status.style.display = 'none';
+      return;
+    }
+
+    // Build roster from currently loaded students
+    const firstNameCounts = {};
+    this.students.forEach(s => {
+      const fn = s.name.split(' ')[0];
+      firstNameCounts[fn] = (firstNameCounts[fn] || 0) + 1;
+    });
+    const roster = this.students.map(s => {
+      const parts = s.name.split(' ');
+      const fn    = parts[0];
+      const displayName = firstNameCounts[fn] > 1 && parts.length > 1
+        ? `${fn} ${parts[parts.length - 1][0]}`
+        : fn;
+      return { student_id: s.student_id, name: s.name, displayName, grade: s.grade };
+    });
+
+    if (btn) btn.textContent = 'Opening…';
+    try {
+      await this.peerManager.open(roster);
+      if (btn) { btn.textContent = '■ Stop Hosting'; btn.classList.add('hosting'); }
+      const status = document.getElementById('hosting-status');
+      if (status) { status.textContent = 'Hosting · 0 connected'; status.style.display = 'inline'; }
+    } catch (err) {
+      if (btn) btn.textContent = '▶ Begin Host';
+      this.showNotification(
+        err.type === 'unavailable-id'
+          ? 'Room is busy — wait a moment and try again'
+          : 'Could not open room: ' + err.type,
+        'error'
+      );
+    }
+  }
+
+  /**
+   * Update the hosting status indicator in the header
+   */
+  updateHostingStatus(connected, identified) {
+    const status = document.getElementById('hosting-status');
+    if (!status) return;
+    if (!this.peerManager.isOpen) { status.style.display = 'none'; return; }
+    status.style.display = 'inline';
+    status.textContent = identified > 0
+      ? `Hosting · ${connected} device${connected !== 1 ? 's' : ''} · ${identified} identified`
+      : `Hosting · ${connected} device${connected !== 1 ? 's' : ''} connected`;
+  }
+
+  /**
+   * Handle a task response arriving from a student device (WebRTC)
+   * Saves to results[] exactly like handleModuleResponse(), without triggering countdown
+   * @param {Object} data - { student_id, taskId, value, isComplete }
+   */
+  handlePeerResponse(data) {
+    if (!data.isComplete) return;
+
+    const newResult = {
+      student_id:     data.student_id,
+      task_id:        data.taskId || this.selectedTask,
+      response:       data.value,
+      completed_date: new Date().toISOString()
+    };
+    this.results.push(newResult);
+    this.markUnsaved();
+    this.updateLocalStorage();
+
+    // Update the student's roster button to completed state
+    const student = this.students.find(s => s.student_id === data.student_id);
+    if (student) this.updateStudentButtonState(student);
+
+    // Auto-save silently
+    this.saveFile(true);
+  }
+
+  // ── End WebRTC Host ────────────────────────────────────────────────────────
 
   /**
    * Handle module settings update
