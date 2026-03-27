@@ -2666,13 +2666,21 @@ class TeachingAssistantApp {
       return;
     }
 
-    // Build roster from currently loaded students
+    // Build roster from the currently selected class (mirrors showStudentScreen filter)
+    let classStudents;
+    if (this.selectedClasses.size > 0) {
+      classStudents = this.students.filter(s => this.selectedClasses.has(s.class));
+    } else {
+      classStudents = this.students.filter(s => s.class === this.selectedClass);
+    }
+    classStudents.sort((a, b) => a.name.localeCompare(b.name));
+
     const firstNameCounts = {};
-    this.students.forEach(s => {
+    classStudents.forEach(s => {
       const fn = s.name.split(' ')[0];
       firstNameCounts[fn] = (firstNameCounts[fn] || 0) + 1;
     });
-    const roster = this.students.map(s => {
+    const roster = classStudents.map(s => {
       const parts = s.name.split(' ');
       const fn    = parts[0];
       const displayName = firstNameCounts[fn] > 1 && parts.length > 1

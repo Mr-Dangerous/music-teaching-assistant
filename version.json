@@ -1,5 +1,5 @@
 {
-  "version": "3.43.1",
+  "version": "3.43.3",
   "lastUpdated": "2026-03-27",
-  "description": "Integrate WebRTC classroom hosting into main app with peer-manager, Begin Host button, client multi-student cycling, and practice mode"
+  "description": "Fix host roster to send only selected class students"
 }
