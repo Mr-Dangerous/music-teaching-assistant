@@ -131,6 +131,20 @@ class TeachingAssistantApp {
       beginHostBtn.addEventListener('click', () => this.toggleHost());
     }
 
+    // Override Clients button
+    const overrideBtn = document.getElementById('override-clients-btn');
+    if (overrideBtn) {
+      overrideBtn.addEventListener('click', () => {
+        if (!this.peerManager.isOpen || !this.selectedTask) return;
+        const taskData = this.getTask(this.selectedTask);
+        if (taskData) {
+          const savedSettings = this.getModuleSettings(taskData.module_path.split('/').pop());
+          this.peerManager.broadcastTask(taskData, savedSettings);
+          this.showNotification('Task pushed to all client devices', 'success');
+        }
+      });
+    }
+
     // Wire up peer manager callbacks
     this.peerManager.onCountChange((connected, identified) => {
       this.updateHostingStatus(connected, identified);
@@ -2710,13 +2724,23 @@ class TeachingAssistantApp {
    * Update the hosting status indicator in the header
    */
   updateHostingStatus(connected, identified) {
-    const status = document.getElementById('hosting-status');
-    if (!status) return;
-    if (!this.peerManager.isOpen) { status.style.display = 'none'; return; }
-    status.style.display = 'inline';
-    status.textContent = identified > 0
-      ? `Hosting · ${connected} device${connected !== 1 ? 's' : ''} · ${identified} identified`
-      : `Hosting · ${connected} device${connected !== 1 ? 's' : ''} connected`;
+    const status      = document.getElementById('hosting-status');
+    const overrideBtn = document.getElementById('override-clients-btn');
+    const isOpen      = this.peerManager.isOpen;
+
+    if (status) {
+      if (!isOpen) { status.style.display = 'none'; }
+      else {
+        status.style.display = 'inline';
+        status.textContent = identified > 0
+          ? `Hosting · ${connected} device${connected !== 1 ? 's' : ''} · ${identified} identified`
+          : `Hosting · ${connected} device${connected !== 1 ? 's' : ''} connected`;
+      }
+    }
+
+    if (overrideBtn) {
+      overrideBtn.style.display = isOpen ? 'inline-flex' : 'none';
+    }
   }
 
   /**

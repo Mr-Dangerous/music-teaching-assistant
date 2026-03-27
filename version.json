@@ -1,5 +1,5 @@
 {
-  "version": "3.43.3",
+  "version": "3.44.1",
   "lastUpdated": "2026-03-27",
-  "description": "Fix host roster to send only selected class students"
+  "description": "Add Override Clients button to push current task to all devices"
 }
