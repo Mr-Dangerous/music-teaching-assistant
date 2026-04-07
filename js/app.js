@@ -4742,6 +4742,7 @@ class TeachingAssistantApp {
     const TOTAL_CHAIRS = 4;
 
     const errors = [];
+    const placedStudentIds = new Set();
     const rug = document.getElementById('seating-chart-rug');
     const stoolsContainer = document.getElementById('seating-chart-stools-container');
 
@@ -4842,6 +4843,7 @@ class TeachingAssistantApp {
           spot.dataset.studentId = manualInRow[i].student_id;
           spot.innerHTML = `<span class="seating-chart-student-name">${this.getFirstNameOnly(manualInRow[i].name)}</span>`;
           spot.draggable = true;
+          placedStudentIds.add(manualInRow[i].student_id);
         } else {
           spot.classList.add('empty');
         }
@@ -4853,6 +4855,7 @@ class TeachingAssistantApp {
       const emptySpots = Array.from(row.querySelectorAll('.seating-chart-student-spot.empty'));
       if (studentsInRow.length > 0 && emptySpots.length > 0) {
         this.distributeStudentsOnChart(studentsInRow, emptySpots);
+        studentsInRow.slice(0, emptySpots.length).forEach(s => placedStudentIds.add(s.student_id));
       }
 
       rug.appendChild(row);
@@ -4897,6 +4900,7 @@ class TeachingAssistantApp {
           <span class="seating-chart-student-name">${this.getFirstNameOnly(assignedStudent.student.name)}</span>
           ${assignedStudent.color ? `<span class="seating-chart-furniture-color-dot" data-color="${assignedStudent.color}"></span>` : ''}
         `;
+        placedStudentIds.add(assignedStudent.student.student_id);
       } else {
         stool.classList.add('empty');
         stool.innerHTML = `<span class="stool-icon">⭐</span><span>${pos.id}</span>`;
@@ -4940,6 +4944,7 @@ class TeachingAssistantApp {
           <span class="seating-chart-student-name">${this.getFirstNameOnly(assignedStudent.student.name)}</span>
           ${assignedStudent.color ? `<span class="seating-chart-furniture-color-dot" data-color="${assignedStudent.color}"></span>` : ''}
         `;
+        placedStudentIds.add(assignedStudent.student.student_id);
       } else {
         chair.classList.add('empty');
         chair.innerHTML = `<span class="chair-icon">🪑</span><span>${pos.id}</span>`;
@@ -4957,8 +4962,36 @@ class TeachingAssistantApp {
       errorBanner.classList.remove('show');
     }
 
+    // Render overflow box for students who couldn't be placed
+    const overflowStudents = availableStudents.filter(s => !placedStudentIds.has(s.student_id));
+    this.renderOverflowBox(overflowStudents);
+
     // Setup drag and drop handlers
     this.setupSeatingChartDragAndDrop();
+  }
+
+  /**
+   * Render the overflow box showing students who couldn't be placed on the seating chart
+   */
+  renderOverflowBox(students) {
+    const box = document.getElementById('seating-chart-overflow-box');
+    const container = document.getElementById('seating-chart-overflow-students');
+    if (!box || !container) return;
+
+    if (students.length === 0) {
+      box.style.display = 'none';
+      return;
+    }
+
+    container.innerHTML = '';
+    students.forEach(student => {
+      const chip = document.createElement('span');
+      chip.className = 'seating-chart-overflow-student';
+      chip.textContent = this.getFirstNameOnly(student.name);
+      container.appendChild(chip);
+    });
+
+    box.style.display = 'flex';
   }
 
   /**

@@ -1,5 +1,5 @@
 {
-  "version": "3.44.3",
-  "lastUpdated": "2026-03-27",
-  "description": "Override Clients sends exact current module state to clients"
+  "version": "3.45.1",
+  "lastUpdated": "2026-04-07",
+  "description": "Add overflow box to seating chart for classes with more than 30 students"
 }

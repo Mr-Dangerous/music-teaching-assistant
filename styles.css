@@ -2340,6 +2340,43 @@ body.snow-theme .app-header {
   display: block;
 }
 
+.seating-chart-overflow-box {
+  width: 85%;
+  background: rgba(239, 68, 68, 0.15);
+  border: 2px solid rgba(239, 68, 68, 0.5);
+  border-radius: 10px;
+  padding: 6px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.seating-chart-overflow-label {
+  color: #fca5a5;
+  font-weight: 700;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.seating-chart-overflow-students {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.seating-chart-overflow-student {
+  background: rgba(239, 68, 68, 0.3);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+  border-radius: 6px;
+  padding: 2px 8px;
+  color: white;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .seating-chart-classroom-container {
   position: relative;
   width: 85%;
