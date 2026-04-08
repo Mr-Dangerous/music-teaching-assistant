@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Instrument Assigner</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .container {
+      background: rgba(255,255,255,0.97);
+      border-radius: 16px;
+      padding: 12px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      gap: 8px;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .header h2 {
+      font-size: 18px;
+      color: #1e293b;
+      font-weight: 700;
+    }
+
+    .clear-btn {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 5px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #64748b;
+      transition: background 0.2s;
+    }
+    .clear-btn:hover { background: #fecaca; color: #dc2626; border-color: #fca5a5; }
+
+    /* ── Students grid ──────────────────────────────────── */
+    .students-area {
+      flex: 1;
+      overflow-y: auto;
+    }
+
+    .students-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 7px;
+      padding: 2px;
+    }
+
+    .student-chip {
+      background: #f8fafc;
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 7px 8px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      min-height: 58px;
+      position: relative;
+      transition: border-color 0.15s, background 0.15s, transform 0.12s;
+    }
+
+    .student-chip.drag-over {
+      border-color: #6366f1;
+      background: #eef2ff;
+      transform: scale(1.04);
+    }
+
+    .student-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e293b;
+      line-height: 1.2;
+    }
+
+    .student-badge {
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      background: #e2e8f0;
+      padding: 2px 8px;
+      border-radius: 20px;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .student-badge.assigned {
+      color: #fff;
+    }
+
+    .remove-assignment {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      width: 17px;
+      height: 17px;
+      border-radius: 50%;
+      background: #ef4444;
+      border: 1.5px solid white;
+      color: white;
+      font-size: 9px;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      line-height: 1;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+
+    .student-chip.has-instrument .remove-assignment { display: flex; }
+
+    /* ── Palette ─────────────────────────────────────────── */
+    .palette-section {
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 8px 10px;
+      flex-shrink: 0;
+      background: #f8fafc;
+      transition: border-color 0.3s, background 0.3s;
+    }
+
+    .palette-section.unlocked {
+      border-color: #f59e0b;
+      background: #fffbeb;
+    }
+
+    .palette-header {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin-bottom: 7px;
+    }
+
+    .palette-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      flex: 1;
+    }
+
+    .palette-hint {
+      font-size: 11px;
+      color: #f59e0b;
+      font-style: italic;
+      display: none;
+    }
+    .palette-section.unlocked .palette-hint { display: inline; }
+
+    .pal-btn {
+      width: 26px;
+      height: 26px;
+      border: none;
+      border-radius: 7px;
+      font-size: 15px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.1s, background 0.2s;
+    }
+    .pal-btn:active { transform: scale(0.93); }
+
+    .add-btn { background: #6366f1; color: white; }
+    .add-btn:hover { background: #4f46e5; }
+
+    .lock-btn { background: #e2e8f0; color: #64748b; }
+    .lock-btn:hover { background: #cbd5e1; }
+    .palette-section.unlocked .lock-btn { background: #fef3c7; color: #b45309; }
+
+    .palette-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      min-height: 32px;
+    }
+
+    /* ── Instrument chip ────────────────────────────────── */
+    .instrument-chip {
+      padding: 5px 13px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+      cursor: grab;
+      user-select: none;
+      touch-action: none;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      transition: box-shadow 0.15s;
+      position: relative;
+    }
+
+    .instrument-chip.dragging { opacity: 0.35; }
+
+    @keyframes jiggle {
+      0%   { transform: rotate(0deg); }
+      20%  { transform: rotate(-3.5deg) scale(1.01); }
+      50%  { transform: rotate(3.5deg) scale(1.01); }
+      80%  { transform: rotate(-2deg); }
+      100% { transform: rotate(0deg); }
+    }
+
+    .instrument-chip.jiggling {
+      animation: jiggle 0.38s ease-in-out infinite;
+    }
+
+    /* ── Drag ghost ─────────────────────────────────────── */
+    #drag-ghost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      padding: 5px 13px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 600;
+      color: white;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+      transform: scale(1.12) rotate(-2deg);
+      display: none;
+    }
+
+    /* ── Delete zone ─────────────────────────────────────── */
+    #delete-zone {
+      position: fixed;
+      top: 14px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(239,68,68,0.9);
+      color: white;
+      padding: 9px 28px;
+      border-radius: 30px;
+      font-size: 13px;
+      font-weight: 700;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      z-index: 9998;
+      pointer-events: none;
+      box-shadow: 0 4px 20px rgba(239,68,68,0.45);
+      transition: background 0.15s;
+    }
+
+    #delete-zone.visible { display: flex; }
+    #delete-zone.active { background: rgba(185,28,28,0.95); transform: translateX(-50%) scale(1.06); }
+
+    /* ── Empty state ─────────────────────────────────────── */
+    .empty-state {
+      grid-column: 1 / -1;
+      padding: 24px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Delete zone (shown while dragging in unlocked mode) -->
+  <div id="delete-zone">🗑️ Drop to remove</div>
+
+  <!-- Drag ghost -->
+  <div id="drag-ghost"></div>
+
+  <div class="container">
+
+    <div class="header">
+      <h2 id="class-title">Instrument Assigner</h2>
+      <button class="clear-btn" id="clear-btn">Clear All</button>
+    </div>
+
+    <div class="students-area">
+      <div class="students-grid" id="students-grid"></div>
+    </div>
+
+    <div class="palette-section" id="palette-section">
+      <div class="palette-header">
+        <span class="palette-label">Instruments</span>
+        <span class="palette-hint">Hold to lock • Drag off to remove</span>
+        <button class="pal-btn add-btn" id="add-btn" title="Add instrument">+</button>
+        <button class="pal-btn lock-btn" id="lock-btn" title="Lock / unlock palette">🔓</button>
+      </div>
+      <div class="palette-chips" id="palette-chips"></div>
+    </div>
+
+  </div>
+
+  <script>
+    // ── Constants ────────────────────────────────────────────────────────────
+    const STORAGE_PREFIX = 'instrument_assigner_v3_';
+    const COLORS = [
+      '#6366f1','#ec4899','#f59e0b','#10b981','#3b82f6',
+      '#8b5cf6','#ef4444','#06b6d4','#84cc16','#f97316',
+      '#0ea5e9','#d946ef','#14b8a6','#a16207','#4f46e5',
+    ];
+    const DEFAULT_INSTRUMENTS = [
+      'Violin','Viola','Cello','Double Bass',
+      'Flute','Clarinet','Trumpet','Trombone',
+    ];
+
+    // ── State ────────────────────────────────────────────────────────────────
+    let s = {
+      className: 'default',
+      students: [],            // [{ id, name, grade, class, present }]
+      instruments: [...DEFAULT_INSTRUMENTS],
+      assignments: {},          // studentId → instrumentName
+      colorMap: {},             // instrumentName → hex color
+      unlocked: false,
+    };
+
+    // ── Color helpers ─────────────────────────────────────────────────────────
+    function colorFor(name) {
+      if (!s.colorMap[name]) {
+        s.colorMap[name] = COLORS[Object.keys(s.colorMap).length % COLORS.length];
+      }
+      return s.colorMap[name];
+    }
+
+    // ── Persistence ──────────────────────────────────────────────────────────
+    function save() {
+      try {
+        localStorage.setItem(
+          STORAGE_PREFIX + s.className,
+          JSON.stringify({ instruments: s.instruments, assignments: s.assignments, colorMap: s.colorMap })
+        );
+      } catch (_) {}
+    }
+
+    function load() {
+      try {
+        const raw = localStorage.getItem(STORAGE_PREFIX + s.className);
+        if (!raw) return;
+        const d = JSON.parse(raw);
+        if (Array.isArray(d.instruments) && d.instruments.length) s.instruments = d.instruments;
+        if (d.assignments) s.assignments = d.assignments;
+        if (d.colorMap) s.colorMap = d.colorMap;
+      } catch (_) {}
+    }
+
+    // ── Notify parent ─────────────────────────────────────────────────────────
+    function notify() {
+      window.parent.postMessage({
+        type: 'taskmodule:response',
+        value: getResponse(),
+        isComplete: Object.keys(s.assignments).length > 0,
+      }, '*');
+    }
+
+    function getResponse() {
+      return JSON.stringify({ className: s.className, instruments: s.instruments, assignments: s.assignments });
+    }
+
+    // ── Render ────────────────────────────────────────────────────────────────
+    function render() { renderStudents(); renderPalette(); }
+
+    function renderStudents() {
+      const grid = document.getElementById('students-grid');
+      grid.innerHTML = '';
+      if (!s.students.length) {
+        grid.innerHTML = '<div class="empty-state">No students loaded for this class.</div>';
+        return;
+      }
+      s.students.forEach(student => {
+        const instrument = s.assignments[student.id];
+        const chip = document.createElement('div');
+        chip.className = 'student-chip' + (instrument ? ' has-instrument' : '');
+        chip.dataset.sid = student.id;
+
+        const nameEl = document.createElement('div');
+        nameEl.className = 'student-name';
+        nameEl.textContent = student.name;
+
+        const badge = document.createElement('div');
+        badge.className = 'student-badge' + (instrument ? ' assigned' : '');
+        badge.textContent = instrument || '—';
+        if (instrument) badge.style.background = colorFor(instrument);
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-assignment';
+        removeBtn.textContent = '×';
+        removeBtn.title = 'Remove assignment';
+        removeBtn.addEventListener('pointerdown', e => {
+          e.stopPropagation(); e.preventDefault();
+          delete s.assignments[student.id];
+          save(); notify(); renderStudents();
+        });
+
+        chip.appendChild(nameEl);
+        chip.appendChild(badge);
+        chip.appendChild(removeBtn);
+        grid.appendChild(chip);
+      });
+    }
+
+    function renderPalette() {
+      const container = document.getElementById('palette-chips');
+      container.innerHTML = '';
+
+      s.instruments.forEach((name, i) => {
+        const chip = document.createElement('div');
+        chip.className = 'instrument-chip' + (s.unlocked ? ' jiggling' : '');
+        chip.style.background = colorFor(name);
+        chip.style.animationDelay = (i * 0.04) + 's';
+        chip.dataset.instrument = name;
+        chip.textContent = name;
+        chip.addEventListener('pointerdown', onInstrumentDown);
+        container.appendChild(chip);
+      });
+
+      const section = document.getElementById('palette-section');
+      section.classList.toggle('unlocked', s.unlocked);
+      const lockBtn = document.getElementById('lock-btn');
+      lockBtn.textContent = s.unlocked ? '🔒' : '🔓';
+    }
+
+    // ── Drag & Drop ───────────────────────────────────────────────────────────
+    let activeDrag = null;
+
+    function onInstrumentDown(e) {
+      e.preventDefault();
+      const chipEl = e.currentTarget;
+      const name = chipEl.dataset.instrument;
+      const startX = e.clientX;
+      const startY = e.clientY;
+      const rect = chipEl.getBoundingClientRect();
+      const offX = e.clientX - rect.left;
+      const offY = e.clientY - rect.top;
+      let dragging = false;
+
+      const ghost = document.getElementById('drag-ghost');
+
+      // Long-press timer → unlock palette (only when locked)
+      const longPressTimer = !s.unlocked ? setTimeout(() => {
+        if (!dragging) {
+          s.unlocked = true;
+          renderPalette();
+          cleanup();
+        }
+      }, 500) : null;
+
+      function beginDrag() {
+        if (dragging) return;
+        dragging = true;
+        clearTimeout(longPressTimer);
+        ghost.textContent = name;
+        ghost.style.background = colorFor(name);
+        ghost.style.display = 'block';
+        chipEl.classList.add('dragging');
+        activeDrag = { name, chipEl };
+        if (s.unlocked) {
+          document.getElementById('delete-zone').classList.add('visible');
+        }
+      }
+
+      function onMove(e) {
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        if (!dragging && Math.hypot(dx, dy) > 8) beginDrag();
+        if (!dragging) return;
+
+        ghost.style.left = (e.clientX - offX) + 'px';
+        ghost.style.top  = (e.clientY - offY) + 'px';
+
+        // Clear previous highlights
+        document.querySelectorAll('.student-chip.drag-over').forEach(c => c.classList.remove('drag-over'));
+
+        ghost.style.display = 'none';
+        const target = document.elementFromPoint(e.clientX, e.clientY);
+        ghost.style.display = 'block';
+
+        if (s.unlocked) {
+          const dz = document.getElementById('delete-zone');
+          const paletteRect = document.getElementById('palette-section').getBoundingClientRect();
+          const outsidePalette =
+            e.clientY < paletteRect.top - 30 ||
+            e.clientX < paletteRect.left  - 40 ||
+            e.clientX > paletteRect.right + 40;
+          const overZone = target && (target.id === 'delete-zone' || target.closest?.('#delete-zone'));
+          dz.classList.toggle('active', outsidePalette || overZone);
+          activeDrag.willDelete = outsidePalette || overZone;
+        } else {
+          const studentChip = target?.closest?.('.student-chip');
+          if (studentChip) studentChip.classList.add('drag-over');
+        }
+      }
+
+      function onUp(e) {
+        cleanup();
+        if (!dragging) return;
+
+        ghost.style.display = 'none';
+        chipEl.classList.remove('dragging');
+        document.getElementById('delete-zone').classList.remove('visible', 'active');
+        document.querySelectorAll('.student-chip.drag-over').forEach(c => c.classList.remove('drag-over'));
+
+        if (s.unlocked && activeDrag.willDelete) {
+          // Remove instrument from palette
+          s.instruments = s.instruments.filter(n => n !== name);
+          // Clear any assignments using it
+          for (const sid of Object.keys(s.assignments)) {
+            if (s.assignments[sid] === name) delete s.assignments[sid];
+          }
+          save(); notify(); render();
+        } else if (!s.unlocked) {
+          // Assign to student
+          const target = document.elementFromPoint(e.clientX, e.clientY);
+          const studentChip = target?.closest?.('.student-chip');
+          if (studentChip?.dataset.sid) {
+            s.assignments[studentChip.dataset.sid] = name;
+            save(); notify(); renderStudents();
+          }
+        }
+        activeDrag = null;
+      }
+
+      function cleanup() {
+        clearTimeout(longPressTimer);
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup',   onUp);
+        document.removeEventListener('pointercancel', onUp);
+      }
+
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup',   onUp);
+      document.addEventListener('pointercancel', onUp);
+    }
+
+    // ── UI event handlers ─────────────────────────────────────────────────────
+    document.getElementById('lock-btn').addEventListener('click', () => {
+      s.unlocked = !s.unlocked;
+      renderPalette();
+    });
+
+    document.getElementById('add-btn').addEventListener('click', () => {
+      const name = prompt('New instrument name:');
+      if (!name?.trim()) return;
+      const trimmed = name.trim();
+      if (s.instruments.includes(trimmed)) { alert(`"${trimmed}" is already in the palette.`); return; }
+      s.instruments.push(trimmed);
+      save(); renderPalette();
+    });
+
+    document.getElementById('clear-btn').addEventListener('click', () => {
+      if (!Object.keys(s.assignments).length) return;
+      if (confirm('Clear all instrument assignments?')) {
+        s.assignments = {};
+        save(); notify(); renderStudents();
+      }
+    });
+
+    // ── TaskModule interface ──────────────────────────────────────────────────
+    window.TaskModule = {
+      init(context) {
+        s.className = context.class || context.className || 'default';
+        s.students  = context.classStudents || [];
+
+        document.getElementById('class-title').textContent = s.className + ' – Instruments';
+
+        // Load persisted data for this class
+        load();
+        if (!s.instruments.length) s.instruments = [...DEFAULT_INSTRUMENTS];
+        s.instruments.forEach(n => colorFor(n)); // pre-init colors
+
+        render();
+
+        // Restore from task response if richer than localStorage (e.g., another device)
+        if (context.existingResponse) {
+          try {
+            const saved = JSON.parse(context.existingResponse);
+            if (saved.assignments && Object.keys(saved.assignments).length) {
+              s.assignments = saved.assignments;
+              if (saved.instruments?.length) s.instruments = saved.instruments;
+              if (saved.colorMap) s.colorMap = { ...s.colorMap, ...saved.colorMap };
+              save(); render();
+            }
+          } catch (_) {}
+        }
+      },
+
+      getResponse,
+
+      isComplete() { return Object.keys(s.assignments).length > 0; },
+
+      reset() { /* persist data across student navigations */ },
+    };
+
+    window.addEventListener('message', e => {
+      if (e.data?.type === 'taskmodule:init') window.TaskModule.init(e.data.context);
+    });
+  </script>
+</body>
+</html>

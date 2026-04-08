@@ -1,5 +1,5 @@
 {
-  "version": "3.45.1",
-  "lastUpdated": "2026-04-07",
-  "description": "Add overflow box to seating chart for classes with more than 30 students"
+  "version": "3.46.1",
+  "lastUpdated": "2026-04-08",
+  "description": "Add instrument assigner module for assigning instruments to students"
 }
