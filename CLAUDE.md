@@ -323,7 +323,7 @@ Version format: `MAJOR.MINOR.PATCH` (e.g., 0.3.0)
 4. Version displayed in bottom-right corner of app
 5. Forces cache refresh for users
 
-**Current version:** 3.9.2 (Next user request: 3.10.0, Next commit: 3.9.3)
+**Current version:** Always read `version.json` to get the real current version — never rely on any version number written in this file, as it will be stale. The numbers below in the two-step example are illustrative only.
 
 ### Git Workflow Delegation
 
@@ -350,11 +350,11 @@ The git agent MUST bump the version in `version.json` following these rules:
    - Example: Committing the code changes
    - This happens DURING the commit process
 
-**Two-step process example:**
-- Current version: 3.6.1
-- User requests: "Add custom note selection" → Bump to 3.7.0
-- Git commit: Changes committed → Bump to 3.7.1
-- Final result: Version 3.7.1 committed and pushed
+**Two-step process example** (numbers are illustrative — always read `version.json` for the real current version):
+- Current version: X.Y.Z (read from `version.json`)
+- User requests: "Add custom note selection" → Bump MINOR → X.(Y+1).0
+- Git commit: Changes committed → Bump PATCH → X.(Y+1).1
+- Final result: X.(Y+1).1 committed and pushed
 
 Example:
 ```
@@ -371,6 +371,71 @@ When code changes are complete and ready to commit:
 ```
 
 **Exceptions:** You may run `git status` or `git log` directly for informational purposes only. All write operations (add, commit, push, version bumping, etc.) MUST go through the git agent.
+
+## Module Connection Agent
+
+**CRITICAL: Always run the Module Connection Agent after creating or deleting any module.**
+
+The Module Connection Agent ensures every `.html` file in `modules/` (excluding `_template.html` and the `ARCHIVED MODULES/` subdirectory) is correctly registered in all connection points so it appears in the teacher's task dropdown.
+
+### Connection Points (all must stay in sync)
+
+There are **two places** that control which modules appear in the dropdown:
+
+1. **`modules/manifest.json`** — Primary source. Fetched at runtime by `loadTasksFromModules()` in `js/app.js`. Used on GitHub Pages and any static host. Format:
+   ```json
+   { "task_id": "my_module", "question": "Human-Readable Name", "module_path": "modules/my_module.html" }
+   ```
+
+2. **`loadKnownModules()` in `js/app.js`** (lines ~572–591) — Hardcoded fallback used when `manifest.json` cannot be fetched (e.g. `file://` local access). Must mirror `manifest.json`.
+
+Both must always contain the same set of modules. A module missing from either will silently fail for some users.
+
+### When to Invoke
+
+**REQUIRED after:**
+- ✅ Creating a new module file in `modules/`
+- ✅ Deleting or archiving a module
+- ✅ Renaming a module file
+
+**NOT required for:**
+- ❌ Editing the content/logic of an existing module (no file added/removed)
+
+### What the Agent Does
+
+Invoke the Module Connection Agent as a general-purpose agent with this prompt:
+
+```
+You are the Module Connection Agent for a music teaching assistant app.
+
+Your job: make sure every module in modules/ is reachable from the task dropdown.
+The dropdown reads from modules/manifest.json (primary) and the loadKnownModules()
+fallback list in js/app.js (~line 572).
+
+Steps:
+1. List all .html files in modules/ (exclude _template.html and anything under ARCHIVED MODULES/)
+2. Read modules/manifest.json — note any files missing from it
+3. Read js/app.js and find loadKnownModules() — note any files missing from the knownModules array
+4. For each missing file:
+   a. Add an entry to manifest.json: { "task_id": "<stem>", "question": "<Human Name>", "module_path": "modules/<file>" }
+   b. Add the filename string to the knownModules array in app.js
+5. Remove any entries in manifest.json or loadKnownModules() that point to files that no longer exist in modules/
+6. Report a summary of all additions and removals made
+7. Do NOT commit — leave that to the git agent
+
+Human name derivation: replace underscores/hyphens with spaces, title-case each word.
+```
+
+### Integration with Git Workflow
+
+```
+1. Claude creates new module
+2. 🔌 MODULE CONNECTION AGENT RUNS (this step)  ← fixes manifest + fallback
+3. (Optional) Module Validation Agent for structural checks
+4. Git agent commits and pushes
+```
+
+---
 
 ## Module Validation Agent
 
