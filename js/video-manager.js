@@ -36,38 +36,22 @@ class VideoManager {
 
     /**
      * Start video recording
-     * @param {string} quality - 'high' for max quality, 'low' for 720p/30fps
      * @returns {Promise<void>}
      */
-    async startRecording(quality = 'high') {
+    async startRecording() {
         if (this.isRecording) {
             console.warn('Already recording');
             return;
         }
 
         try {
-            // Configure settings based on quality
-            let videoConstraints, videoBitrate;
-
-            if (quality === 'low') {
-                // Low quality: 720p at 30fps
-                videoConstraints = {
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 },
-                    facingMode: 'user',
-                    frameRate: { ideal: 30 }
-                };
-                videoBitrate = 2500000; // 2.5 Mbps
-            } else {
-                // High quality: Max resolution at 60fps
-                videoConstraints = {
-                    width: { ideal: 1920 },
-                    height: { ideal: 1080 },
-                    facingMode: 'user',
-                    frameRate: { ideal: 60 }
-                };
-                videoBitrate = 8000000; // 8 Mbps for higher quality
-            }
+            const videoConstraints = {
+                width: { ideal: 1280 },
+                height: { ideal: 720 },
+                facingMode: 'user',
+                frameRate: { ideal: 30 }
+            };
+            const videoBitrate = 2500000; // 2.5 Mbps
 
             // Request camera and microphone access
             this.stream = await navigator.mediaDevices.getUserMedia({

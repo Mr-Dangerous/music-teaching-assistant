@@ -365,7 +365,7 @@ class TeachingAssistantApp {
     const videoRecordingBtn = document.getElementById('video-recording-lq-btn');
     if (videoRecordingBtn) {
       videoRecordingBtn.addEventListener('click', async () => {
-        await this.toggleVideoRecording('low');
+        await this.toggleVideoRecording();
       });
     }
 
@@ -732,6 +732,16 @@ class TeachingAssistantApp {
   showClassScreen() {
     // Cancel any active countdown
     this.cancelCountdown();
+
+    // Stop any active video recording
+    if (this.videoManager && this.videoManager.getIsRecording()) {
+      this.videoManager.stopRecording();
+      const lqBtn = document.getElementById('video-recording-lq-btn');
+      if (lqBtn) {
+        lqBtn.classList.remove('recording');
+        lqBtn.disabled = false;
+      }
+    }
 
     this.currentScreen = 'class-select';
     this.selectedClass = null;
@@ -2599,9 +2609,8 @@ class TeachingAssistantApp {
 
   /**
    * Toggle video recording on/off
-   * @param {string} quality - 'high' or 'low' quality mode
    */
-  async toggleVideoRecording(quality = 'low') {
+  async toggleVideoRecording() {
     const lqBtn = document.getElementById('video-recording-lq-btn');
 
     try {
@@ -2619,8 +2628,8 @@ class TeachingAssistantApp {
           this.selectedClass
         );
 
-        // Start recording with specified quality
-        await this.videoManager.startRecording(quality);
+        // Start recording
+        await this.videoManager.startRecording();
         if (lqBtn) {
           lqBtn.classList.add('recording');
         }
@@ -4687,17 +4696,17 @@ class TeachingAssistantApp {
 
     await new Promise(resolve => requestAnimationFrame(resolve));
 
-    clone1.style.transition = 'all 0.5s cubic-bezier(0.4, 0.0, 0.2, 1)';
+    clone1.style.transition = 'all 2s cubic-bezier(0.4, 0.0, 0.2, 1)';
     clone1.style.left = rect2.left + 'px';
     clone1.style.top = rect2.top + 'px';
 
     if (isSwap && clone2) {
-      clone2.style.transition = 'all 0.5s cubic-bezier(0.4, 0.0, 0.2, 1)';
+      clone2.style.transition = 'all 2s cubic-bezier(0.4, 0.0, 0.2, 1)';
       clone2.style.left = rect1.left + 'px';
       clone2.style.top = rect1.top + 'px';
     }
 
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     clone1.remove();
     if (clone2) clone2.remove();
@@ -4721,13 +4730,26 @@ class TeachingAssistantApp {
     const clone = document.createElement('div');
     clone.className = 'riser-chart-spot occupied riser-chart-animated-clone';
     clone.innerHTML = spot.innerHTML;
+
+    const computedStyle = window.getComputedStyle(spot);
     clone.style.width = rect.width + 'px';
     clone.style.height = rect.height + 'px';
+    clone.style.fontSize = computedStyle.fontSize;
+    clone.style.fontWeight = computedStyle.fontWeight;
+    clone.style.color = computedStyle.color;
+    clone.style.background = computedStyle.background;
+    clone.style.border = computedStyle.border;
+    clone.style.borderRadius = computedStyle.borderRadius;
+    clone.style.textShadow = computedStyle.textShadow;
     clone.style.position = 'fixed';
     clone.style.left = rect.left + 'px';
     clone.style.top = rect.top + 'px';
     clone.style.zIndex = '100000';
     clone.style.pointerEvents = 'none';
+    clone.style.display = 'flex';
+    clone.style.alignItems = 'center';
+    clone.style.justifyContent = 'center';
+    clone.style.boxShadow = '0 8px 24px rgba(0,0,0,0.4)';
     document.body.appendChild(clone);
     return clone;
   }
