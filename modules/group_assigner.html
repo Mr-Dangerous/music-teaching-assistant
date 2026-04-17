@@ -422,7 +422,7 @@
     return box;
   }
 
-  // ── Attach HTML5 DnD + tap-to-place to a zone element ────────────────────
+  // ── Attach HTML5 DnD to a zone element ───────────────────────────────────
   function attachDropZone(el, zoneId) {
     el.addEventListener('dragover', e => {
       e.preventDefault();
@@ -443,18 +443,25 @@
       dragStudentId  = null;
       dragSourceZone = null;
     });
-
-    // Tap-to-place: click the zone (not on a chip/input/button) to drop selected student
-    el.addEventListener('click', e => {
-      if (!selectedSid)                       return;
-      if (e.target.closest('.chip'))          return;
-      if (e.target.closest('.group-name'))    return;
-      if (e.target.closest('.group-delete'))  return;
-      if (zoneId === selectedZone)            return;
-      moveStudent(selectedSid, selectedZone, zoneId);
-      clearSelection();
-    });
   }
+
+  // ── Single document-level tap-to-assign handler ───────────────────────────
+  // Fires for any click that wasn't stopped by a chip's own handler.
+  // This reliably handles clicks on group borders, padding, header, chips area.
+  document.addEventListener('click', e => {
+    if (!selectedSid) return;
+    if (e.target.closest('.chip')) return;  // chip click handled by chip itself
+    if (e.target.closest('.btn'))  return;  // toolbar buttons
+
+    const zone = e.target.closest('[data-zone]');
+    if (!zone) { clearSelection(); return; }   // clicked outside any zone
+
+    const zoneId = zone.dataset.zone;
+    if (zoneId === selectedZone) { clearSelection(); return; }  // same zone
+
+    moveStudent(selectedSid, selectedZone, zoneId);
+    clearSelection();
+  });
 
   // ── Move a student between zones ──────────────────────────────────────────
   function moveStudent(sid, fromZone, toZone) {

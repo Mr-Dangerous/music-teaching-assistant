@@ -1,5 +1,5 @@
 {
-  "version": "3.48.3",
+  "version": "3.48.4",
   "lastUpdated": "2026-04-17",
-  "description": "Replace pointer-event DnD with HTML5 native drag-and-drop in group_assigner; add tap-to-assign fallback for touch-only scenarios"
+  "description": "Fix tap-to-assign in group_assigner: replace per-zone click handlers with document-level handler so clicks on child elements (input, chips) still register zone assignment"
 }
