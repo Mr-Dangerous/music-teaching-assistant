@@ -312,6 +312,7 @@
 
   // ── Drag helpers ──────────────────────────────────────────────────────────
   function startDrag(chip, x, y) {
+    showToast(`Drag start: ${chip.textContent}`);
     dragSid      = chip.dataset.sid;
     dragChip     = chip;
     const z = chip.closest('[data-zone]');
@@ -349,11 +350,10 @@
     document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
 
     const under = document.elementFromPoint(x, y);
-    if (under && dragSid) {
-      const z = under.closest('[data-zone]');
-      if (z && z.dataset.zone !== dragFromZone)
-        moveStudent(dragSid, dragFromZone, z.dataset.zone);
-    }
+    const z = under ? under.closest('[data-zone]') : null;
+    showToast(`Drop → zone:${z ? z.dataset.zone : 'none'} el:${under ? under.tagName : 'none'}`);
+    if (z && dragSid && z.dataset.zone !== dragFromZone)
+      moveStudent(dragSid, dragFromZone, z.dataset.zone);
     dragSid = null; dragFromZone = null;
   }
 
@@ -460,6 +460,7 @@
     if (groups.length === 0) { showToast('Add a group first'); return; }
     groups.forEach(g => { g.students = []; });
     const pool = [...students].sort(() => Math.random() - 0.5);
+    showToast(`Auto: ${pool.length} students → ${groups.length} groups`);
     pool.forEach((s, i) => groups[i % groups.length].students.push(s.student_id));
     render();
   }
@@ -655,7 +656,7 @@
     init(context) {
       students  = context.classStudents || [];
       className = context.class || 'Unknown Class';
-      document.getElementById('class-label').textContent = className;
+      document.getElementById('class-label').textContent = `${className} — ${students.length} students loaded`;
 
       seedGroups();
 

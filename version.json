@@ -1,5 +1,5 @@
 {
-  "version": "3.48.6",
+  "version": "3.48.7",
   "lastUpdated": "2026-04-17",
-  "description": "Fix group_assigner drag-and-drop: replace HTML5 DnD with custom mouse+touch implementation, fix autoAssign and clearAll, remove tap-to-assign"
+  "description": "Add diagnostic toasts to group_assigner: class label shows student count, auto-assign toasts pool/group sizes, drag start/end toasts student name and drop zone"
 }
