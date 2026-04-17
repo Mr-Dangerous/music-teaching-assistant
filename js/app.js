@@ -589,6 +589,7 @@ class TeachingAssistantApp {
       'student_notes.html',
       'ukulele-tuner.html',
       'instrument_assigner.html',
+      'group_assigner.html',
     ];
 
     const tasks = knownModules.map(moduleFile => {

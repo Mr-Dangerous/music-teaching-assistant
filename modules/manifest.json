@@ -17,5 +17,6 @@
   { "task_id": "string",                    "question": "String Task Module",            "module_path": "modules/string.html" },
   { "task_id": "student_notes",             "question": "Student Notes",                 "module_path": "modules/student_notes.html" },
   { "task_id": "ukulele-tuner",             "question": "Ukulele Tuner",                 "module_path": "modules/ukulele-tuner.html" },
-  { "task_id": "instrument_assigner",       "question": "Instrument Assigner",           "module_path": "modules/instrument_assigner.html" }
+  { "task_id": "instrument_assigner",       "question": "Instrument Assigner",           "module_path": "modules/instrument_assigner.html" },
+  { "task_id": "group_assigner",            "question": "Group Assigner",                "module_path": "modules/group_assigner.html" }
 ]

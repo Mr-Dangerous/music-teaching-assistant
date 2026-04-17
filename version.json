@@ -1,5 +1,5 @@
 {
-  "version": "3.47.1",
-  "lastUpdated": "2026-04-14",
-  "description": "Remove HQ video quality option (always 720p/30fps); stop recording on class switch; slow riser swap animation to 2s; copy computed styles to animated clone for visual fidelity"
+  "version": "3.48.1",
+  "lastUpdated": "2026-04-17",
+  "description": "Add Group Assigner module with drag-and-drop student group assignment, renameable groups, auto-resizing, and CSV save/load via File System Access API with localStorage fallback"
 }
