@@ -36,23 +36,24 @@
     }
 
     .title-block .title {
-      font-size: 18px;
+      font-size: 22px;
       font-weight: bold;
       color: #2c3e50;
       line-height: 1.2;
     }
     .title-block .class-label {
-      font-size: 12px;
-      color: #888;
+      font-size: 15px;
+      color: #555;
+      font-weight: 600;
     }
 
-    .btn-group { display: flex; gap: 6px; flex-wrap: wrap; }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
 
     .btn {
-      padding: 5px 14px;
+      padding: 8px 20px;
       border: none;
       border-radius: 20px;
-      font-size: 12px;
+      font-size: 15px;
       font-weight: bold;
       cursor: pointer;
       transition: transform 0.15s, opacity 0.15s;
@@ -69,9 +70,9 @@
       background: #f5f6ff;
       border: 2px dashed #c5cae9;
       border-radius: 12px;
-      padding: 6px 10px;
+      padding: 8px 12px;
       flex-shrink: 0;
-      min-height: 48px;
+      min-height: 58px;
       transition: background 0.15s, border-color 0.15s;
     }
     .palette-section.drop-target {
@@ -79,18 +80,18 @@
       border-color: #5c6bc0;
     }
     .palette-label {
-      font-size: 10px;
+      font-size: 12px;
       font-weight: bold;
       color: #9fa8da;
       text-transform: uppercase;
       letter-spacing: 1px;
-      margin-bottom: 5px;
+      margin-bottom: 6px;
     }
     .palette-chips {
       display: flex;
       flex-wrap: wrap;
-      gap: 5px;
-      min-height: 26px;
+      gap: 8px;
+      min-height: 36px;
     }
 
     /* Groups area */
@@ -105,13 +106,13 @@
 
     /* Individual group box */
     .group-box {
-      border: 3px solid #5c6bc0;
-      border-radius: 14px;
-      padding: 6px 8px;
-      min-width: 130px;
-      min-height: 80px;
-      flex: 1 1 130px;
-      max-width: 260px;
+      border: 4px solid #5c6bc0;
+      border-radius: 16px;
+      padding: 10px 12px;
+      min-width: 160px;
+      min-height: 100px;
+      flex: 1 1 160px;
+      max-width: 320px;
       background: #fff;
       display: flex;
       flex-direction: column;
@@ -125,16 +126,16 @@
     .group-header {
       display: flex;
       align-items: center;
-      gap: 4px;
-      margin-bottom: 5px;
+      gap: 6px;
+      margin-bottom: 8px;
     }
     .group-name {
       flex: 1;
-      font-size: 14px;
+      font-size: 20px;
       font-weight: bold;
-      border: 1px solid transparent;
-      border-radius: 6px;
-      padding: 2px 4px;
+      border: 2px solid transparent;
+      border-radius: 8px;
+      padding: 3px 6px;
       outline: none;
       cursor: text;
       background: transparent;
@@ -148,10 +149,10 @@
       background: none;
       border: none;
       cursor: pointer;
-      font-size: 16px;
+      font-size: 20px;
       line-height: 1;
       color: #ccc;
-      padding: 0 2px;
+      padding: 0 4px;
       flex-shrink: 0;
     }
     .group-delete:hover { color: #e53935; }
@@ -159,10 +160,10 @@
     .group-chips {
       display: flex;
       flex-wrap: wrap;
-      gap: 4px;
+      gap: 6px;
       flex: 1;
-      min-height: 28px;
-      padding: 3px;
+      min-height: 36px;
+      padding: 4px;
       border-radius: 8px;
     }
 
@@ -172,31 +173,32 @@
       align-items: center;
       background: linear-gradient(135deg, #667eea, #764ba2);
       color: #fff;
-      padding: 4px 10px;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 500;
+      padding: 8px 18px;
+      border-radius: 24px;
+      font-size: 18px;
+      font-weight: 700;
       cursor: grab;
       user-select: none;
       white-space: nowrap;
       touch-action: none;
-      box-shadow: 0 2px 6px rgba(102,126,234,0.35);
+      box-shadow: 0 3px 8px rgba(102,126,234,0.4);
       transition: opacity 0.1s, transform 0.1s;
+      letter-spacing: 0.3px;
     }
-    .chip.is-dragging { opacity: 0.3; }
+    .chip.is-dragging { opacity: 0.25; cursor: grabbing; }
 
     /* Floating ghost */
     #drag-ghost {
       position: fixed;
       pointer-events: none;
       z-index: 9999;
-      transform: scale(1.1);
-      opacity: 0.9;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
-      border-radius: 20px;
-      padding: 4px 10px;
-      font-size: 12px;
-      font-weight: 500;
+      transform: scale(1.12) rotate(-2deg);
+      opacity: 0.92;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.3);
+      border-radius: 24px;
+      padding: 8px 18px;
+      font-size: 18px;
+      font-weight: 700;
       color: #fff;
       display: none;
     }
@@ -356,7 +358,7 @@
     return box;
   }
 
-  // ── Drag & Drop (Pointer Events) ─────────────────────────────────────────
+  // ── Drag & Drop (Pointer Events with capture) ───────────────────────────
   ghost = document.getElementById('drag-ghost');
 
   function onPointerDown(e) {
@@ -367,64 +369,72 @@
     const chip = e.currentTarget;
     dragStudentId = chip.dataset.sid;
 
-    // Identify source zone
     const zone = chip.closest('[data-zone]');
     dragSourceZone = zone ? zone.dataset.zone : 'palette';
 
-    // Style original chip
     chip.classList.add('is-dragging');
     activeChip = chip;
 
-    // Set up ghost
     ghost.textContent = chip.textContent;
     ghost.className = chip.className.replace('is-dragging','').trim();
     ghost.style.display = 'block';
     positionGhost(e);
 
-    document.addEventListener('pointermove', onPointerMove);
-    document.addEventListener('pointerup',   onPointerUp);
-    document.setPointerCapture?.(e.pointerId); // optional
+    // Capture pointer on the chip so move/up always arrive here, even in iframes
+    chip.setPointerCapture(e.pointerId);
+    chip.addEventListener('pointermove',   onPointerMove);
+    chip.addEventListener('pointerup',     onPointerUp);
+    chip.addEventListener('pointercancel', onPointerCancel);
   }
 
   function onPointerMove(e) {
     positionGhost(e);
-    highlightDropZone(e);
+
+    // Highlight drop zone (hide ghost briefly so elementFromPoint sees through it)
+    document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+    ghost.style.visibility = 'hidden';
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    ghost.style.visibility = '';
+    if (under) {
+      const z = under.closest('[data-zone]');
+      if (z) z.classList.add('drop-target');
+    }
   }
 
   function positionGhost(e) {
-    const w = ghost.offsetWidth  || 80;
-    const h = ghost.offsetHeight || 28;
+    const w = ghost.offsetWidth  || 100;
+    const h = ghost.offsetHeight || 36;
     ghost.style.left = (e.clientX - w / 2) + 'px';
     ghost.style.top  = (e.clientY - h / 2) + 'px';
   }
 
-  function highlightDropZone(e) {
-    document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
-    ghost.style.display = 'none';
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    ghost.style.display = 'block';
-    if (!el) return;
-    const zone = el.closest('[data-zone]');
-    if (zone) zone.classList.add('drop-target');
+  function onPointerCancel(e) {
+    endDrag(e, false);
   }
 
   function onPointerUp(e) {
-    document.removeEventListener('pointermove', onPointerMove);
-    document.removeEventListener('pointerup',   onPointerUp);
+    endDrag(e, true);
+  }
+
+  function endDrag(e, doMove) {
+    const chip = e.currentTarget;
+    chip.removeEventListener('pointermove',   onPointerMove);
+    chip.removeEventListener('pointerup',     onPointerUp);
+    chip.removeEventListener('pointercancel', onPointerCancel);
+    chip.releasePointerCapture(e.pointerId);
 
     ghost.style.display = 'none';
     document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
     if (activeChip) { activeChip.classList.remove('is-dragging'); activeChip = null; }
 
-    // Find drop target
-    ghost.style.display = 'none';
-    const el = document.elementFromPoint(e.clientX, e.clientY);
-    ghost.style.display = 'none';
+    if (!doMove || !dragStudentId) { dragStudentId = null; dragSourceZone = null; return; }
 
-    if (!el || !dragStudentId) { dragStudentId = null; dragSourceZone = null; return; }
+    // Find element under cursor
+    const under = document.elementFromPoint(e.clientX, e.clientY);
+    if (!under) { dragStudentId = null; dragSourceZone = null; return; }
 
-    const zone = el.closest('[data-zone]');
-    const targetZone = zone ? zone.dataset.zone : null;
+    const z = under.closest('[data-zone]');
+    const targetZone = z ? z.dataset.zone : null;
 
     if (targetZone && targetZone !== dragSourceZone) {
       moveStudent(dragStudentId, dragSourceZone, targetZone);

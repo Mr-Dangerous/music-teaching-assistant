@@ -1,5 +1,5 @@
 {
-  "version": "3.48.1",
+  "version": "3.48.2",
   "lastUpdated": "2026-04-17",
-  "description": "Add Group Assigner module with drag-and-drop student group assignment, renameable groups, auto-resizing, and CSV save/load via File System Access API with localStorage fallback"
+  "description": "Fix drag-and-drop pointer capture in group_assigner (chip.setPointerCapture), add pointercancel handler, improve UDL readability with larger fonts and padding"
 }
