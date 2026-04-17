@@ -312,7 +312,6 @@
 
   // ── Drag helpers ──────────────────────────────────────────────────────────
   function startDrag(chip, x, y) {
-    showToast(`Drag start: ${chip.textContent}`);
     dragSid      = chip.dataset.sid;
     dragChip     = chip;
     const z = chip.closest('[data-zone]');
@@ -351,7 +350,6 @@
 
     const under = document.elementFromPoint(x, y);
     const z = under ? under.closest('[data-zone]') : null;
-    showToast(`Drop → zone:${z ? z.dataset.zone : 'none'} el:${under ? under.tagName : 'none'}`);
     if (z && dragSid && z.dataset.zone !== dragFromZone)
       moveStudent(dragSid, dragFromZone, z.dataset.zone);
     dragSid = null; dragFromZone = null;
@@ -460,7 +458,6 @@
     if (groups.length === 0) { showToast('Add a group first'); return; }
     groups.forEach(g => { g.students = []; });
     const pool = [...students].sort(() => Math.random() - 0.5);
-    showToast(`Auto: ${pool.length} students → ${groups.length} groups`);
     pool.forEach((s, i) => groups[i % groups.length].students.push(s.student_id));
     render();
   }
@@ -654,7 +651,8 @@
   // ── TaskModule interface ───────────────────────────────────────────────────
   window.TaskModule = {
     init(context) {
-      students  = context.classStudents || [];
+      // Normalise all student_ids to strings to avoid number/string mismatch
+      students  = (context.classStudents || []).map(s => ({ ...s, student_id: String(s.student_id) }));
       className = context.class || 'Unknown Class';
       document.getElementById('class-label').textContent = `${className} — ${students.length} students loaded`;
 

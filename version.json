@@ -1,5 +1,5 @@
 {
-  "version": "3.48.7",
+  "version": "3.48.8",
   "lastUpdated": "2026-04-17",
-  "description": "Add diagnostic toasts to group_assigner: class label shows student count, auto-assign toasts pool/group sizes, drag start/end toasts student name and drop zone"
+  "description": "Fix student_id type mismatch in group_assigner: normalise all student_ids to String() on init so Set lookups and Array.find comparisons work correctly; remove diagnostic toasts"
 }
