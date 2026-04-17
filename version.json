@@ -1,5 +1,5 @@
 {
-  "version": "3.48.2",
+  "version": "3.48.3",
   "lastUpdated": "2026-04-17",
-  "description": "Fix drag-and-drop pointer capture in group_assigner (chip.setPointerCapture), add pointercancel handler, improve UDL readability with larger fonts and padding"
+  "description": "Replace pointer-event DnD with HTML5 native drag-and-drop in group_assigner; add tap-to-assign fallback for touch-only scenarios"
 }

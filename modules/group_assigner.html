@@ -186,6 +186,16 @@
       letter-spacing: 0.3px;
     }
     .chip.is-dragging { opacity: 0.25; cursor: grabbing; }
+    .chip.selected {
+      outline: 3px solid #fff;
+      box-shadow: 0 0 0 5px #f5576c, 0 4px 12px rgba(0,0,0,0.3);
+      transform: scale(1.08);
+    }
+    .group-box.tap-ready, .palette-section.tap-ready {
+      border-style: dashed;
+      opacity: 0.85;
+      cursor: pointer;
+    }
 
     /* Floating ghost */
     #drag-ghost {
@@ -266,7 +276,6 @@
   <div class="groups-area" id="groups-area"></div>
 </div>
 
-<div id="drag-ghost"></div>
 <div id="toast"></div>
 
 <script>
@@ -276,11 +285,13 @@
   let className = '';
   let savedFileHandle = null;
 
-  // ── Drag state ───────────────────────────────────────────────────────────
-  let dragStudentId = null;
+  // ── Drag state (HTML5 DnD) ───────────────────────────────────────────────
+  let dragStudentId  = null;
   let dragSourceZone = null;
-  let ghost = null;
-  let activeChip = null;
+
+  // ── Tap-to-assign state ──────────────────────────────────────────────────
+  let selectedSid  = null;
+  let selectedZone = null;
 
   // ── Colours ──────────────────────────────────────────────────────────────
   const NUM_COLORS = 8;
@@ -291,12 +302,19 @@
   function groupForStudent(sid) {
     return groups.find(g => g.students.includes(sid)) || null;
   }
-
   function storageKey() { return `groupAssign__${className}`; }
+
+  function clearSelection() {
+    selectedSid  = null;
+    selectedZone = null;
+    document.querySelectorAll('.chip.selected').forEach(c => c.classList.remove('selected'));
+    document.querySelectorAll('.group-box.tap-ready, .palette-section.tap-ready')
+      .forEach(el => el.classList.remove('tap-ready'));
+  }
 
   // ── Render ───────────────────────────────────────────────────────────────
   function render() {
-    const assigned = new Set(groups.flatMap(g => g.students));
+    const assigned  = new Set(groups.flatMap(g => g.students));
     const unassigned = students.filter(s => !assigned.has(s.student_id));
 
     // Palette
@@ -304,28 +322,74 @@
     pc.innerHTML = '';
     unassigned.forEach(s => pc.appendChild(buildChip(s, -1)));
 
+    // Palette drop zone
+    const pal = document.getElementById('palette-section');
+    attachDropZone(pal, 'palette');
+
     // Groups
     const area = document.getElementById('groups-area');
     area.innerHTML = '';
     groups.forEach((g, gi) => area.appendChild(buildGroupBox(g, gi)));
   }
 
+  // ── Build a student chip ──────────────────────────────────────────────────
   function buildChip(student, groupIndex) {
     const chip = document.createElement('div');
     chip.className = 'chip' + (groupIndex >= 0 ? ` ${chipColorClass(groupIndex)}` : '');
     chip.dataset.sid = student.student_id;
     chip.textContent = student.name.split(' ')[0];
     chip.title = student.name;
-    chip.addEventListener('pointerdown', onPointerDown);
+    chip.draggable = true;
+
+    // ── HTML5 drag ──────────────────────────────────────────────────────────
+    chip.addEventListener('dragstart', e => {
+      dragStudentId  = chip.dataset.sid;
+      const z = chip.closest('[data-zone]');
+      dragSourceZone = z ? z.dataset.zone : 'palette';
+      e.dataTransfer.setData('text/plain', dragStudentId);
+      e.dataTransfer.effectAllowed = 'move';
+      // Small delay so the browser ghost renders before we fade the original
+      setTimeout(() => chip.classList.add('is-dragging'), 0);
+    });
+
+    chip.addEventListener('dragend', () => {
+      chip.classList.remove('is-dragging');
+      document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+      dragStudentId  = null;
+      dragSourceZone = null;
+    });
+
+    // ── Tap-to-select (touch / click fallback) ──────────────────────────────
+    chip.addEventListener('click', e => {
+      e.stopPropagation();
+      const sid = chip.dataset.sid;
+
+      if (selectedSid === sid) {
+        clearSelection();
+        return;
+      }
+
+      clearSelection();
+      selectedSid  = sid;
+      const z = chip.closest('[data-zone]');
+      selectedZone = z ? z.dataset.zone : 'palette';
+      chip.classList.add('selected');
+
+      // Highlight all valid drop targets
+      document.querySelectorAll('[data-zone]').forEach(el => {
+        if (el.dataset.zone !== selectedZone) el.classList.add('tap-ready');
+      });
+    });
+
     return chip;
   }
 
+  // ── Build a group box ─────────────────────────────────────────────────────
   function buildGroupBox(group, gi) {
     const box = document.createElement('div');
     box.className = `group-box ${groupColorClass(gi)}`;
     box.dataset.zone = group.id;
 
-    // Header
     const hdr = document.createElement('div');
     hdr.className = 'group-header';
 
@@ -333,19 +397,17 @@
     inp.type = 'text';
     inp.className = 'group-name';
     inp.value = group.name;
-    inp.addEventListener('pointerdown', e => e.stopPropagation()); // don't start drag
     inp.addEventListener('input', e => { group.name = e.target.value; });
 
     const del = document.createElement('button');
     del.className = 'group-delete';
     del.textContent = '×';
-    del.title = 'Remove group (students return to palette)';
-    del.addEventListener('click', () => deleteGroup(group.id));
+    del.title = 'Remove group';
+    del.addEventListener('click', e => { e.stopPropagation(); deleteGroup(group.id); });
 
     hdr.appendChild(inp);
     hdr.appendChild(del);
 
-    // Chips
     const chips = document.createElement('div');
     chips.className = 'group-chips';
     group.students.forEach(sid => {
@@ -355,102 +417,51 @@
 
     box.appendChild(hdr);
     box.appendChild(chips);
+
+    attachDropZone(box, group.id);
     return box;
   }
 
-  // ── Drag & Drop (Pointer Events with capture) ───────────────────────────
-  ghost = document.getElementById('drag-ghost');
+  // ── Attach HTML5 DnD + tap-to-place to a zone element ────────────────────
+  function attachDropZone(el, zoneId) {
+    el.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      el.classList.add('drop-target');
+    });
 
-  function onPointerDown(e) {
-    if (e.button !== undefined && e.button !== 0) return;
-    e.preventDefault();
-    e.stopPropagation();
+    el.addEventListener('dragleave', e => {
+      if (!el.contains(e.relatedTarget)) el.classList.remove('drop-target');
+    });
 
-    const chip = e.currentTarget;
-    dragStudentId = chip.dataset.sid;
+    el.addEventListener('drop', e => {
+      e.preventDefault();
+      el.classList.remove('drop-target');
+      const sid = e.dataTransfer.getData('text/plain') || dragStudentId;
+      const src  = dragSourceZone || 'palette';
+      if (sid && zoneId !== src) moveStudent(sid, src, zoneId);
+      dragStudentId  = null;
+      dragSourceZone = null;
+    });
 
-    const zone = chip.closest('[data-zone]');
-    dragSourceZone = zone ? zone.dataset.zone : 'palette';
-
-    chip.classList.add('is-dragging');
-    activeChip = chip;
-
-    ghost.textContent = chip.textContent;
-    ghost.className = chip.className.replace('is-dragging','').trim();
-    ghost.style.display = 'block';
-    positionGhost(e);
-
-    // Capture pointer on the chip so move/up always arrive here, even in iframes
-    chip.setPointerCapture(e.pointerId);
-    chip.addEventListener('pointermove',   onPointerMove);
-    chip.addEventListener('pointerup',     onPointerUp);
-    chip.addEventListener('pointercancel', onPointerCancel);
+    // Tap-to-place: click the zone (not on a chip/input/button) to drop selected student
+    el.addEventListener('click', e => {
+      if (!selectedSid)                       return;
+      if (e.target.closest('.chip'))          return;
+      if (e.target.closest('.group-name'))    return;
+      if (e.target.closest('.group-delete'))  return;
+      if (zoneId === selectedZone)            return;
+      moveStudent(selectedSid, selectedZone, zoneId);
+      clearSelection();
+    });
   }
 
-  function onPointerMove(e) {
-    positionGhost(e);
-
-    // Highlight drop zone (hide ghost briefly so elementFromPoint sees through it)
-    document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
-    ghost.style.visibility = 'hidden';
-    const under = document.elementFromPoint(e.clientX, e.clientY);
-    ghost.style.visibility = '';
-    if (under) {
-      const z = under.closest('[data-zone]');
-      if (z) z.classList.add('drop-target');
-    }
-  }
-
-  function positionGhost(e) {
-    const w = ghost.offsetWidth  || 100;
-    const h = ghost.offsetHeight || 36;
-    ghost.style.left = (e.clientX - w / 2) + 'px';
-    ghost.style.top  = (e.clientY - h / 2) + 'px';
-  }
-
-  function onPointerCancel(e) {
-    endDrag(e, false);
-  }
-
-  function onPointerUp(e) {
-    endDrag(e, true);
-  }
-
-  function endDrag(e, doMove) {
-    const chip = e.currentTarget;
-    chip.removeEventListener('pointermove',   onPointerMove);
-    chip.removeEventListener('pointerup',     onPointerUp);
-    chip.removeEventListener('pointercancel', onPointerCancel);
-    chip.releasePointerCapture(e.pointerId);
-
-    ghost.style.display = 'none';
-    document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
-    if (activeChip) { activeChip.classList.remove('is-dragging'); activeChip = null; }
-
-    if (!doMove || !dragStudentId) { dragStudentId = null; dragSourceZone = null; return; }
-
-    // Find element under cursor
-    const under = document.elementFromPoint(e.clientX, e.clientY);
-    if (!under) { dragStudentId = null; dragSourceZone = null; return; }
-
-    const z = under.closest('[data-zone]');
-    const targetZone = z ? z.dataset.zone : null;
-
-    if (targetZone && targetZone !== dragSourceZone) {
-      moveStudent(dragStudentId, dragSourceZone, targetZone);
-    }
-
-    dragStudentId  = null;
-    dragSourceZone = null;
-  }
-
+  // ── Move a student between zones ──────────────────────────────────────────
   function moveStudent(sid, fromZone, toZone) {
-    // Remove from source group
     if (fromZone !== 'palette') {
       const src = groups.find(g => g.id === fromZone);
       if (src) src.students = src.students.filter(id => id !== sid);
     }
-    // Add to target group
     if (toZone !== 'palette') {
       const dst = groups.find(g => g.id === toZone);
       if (dst && !dst.students.includes(sid)) dst.students.push(sid);
@@ -481,12 +492,8 @@
     const lines = ['class,student_id,student_name,group'];
     students.forEach(s => {
       const g = groupForStudent(s.student_id);
-      lines.push([
-        escapeCsv(className),
-        escapeCsv(s.student_id),
-        escapeCsv(s.name),
-        g ? escapeCsv(g.name) : ''
-      ].join(','));
+      lines.push([escapeCsv(className), escapeCsv(s.student_id),
+                  escapeCsv(s.name), g ? escapeCsv(g.name) : ''].join(','));
     });
     return lines.join('\n');
   }
@@ -494,8 +501,7 @@
   function escapeCsv(val) {
     const s = String(val ?? '');
     return s.includes(',') || s.includes('"') || s.includes('\n')
-      ? '"' + s.replace(/"/g, '""') + '"'
-      : s;
+      ? '"' + s.replace(/"/g, '""') + '"' : s;
   }
 
   function applyCSV(text) {
@@ -512,18 +518,9 @@
         groupMap[gname].push(sid.trim());
       }
     }
-
     const entries = Object.entries(groupMap);
-    if (entries.length === 0) {
-      showToast('No data for this class in file');
-      return;
-    }
-
-    groups = entries.map(([name, studs], i) => ({
-      id: 'g' + i,
-      name,
-      students: studs
-    }));
+    if (entries.length === 0) { showToast('No data for this class in file'); return; }
+    groups = entries.map(([name, studs], i) => ({ id: 'g' + i, name, students: studs }));
     render();
   }
 
@@ -533,13 +530,9 @@
     for (let i = 0; i < line.length; i++) {
       const c = line[i];
       if (c === '"') {
-        if (inQ && line[i+1] === '"') { cur += '"'; i++; }
-        else { inQ = !inQ; }
-      } else if (c === ',' && !inQ) {
-        result.push(cur); cur = '';
-      } else {
-        cur += c;
-      }
+        if (inQ && line[i+1] === '"') { cur += '"'; i++; } else { inQ = !inQ; }
+      } else if (c === ',' && !inQ) { result.push(cur); cur = ''; }
+      else { cur += c; }
     }
     result.push(cur);
     return result;
@@ -548,11 +541,8 @@
   // ── Save ─────────────────────────────────────────────────────────────────
   async function saveAssignments() {
     const csv = buildCSV();
-
-    // Always persist to localStorage as fast backup
     localStorage.setItem(storageKey(), JSON.stringify({ groups }));
 
-    // Try File System Access API
     if (window.showSaveFilePicker) {
       try {
         if (!savedFileHandle) {
@@ -569,12 +559,10 @@
         return;
       } catch (err) {
         if (err.name === 'AbortError') return;
-        // Fall through to download
         savedFileHandle = null;
       }
     }
 
-    // Fallback: download
     downloadCSV(csv);
     showToast('Downloaded!');
     reportResponse();
@@ -592,7 +580,6 @@
 
   // ── Load ─────────────────────────────────────────────────────────────────
   async function loadAssignments() {
-    // Prefer File System Access API
     if (window.showOpenFilePicker) {
       try {
         const [handle] = await window.showOpenFilePicker({
@@ -600,8 +587,7 @@
         });
         savedFileHandle = handle;
         const file = await handle.getFile();
-        const text = await file.text();
-        applyCSV(text);
+        applyCSV(await file.text());
         showToast('Loaded!');
         return;
       } catch (err) {
@@ -609,7 +595,6 @@
       }
     }
 
-    // Fallback: file input + localStorage
     const stored = localStorage.getItem(storageKey());
     if (stored) {
       try {
@@ -623,10 +608,8 @@
       } catch (e) { /* ignore */ }
     }
 
-    // Final fallback: file input
     const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.csv';
+    input.type = 'file'; input.accept = '.csv';
     input.onchange = async e => {
       const file = e.target.files[0];
       if (!file) return;
@@ -636,18 +619,17 @@
     input.click();
   }
 
-  // ── Toast ────────────────────────────────────────────────────────────────
+  // ── Toast ─────────────────────────────────────────────────────────────────
   let toastTimer = null;
   function showToast(msg, color = '#2ecc71') {
     const t = document.getElementById('toast');
-    t.textContent = msg;
-    t.style.background = color;
+    t.textContent = msg; t.style.background = color;
     t.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => t.classList.remove('show'), 2200);
   }
 
-  // ── Report to parent ─────────────────────────────────────────────────────
+  // ── Report to parent ──────────────────────────────────────────────────────
   function reportResponse() {
     const payload = {
       className,
@@ -659,14 +641,11 @@
         })
       }))
     };
-    window.parent.postMessage({
-      type: 'taskmodule:response',
-      response: JSON.stringify(payload),
-      complete: true
-    }, '*');
+    window.parent.postMessage({ type: 'taskmodule:response',
+      response: JSON.stringify(payload), complete: true }, '*');
   }
 
-  // ── Default group seed ───────────────────────────────────────────────────
+  // ── Default group seed ─────────────────────────────────────────────────────
   function seedGroups() {
     groups = [
       { id: 'g_a', name: 'Group 1', students: [] },
@@ -675,23 +654,21 @@
     ];
   }
 
-  // ── TaskModule interface ─────────────────────────────────────────────────
+  // ── TaskModule interface ───────────────────────────────────────────────────
   window.TaskModule = {
     init(context) {
-      students  = (context.classStudents || []);
+      students  = context.classStudents || [];
       className = context.class || 'Unknown Class';
       document.getElementById('class-label').textContent = className;
 
       seedGroups();
 
-      // Restore from localStorage if available
       const stored = localStorage.getItem(storageKey());
       if (stored) {
         try {
           const data = JSON.parse(stored);
-          if (Array.isArray(data.groups) && data.groups.length > 0) {
+          if (Array.isArray(data.groups) && data.groups.length > 0)
             groups = data.groups.map(g => ({ id: g.id, name: g.name, students: g.students || [] }));
-          }
         } catch(e) { /* ignore */ }
       }
 
@@ -699,7 +676,7 @@
     },
 
     getResponse() {
-      const payload = {
+      return JSON.stringify({
         className,
         groups: groups.map(g => ({
           name: g.name,
@@ -708,26 +685,16 @@
             return { student_id: sid, name: s ? s.name : sid };
           })
         }))
-      };
-      return JSON.stringify(payload);
+      });
     },
 
-    isComplete() {
-      return groups.some(g => g.students.length > 0);
-    },
-
-    reset() {
-      dragStudentId = null;
-      if (activeChip) { activeChip.classList.remove('is-dragging'); activeChip = null; }
-      if (ghost) ghost.style.display = 'none';
-    }
+    isComplete() { return groups.some(g => g.students.length > 0); },
+    reset()      { clearSelection(); dragStudentId = null; dragSourceZone = null; }
   };
 
-  // Init from postMessage
   window.addEventListener('message', e => {
-    if (e.data && e.data.type === 'taskmodule:init') {
+    if (e.data && e.data.type === 'taskmodule:init')
       window.TaskModule.init(e.data.context || {});
-    }
   });
 </script>
 </body>
