@@ -1,5 +1,5 @@
 {
-  "version": "3.48.4",
+  "version": "3.48.5",
   "lastUpdated": "2026-04-17",
-  "description": "Fix tap-to-assign in group_assigner: replace per-zone click handlers with document-level handler so clicks on child elements (input, chips) still register zone assignment"
+  "description": "Add Auto button to group_assigner: randomly distributes unassigned students evenly across groups via round-robin shuffle"
 }

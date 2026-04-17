@@ -63,6 +63,7 @@
     .btn-save  { background: linear-gradient(135deg,#11998e,#38ef7d); color:#fff; }
     .btn-load  { background: linear-gradient(135deg,#4e54c8,#8f94fb); color:#fff; }
     .btn-add   { background: linear-gradient(135deg,#f093fb,#f5576c); color:#fff; }
+    .btn-auto  { background: linear-gradient(135deg,#f7971e,#ffd200); color:#333; }
     .btn-clear { background: linear-gradient(135deg,#fc4a1a,#f7b733); color:#fff; }
 
     /* Palette */
@@ -262,6 +263,7 @@
     </div>
     <div class="btn-group">
       <button class="btn btn-add"   onclick="addGroup()">+ Group</button>
+      <button class="btn btn-auto"  onclick="autoAssign()">Auto</button>
       <button class="btn btn-clear" onclick="clearAll()">Clear</button>
       <button class="btn btn-save"  onclick="saveAssignments()">Save</button>
       <button class="btn btn-load"  onclick="loadAssignments()">Load</button>
@@ -473,6 +475,17 @@
       const dst = groups.find(g => g.id === toZone);
       if (dst && !dst.students.includes(sid)) dst.students.push(sid);
     }
+    render();
+  }
+
+  // ── Auto-assign ───────────────────────────────────────────────────────────
+  function autoAssign() {
+    if (groups.length === 0) { showToast('Add a group first'); return; }
+    const assigned = new Set(groups.flatMap(g => g.students));
+    const pool = students.filter(s => !assigned.has(s.student_id))
+                         .map(s => s.student_id)
+                         .sort(() => Math.random() - 0.5);
+    pool.forEach((sid, i) => groups[i % groups.length].students.push(sid));
     render();
   }
 
