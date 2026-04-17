@@ -186,17 +186,9 @@
       transition: opacity 0.1s, transform 0.1s;
       letter-spacing: 0.3px;
     }
-    .chip.is-dragging { opacity: 0.25; cursor: grabbing; }
-    .chip.selected {
-      outline: 3px solid #fff;
-      box-shadow: 0 0 0 5px #f5576c, 0 4px 12px rgba(0,0,0,0.3);
-      transform: scale(1.08);
-    }
-    .group-box.tap-ready, .palette-section.tap-ready {
-      border-style: dashed;
-      opacity: 0.85;
-      cursor: pointer;
-    }
+    .chip.is-dragging { opacity: 0.25; }
+    .group-box.drop-target  { background: #f3f4ff; border-style: dashed; }
+    .palette-section.drop-target { background: #e8eaf6; border-color: #5c6bc0; }
 
     /* Floating ghost */
     #drag-ghost {
@@ -287,13 +279,11 @@
   let className = '';
   let savedFileHandle = null;
 
-  // ── Drag state (HTML5 DnD) ───────────────────────────────────────────────
-  let dragStudentId  = null;
-  let dragSourceZone = null;
-
-  // ── Tap-to-assign state ──────────────────────────────────────────────────
-  let selectedSid  = null;
-  let selectedZone = null;
+  // ── Drag state ───────────────────────────────────────────────────────────
+  let dragSid      = null;
+  let dragFromZone = null;
+  let dragClone    = null;
+  let dragChip     = null;   // original chip being dragged
 
   // ── Colours ──────────────────────────────────────────────────────────────
   const NUM_COLORS = 8;
@@ -306,32 +296,65 @@
   }
   function storageKey() { return `groupAssign__${className}`; }
 
-  function clearSelection() {
-    selectedSid  = null;
-    selectedZone = null;
-    document.querySelectorAll('.chip.selected').forEach(c => c.classList.remove('selected'));
-    document.querySelectorAll('.group-box.tap-ready, .palette-section.tap-ready')
-      .forEach(el => el.classList.remove('tap-ready'));
-  }
-
   // ── Render ───────────────────────────────────────────────────────────────
   function render() {
-    const assigned  = new Set(groups.flatMap(g => g.students));
+    const assigned   = new Set(groups.flatMap(g => g.students));
     const unassigned = students.filter(s => !assigned.has(s.student_id));
 
-    // Palette
     const pc = document.getElementById('palette-chips');
     pc.innerHTML = '';
     unassigned.forEach(s => pc.appendChild(buildChip(s, -1)));
 
-    // Palette drop zone
-    const pal = document.getElementById('palette-section');
-    attachDropZone(pal, 'palette');
-
-    // Groups
     const area = document.getElementById('groups-area');
     area.innerHTML = '';
     groups.forEach((g, gi) => area.appendChild(buildGroupBox(g, gi)));
+  }
+
+  // ── Drag helpers ──────────────────────────────────────────────────────────
+  function startDrag(chip, x, y) {
+    dragSid      = chip.dataset.sid;
+    dragChip     = chip;
+    const z = chip.closest('[data-zone]');
+    dragFromZone = z ? z.dataset.zone : 'palette';
+
+    dragClone = chip.cloneNode(true);
+    dragClone.style.cssText =
+      'position:fixed;z-index:9999;pointer-events:none;opacity:0.9;' +
+      'transform:scale(1.12) rotate(-2deg);transition:none;';
+    document.body.appendChild(dragClone);
+    chip.style.opacity = '0.25';
+    moveDragClone(x, y);
+  }
+
+  function moveDragClone(x, y) {
+    if (!dragClone) return;
+    const w = dragClone.offsetWidth  || 100;
+    const h = dragClone.offsetHeight || 36;
+    dragClone.style.left = (x - w / 2) + 'px';
+    dragClone.style.top  = (y - h / 2) + 'px';
+    // highlight zone under cursor
+    document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+    dragClone.style.display = 'none';
+    const under = document.elementFromPoint(x, y);
+    dragClone.style.display = '';
+    if (under) {
+      const z = under.closest('[data-zone]');
+      if (z && z.dataset.zone !== dragFromZone) z.classList.add('drop-target');
+    }
+  }
+
+  function endDrag(x, y) {
+    if (dragClone) { dragClone.remove(); dragClone = null; }
+    if (dragChip)  { dragChip.style.opacity = ''; dragChip = null; }
+    document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+
+    const under = document.elementFromPoint(x, y);
+    if (under && dragSid) {
+      const z = under.closest('[data-zone]');
+      if (z && z.dataset.zone !== dragFromZone)
+        moveStudent(dragSid, dragFromZone, z.dataset.zone);
+    }
+    dragSid = null; dragFromZone = null;
   }
 
   // ── Build a student chip ──────────────────────────────────────────────────
@@ -341,47 +364,44 @@
     chip.dataset.sid = student.student_id;
     chip.textContent = student.name.split(' ')[0];
     chip.title = student.name;
-    chip.draggable = true;
+    chip.style.touchAction = 'none';
 
-    // ── HTML5 drag ──────────────────────────────────────────────────────────
-    chip.addEventListener('dragstart', e => {
-      dragStudentId  = chip.dataset.sid;
-      const z = chip.closest('[data-zone]');
-      dragSourceZone = z ? z.dataset.zone : 'palette';
-      e.dataTransfer.setData('text/plain', dragStudentId);
-      e.dataTransfer.effectAllowed = 'move';
-      // Small delay so the browser ghost renders before we fade the original
-      setTimeout(() => chip.classList.add('is-dragging'), 0);
+    // ── Mouse drag ───────────────────────────────────────────────────────────
+    chip.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      startDrag(chip, e.clientX, e.clientY);
+      const onMove = e => moveDragClone(e.clientX, e.clientY);
+      const onUp   = e => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup',   onUp);
+        endDrag(e.clientX, e.clientY);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup',   onUp);
     });
 
-    chip.addEventListener('dragend', () => {
-      chip.classList.remove('is-dragging');
-      document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
-      dragStudentId  = null;
-      dragSourceZone = null;
-    });
-
-    // ── Tap-to-select (touch / click fallback) ──────────────────────────────
-    chip.addEventListener('click', e => {
-      e.stopPropagation();
-      const sid = chip.dataset.sid;
-
-      if (selectedSid === sid) {
-        clearSelection();
-        return;
-      }
-
-      clearSelection();
-      selectedSid  = sid;
-      const z = chip.closest('[data-zone]');
-      selectedZone = z ? z.dataset.zone : 'palette';
-      chip.classList.add('selected');
-
-      // Highlight all valid drop targets
-      document.querySelectorAll('[data-zone]').forEach(el => {
-        if (el.dataset.zone !== selectedZone) el.classList.add('tap-ready');
-      });
-    });
+    // ── Touch drag ───────────────────────────────────────────────────────────
+    chip.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const t = e.touches[0];
+      startDrag(chip, t.clientX, t.clientY);
+      const onMove = e => {
+        e.preventDefault();
+        const t = e.touches[0];
+        moveDragClone(t.clientX, t.clientY);
+      };
+      const onEnd = e => {
+        document.removeEventListener('touchmove',  onMove);
+        document.removeEventListener('touchend',   onEnd);
+        document.removeEventListener('touchcancel',onEnd);
+        const t = e.changedTouches[0];
+        endDrag(t.clientX, t.clientY);
+      };
+      document.addEventListener('touchmove',   onMove,  { passive: false });
+      document.addEventListener('touchend',    onEnd);
+      document.addEventListener('touchcancel', onEnd);
+    }, { passive: false });
 
     return chip;
   }
@@ -405,7 +425,7 @@
     del.className = 'group-delete';
     del.textContent = '×';
     del.title = 'Remove group';
-    del.addEventListener('click', e => { e.stopPropagation(); deleteGroup(group.id); });
+    del.addEventListener('click', () => deleteGroup(group.id));
 
     hdr.appendChild(inp);
     hdr.appendChild(del);
@@ -419,51 +439,8 @@
 
     box.appendChild(hdr);
     box.appendChild(chips);
-
-    attachDropZone(box, group.id);
     return box;
   }
-
-  // ── Attach HTML5 DnD to a zone element ───────────────────────────────────
-  function attachDropZone(el, zoneId) {
-    el.addEventListener('dragover', e => {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = 'move';
-      el.classList.add('drop-target');
-    });
-
-    el.addEventListener('dragleave', e => {
-      if (!el.contains(e.relatedTarget)) el.classList.remove('drop-target');
-    });
-
-    el.addEventListener('drop', e => {
-      e.preventDefault();
-      el.classList.remove('drop-target');
-      const sid = e.dataTransfer.getData('text/plain') || dragStudentId;
-      const src  = dragSourceZone || 'palette';
-      if (sid && zoneId !== src) moveStudent(sid, src, zoneId);
-      dragStudentId  = null;
-      dragSourceZone = null;
-    });
-  }
-
-  // ── Single document-level tap-to-assign handler ───────────────────────────
-  // Fires for any click that wasn't stopped by a chip's own handler.
-  // This reliably handles clicks on group borders, padding, header, chips area.
-  document.addEventListener('click', e => {
-    if (!selectedSid) return;
-    if (e.target.closest('.chip')) return;  // chip click handled by chip itself
-    if (e.target.closest('.btn'))  return;  // toolbar buttons
-
-    const zone = e.target.closest('[data-zone]');
-    if (!zone) { clearSelection(); return; }   // clicked outside any zone
-
-    const zoneId = zone.dataset.zone;
-    if (zoneId === selectedZone) { clearSelection(); return; }  // same zone
-
-    moveStudent(selectedSid, selectedZone, zoneId);
-    clearSelection();
-  });
 
   // ── Move a student between zones ──────────────────────────────────────────
   function moveStudent(sid, fromZone, toZone) {
@@ -478,14 +455,12 @@
     render();
   }
 
-  // ── Auto-assign ───────────────────────────────────────────────────────────
+  // ── Auto-assign: clear all, then shuffle all students into groups ──────────
   function autoAssign() {
     if (groups.length === 0) { showToast('Add a group first'); return; }
-    const assigned = new Set(groups.flatMap(g => g.students));
-    const pool = students.filter(s => !assigned.has(s.student_id))
-                         .map(s => s.student_id)
-                         .sort(() => Math.random() - 0.5);
-    pool.forEach((sid, i) => groups[i % groups.length].students.push(sid));
+    groups.forEach(g => { g.students = []; });
+    const pool = [...students].sort(() => Math.random() - 0.5);
+    pool.forEach((s, i) => groups[i % groups.length].students.push(s.student_id));
     render();
   }
 
@@ -502,9 +477,10 @@
   }
 
   function clearAll() {
-    if (!confirm('Return all students to the unassigned palette?')) return;
+    // confirm() is blocked in sandboxed iframes — skip it
     groups.forEach(g => { g.students = []; });
     render();
+    showToast('Cleared');
   }
 
   // ── CSV helpers ──────────────────────────────────────────────────────────
@@ -709,7 +685,7 @@
     },
 
     isComplete() { return groups.some(g => g.students.length > 0); },
-    reset()      { clearSelection(); dragStudentId = null; dragSourceZone = null; }
+    reset()      { if (dragClone) { dragClone.remove(); dragClone = null; } dragSid = null; }
   };
 
   window.addEventListener('message', e => {

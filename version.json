@@ -1,5 +1,5 @@
 {
-  "version": "3.48.5",
+  "version": "3.48.6",
   "lastUpdated": "2026-04-17",
-  "description": "Add Auto button to group_assigner: randomly distributes unassigned students evenly across groups via round-robin shuffle"
+  "description": "Fix group_assigner drag-and-drop: replace HTML5 DnD with custom mouse+touch implementation, fix autoAssign and clearAll, remove tap-to-assign"
 }
