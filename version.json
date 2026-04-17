@@ -1,5 +1,5 @@
 {
-  "version": "3.48.8",
+  "version": "3.48.9",
   "lastUpdated": "2026-04-17",
-  "description": "Fix student_id type mismatch in group_assigner: normalise all student_ids to String() on init so Set lookups and Array.find comparisons work correctly; remove diagnostic toasts"
+  "description": "Add diagnostic toast on init in group_assigner to show raw first student object as JSON for inspecting classStudents context fields"
 }

@@ -655,6 +655,7 @@
       students  = (context.classStudents || []).map(s => ({ ...s, student_id: String(s.student_id) }));
       className = context.class || 'Unknown Class';
       document.getElementById('class-label').textContent = `${className} — ${students.length} students loaded`;
+      if (students.length > 0) showToast(JSON.stringify(students[0]).slice(0, 120));
 
       seedGroups();
 
