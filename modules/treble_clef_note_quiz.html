@@ -207,13 +207,13 @@
 
 <div class="app">
   <div class="header">
-    <div class="title-block">
-      <div class="title">Treble Clef Notes</div>
-      <div class="subtitle" id="filter-summary">Practicing: ...</div>
-    </div>
     <div class="toolbar-btns">
       <button class="toolbar-btn btn-new-note" id="new-note-btn" title="Give this student a new note to identify">&#128260; New Note</button>
       <button class="toolbar-btn btn-select-notes" id="settings-btn" title="Choose which notes to practice">&#9881; Select Notes</button>
+    </div>
+    <div class="title-block">
+      <div class="title">Treble Clef Notes</div>
+      <div class="subtitle" id="filter-summary">Practicing: ...</div>
     </div>
   </div>
 
@@ -505,12 +505,12 @@
     // Standard engraving proportions: a treble clef glyph spans about 2
     // line-spaces above the top staff line to 1 line-space below the
     // bottom line (7 spaces total), with its curl wrapping the G line
-    // (2nd line from the bottom) — shifted up half a step from the
-    // original estimate, which landed the curl a step too low.
+    // (2nd line from the bottom) — tuned down from the original estimate
+    // by 1.5 line-spaces total to land the curl on the G line.
     const clefHeight = lineSpacing * 7.2;
     const clefWidth = clefHeight * (242 / 690);
     const clefX = staffLineLeft;
-    const clefY = staffTopY - lineSpacing * 2 - halfStep;
+    const clefY = staffTopY - lineSpacing * 1.5;
 
     // Notes are placed to the right of the clef so they never overlap it.
     const noteAreaLeft = clefX + clefWidth + 15;

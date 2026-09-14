@@ -2,6 +2,13 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Commercial App in Development
+
+A commercial Electron-based version of this application is being developed in a separate folder:
+**`/home/mrdangerous/Desktop/Promethean_Board_Teaching_Assistant_App/`**
+
+This new app is intended for distribution to teachers broadly, with Google Drive integration for data sync, a downloadable module pack system, and a proper installer. The current repo remains the development/reference implementation.
+
 ## Project Overview
 
 A browser-based smartboard teaching assistant for conducting student assessments. Pure HTML/CSS/JS with no build process - open `index.html` directly in a browser.
@@ -36,6 +43,8 @@ No build, compile, or bundle steps needed.
 - **Dynamic sizing** - Use CSS grid/flexbox to adapt to available space
 - **Avoid expansion** - Adding features (like checkboxes) should NOT make existing elements larger or push content off screen
 - **Test fit** - Consider that class screens may have 10+ classes visible at once
+
+**Touch control placement:** When designing touch controls for custom modules, generally favor placing buttons on the left side of the screen rather than the right or center.
 
 ## Architecture
 

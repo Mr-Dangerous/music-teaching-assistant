@@ -1,5 +1,5 @@
 {
-  "version": "3.51.1",
+  "version": "3.51.2",
   "lastUpdated": "2026-09-14",
-  "description": "Treble Clef Note Quiz: add Reveal Hint/Reveal G/Reveal All Lines/Reveal All Spaces teaching aids; move clef onto the staff and shift it up to align with the G line"
+  "description": "Treble Clef Note Quiz: fix clef vertical alignment (down a full line) and move New Note/Select Notes buttons to the left; document left-side touch control preference in CLAUDE.md"
 }
