@@ -1,5 +1,5 @@
 {
-  "version": "3.48.9",
-  "lastUpdated": "2026-04-17",
-  "description": "Add diagnostic toast on init in group_assigner to show raw first student object as JSON for inspecting classStudents context fields"
+  "version": "3.49.1",
+  "lastUpdated": "2026-09-14",
+  "description": "Add Treble Clef Note Quiz module with configurable line/space/below-staff note filters and drag-to-answer staff quiz"
 }

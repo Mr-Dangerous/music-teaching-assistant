@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Treble Clef Note Quiz</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 10px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app {
+    background: rgba(255,255,255,0.97);
+    border-radius: 16px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 8px;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .title { font-size: 22px; font-weight: bold; color: #2c3e50; line-height: 1.2; }
+  .subtitle { font-size: 14px; color: #666; font-weight: 600; }
+
+  .gear-btn {
+    background: linear-gradient(135deg,#4e54c8,#8f94fb);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    font-size: 20px;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .gear-btn:hover { opacity: 0.88; }
+
+  .staff-wrap {
+    flex: 1;
+    min-height: 0;
+    background: #f5f6ff;
+    border: 2px dashed #c5cae9;
+    border-radius: 12px;
+    position: relative;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .staff-wrap.drop-target { background: #e8eaf6; border-color: #5c6bc0; }
+  #staff-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  .bank {
+    flex-shrink: 0;
+    min-height: 74px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 6px;
+  }
+
+  .letter-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 26px;
+    font-weight: 800;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    box-shadow: 0 3px 8px rgba(102,126,234,0.4);
+  }
+
+  /* Settings overlay */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+  }
+  .panel {
+    background: #fff;
+    border-radius: 18px;
+    padding: 22px 26px;
+    max-width: 560px;
+    width: 90%;
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+  .panel h2 { color: #2c3e50; font-size: 20px; margin-bottom: 14px; }
+  .columns {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .col {
+    flex: 1 1 140px;
+    background: #f5f6ff;
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .col-header {
+    display: block;
+    font-weight: bold;
+    color: #3949ab;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #c5cae9;
+  }
+  .col label {
+    display: block;
+    font-size: 15px;
+    color: #333;
+    padding: 4px 0;
+    cursor: pointer;
+  }
+  .col label input { margin-right: 8px; }
+
+  .panel-actions { margin-top: 18px; text-align: right; }
+  .btn-start {
+    background: linear-gradient(135deg,#11998e,#38ef7d);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 26px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .btn-start:hover { opacity: 0.9; }
+
+  #toast {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    background: #2ecc71;
+    color: #fff;
+    padding: 7px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: bold;
+    z-index: 99999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="title-block">
+      <div class="title">Treble Clef Notes</div>
+      <div class="subtitle" id="filter-summary">Practicing: ...</div>
+    </div>
+    <button class="gear-btn" id="settings-btn" title="Choose which notes to practice">&#9881;</button>
+  </div>
+
+  <div class="staff-wrap" id="staff-zone" data-zone="staff">
+    <canvas id="staff-canvas"></canvas>
+  </div>
+
+  <div class="bank" id="letter-bank" data-zone="bank"></div>
+</div>
+
+<div id="settings-overlay" class="overlay" hidden>
+  <div class="panel">
+    <h2>Choose Notes to Practice</h2>
+    <div class="columns">
+      <div class="col">
+        <label class="col-header"><input type="checkbox" id="col-line-all"> Line Notes</label>
+        <label><input type="checkbox" class="note-cb" data-id="E4"> E &mdash; Line 1</label>
+        <label><input type="checkbox" class="note-cb" data-id="G4"> G &mdash; Line 2</label>
+        <label><input type="checkbox" class="note-cb" data-id="B4"> B &mdash; Line 3</label>
+        <label><input type="checkbox" class="note-cb" data-id="D5"> D &mdash; Line 4</label>
+        <label><input type="checkbox" class="note-cb" data-id="F5"> F &mdash; Line 5</label>
+      </div>
+      <div class="col">
+        <label class="col-header"><input type="checkbox" id="col-space-all"> Space Notes</label>
+        <label><input type="checkbox" class="note-cb" data-id="F4"> F &mdash; Space 1</label>
+        <label><input type="checkbox" class="note-cb" data-id="A4"> A &mdash; Space 2</label>
+        <label><input type="checkbox" class="note-cb" data-id="C5"> C &mdash; Space 3</label>
+        <label><input type="checkbox" class="note-cb" data-id="E5"> E &mdash; Space 4</label>
+      </div>
+      <div class="col">
+        <label class="col-header"><input type="checkbox" id="col-ext-all"> Below Staff</label>
+        <label><input type="checkbox" class="note-cb" data-id="D4"> D &mdash; below staff</label>
+        <label><input type="checkbox" class="note-cb" data-id="C4"> C &mdash; Middle C</label>
+      </div>
+    </div>
+    <div class="panel-actions">
+      <button class="btn-start" id="settings-close-btn">Start Quiz</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // ── Note data (bottom to top) ───────────────────────────────────────────
+  // step 0 = bottom line (E4); each step = one diatonic staff position
+  const NOTE_POSITIONS = [
+    { id: 'C4', letter: 'C', step: -2, ledger: true  },
+    { id: 'D4', letter: 'D', step: -1, ledger: false },
+    { id: 'E4', letter: 'E', step: 0  },
+    { id: 'F4', letter: 'F', step: 1  },
+    { id: 'G4', letter: 'G', step: 2  },
+    { id: 'A4', letter: 'A', step: 3  },
+    { id: 'B4', letter: 'B', step: 4  },
+    { id: 'C5', letter: 'C', step: 5  },
+    { id: 'D5', letter: 'D', step: 6  },
+    { id: 'E5', letter: 'E', step: 7  },
+    { id: 'F5', letter: 'F', step: 8  },
+  ];
+  const LINE_IDS = ['E4', 'G4', 'B4', 'D5', 'F5'];
+  const SPACE_IDS = ['F4', 'A4', 'C5', 'E5'];
+  const EXT_IDS = ['D4', 'C4'];
+  const LS_KEY = 'trebleClefNoteQuiz_settings_v1';
+  const CONFIGURED_KEY = 'trebleClefNoteQuizConfigured';
+  const MODULE_FILE = 'treble_clef_note_quiz.html';
+
+  function defaultSettings() {
+    const enabled = {};
+    NOTE_POSITIONS.forEach(n => { enabled[n.id] = LINE_IDS.includes(n.id) || SPACE_IDS.includes(n.id); });
+    return { enabled };
+  }
+
+  // ── State ────────────────────────────────────────────────────────────────
+  let settings = defaultSettings();
+  let currentTarget = null;
+  let answered = false;
+  let lastResponse = null;
+  let logicalW = 0, logicalH = 0;
+
+  const clefImg = new Image();
+  clefImg.src = '../assets/clefs/symbol_treble_clef.png';
+  clefImg.onload = () => drawStaff();
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  function enabledPositions() { return NOTE_POSITIONS.filter(n => settings.enabled[n.id]); }
+  function enabledLetters() {
+    const set = new Set(enabledPositions().map(n => n.letter));
+    return ['A', 'B', 'C', 'D', 'E', 'F', 'G'].filter(l => set.has(l));
+  }
+  function loadLocalSettings() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      return parsed && parsed.enabled ? parsed : null;
+    } catch (e) { return null; }
+  }
+  function saveLocalSettings() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(settings)); } catch (e) { /* ignore */ }
+  }
+  function hasEverConfigured(context) {
+    if (context && context.savedSettings && context.savedSettings.enabled) return true;
+    try { return localStorage.getItem(CONFIGURED_KEY) === '1'; } catch (e) { return false; }
+  }
+
+  function pickNewTarget() {
+    const pool = enabledPositions();
+    currentTarget = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+    answered = false;
+    lastResponse = null;
+  }
+
+  // ── Settings overlay ─────────────────────────────────────────────────────
+  function openSettingsOverlay() { document.getElementById('settings-overlay').hidden = false; }
+  function closeSettingsOverlay() { document.getElementById('settings-overlay').hidden = true; }
+
+  function applySettingsToUI() {
+    document.querySelectorAll('.note-cb').forEach(cb => {
+      cb.checked = !!settings.enabled[cb.dataset.id];
+    });
+    updateColumnHeaders();
+  }
+  function updateColumnHeaders() {
+    document.getElementById('col-line-all').checked = LINE_IDS.every(id => settings.enabled[id]);
+    document.getElementById('col-space-all').checked = SPACE_IDS.every(id => settings.enabled[id]);
+    document.getElementById('col-ext-all').checked = EXT_IDS.every(id => settings.enabled[id]);
+  }
+  function toggleColumn(ids, checked) {
+    ids.forEach(id => { settings.enabled[id] = checked; });
+    applySettingsToUI();
+  }
+  function updateFilterSummary() {
+    const el = document.getElementById('filter-summary');
+    const letters = enabledLetters();
+    el.textContent = letters.length ? `Practicing: ${letters.join(' ')}` : 'No notes selected';
+  }
+
+  // ── Letter bank & drag/drop ──────────────────────────────────────────────
+  let dragLetter = null, dragClone = null, dragChip = null;
+
+  function startDrag(chip, x, y) {
+    if (answered || !currentTarget) return;
+    dragLetter = chip.dataset.letter;
+    dragChip = chip;
+    dragClone = chip.cloneNode(true);
+    dragClone.style.cssText =
+      'position:fixed;z-index:9999;pointer-events:none;opacity:0.9;transform:scale(1.15);transition:none;';
+    document.body.appendChild(dragClone);
+    chip.style.opacity = '0.3';
+    moveDragClone(x, y);
+  }
+  function moveDragClone(x, y) {
+    if (!dragClone) return;
+    const w = dragClone.offsetWidth || 58, h = dragClone.offsetHeight || 58;
+    dragClone.style.left = (x - w / 2) + 'px';
+    dragClone.style.top = (y - h / 2) + 'px';
+
+    dragClone.style.display = 'none';
+    const under = document.elementFromPoint(x, y);
+    dragClone.style.display = '';
+    const overStaff = under && under.closest('[data-zone="staff"]');
+    document.getElementById('staff-zone').classList.toggle('drop-target', !!overStaff);
+  }
+  function endDrag(x, y) {
+    document.getElementById('staff-zone').classList.remove('drop-target');
+    if (dragClone) { dragClone.remove(); dragClone = null; }
+    if (dragChip) { dragChip.style.opacity = ''; dragChip = null; }
+    if (!dragLetter) return;
+
+    const under = document.elementFromPoint(x, y);
+    const overStaff = under && under.closest('[data-zone="staff"]');
+    if (overStaff && !answered && currentTarget) submitAnswer(dragLetter);
+    dragLetter = null;
+  }
+
+  function buildChip(letter) {
+    const chip = document.createElement('div');
+    chip.className = 'letter-chip';
+    chip.dataset.letter = letter;
+    chip.textContent = letter;
+
+    chip.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      startDrag(chip, e.clientX, e.clientY);
+      const onMove = e => moveDragClone(e.clientX, e.clientY);
+      const onUp = e => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        endDrag(e.clientX, e.clientY);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    chip.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const t = e.touches[0];
+      startDrag(chip, t.clientX, t.clientY);
+      const onMove = e => { e.preventDefault(); const t = e.touches[0]; moveDragClone(t.clientX, t.clientY); };
+      const onEnd = e => {
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onEnd);
+        document.removeEventListener('touchcancel', onEnd);
+        const t = e.changedTouches[0];
+        endDrag(t.clientX, t.clientY);
+      };
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend', onEnd);
+      document.addEventListener('touchcancel', onEnd);
+    }, { passive: false });
+
+    return chip;
+  }
+
+  function renderBank() {
+    const bank = document.getElementById('letter-bank');
+    bank.innerHTML = '';
+    enabledLetters().forEach(l => bank.appendChild(buildChip(l)));
+  }
+
+  // ── Answer handling ──────────────────────────────────────────────────────
+  function submitAnswer(letter) {
+    answered = true;
+    const correct = letter === currentTarget.letter;
+    lastResponse = `${currentTarget.id}|${letter}`;
+    drawStaff(correct ? 'correct' : 'wrong');
+    showToast(correct ? `Correct! It's ${currentTarget.letter}` : `Not quite — that was ${currentTarget.letter}`,
+      correct ? '#2ecc71' : '#e74c3c');
+
+    window.parent.postMessage({
+      type: 'taskmodule:response',
+      value: lastResponse,
+      isComplete: true
+    }, '*');
+  }
+
+  // ── Canvas rendering ─────────────────────────────────────────────────────
+  function getScale() { return document.body.classList.contains('resolution-4k') ? 2 : 1; }
+
+  function resizeCanvas() {
+    const canvas = document.getElementById('staff-canvas');
+    const wrap = document.getElementById('staff-zone');
+    const rect = wrap.getBoundingClientRect();
+    logicalW = rect.width;
+    logicalH = rect.height;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.round(logicalW * dpr));
+    canvas.height = Math.max(1, Math.round(logicalH * dpr));
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function drawStaff(status) {
+    const canvas = document.getElementById('staff-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, logicalW, logicalH);
+    if (logicalW < 10 || logicalH < 10) return;
+
+    const scale = getScale();
+    const lineSpacing = logicalH * 0.10;
+    const halfStep = lineSpacing / 2;
+    const staffBottomY = logicalH * 0.66;
+    const clefHeight = lineSpacing * 4 * 2.15;
+    const clefWidth = clefHeight * (242 / 690);
+    const staffLeft = 24 * scale + clefWidth + 18;
+    const staffRight = logicalW - 30;
+
+    ctx.strokeStyle = '#2c3e50';
+    ctx.lineWidth = 3;
+    [0, 2, 4, 6, 8].forEach(step => {
+      const y = staffBottomY - step * halfStep;
+      ctx.beginPath();
+      ctx.moveTo(staffLeft, y);
+      ctx.lineTo(staffRight, y);
+      ctx.stroke();
+    });
+
+    if (clefImg.complete && clefImg.naturalWidth > 0) {
+      const clefY = staffBottomY - 8 * halfStep - (clefHeight - 4 * lineSpacing) * 0.42;
+      ctx.drawImage(clefImg, 12, clefY, clefWidth, clefHeight);
+    }
+
+    if (currentTarget) {
+      const y = staffBottomY - currentTarget.step * halfStep;
+      const noteX = staffLeft + (staffRight - staffLeft) * 0.55;
+
+      if (currentTarget.ledger) {
+        ctx.beginPath();
+        ctx.moveTo(noteX - 22, y);
+        ctx.lineTo(noteX + 22, y);
+        ctx.stroke();
+      }
+
+      drawNotehead(ctx, noteX, y, status);
+    } else {
+      ctx.fillStyle = '#888';
+      ctx.font = '16px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Select at least one note in settings ⚙', logicalW / 2, logicalH / 2);
+    }
+  }
+
+  function drawNotehead(ctx, x, y, status) {
+    const r = 13;
+    const color = status === 'correct' ? '#2ecc71' : status === 'wrong' ? '#e74c3c' : '#2c3e50';
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r * 1.2, r, -Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + r, y - 60);
+    ctx.stroke();
+  }
+
+  window.addEventListener('resize', () => { resizeCanvas(); drawStaff(); });
+
+  // ── Toast ────────────────────────────────────────────────────────────────
+  let toastTimer = null;
+  function showToast(msg, color) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.background = color || '#2ecc71';
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  // ── Settings panel wiring ────────────────────────────────────────────────
+  document.querySelectorAll('.note-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      settings.enabled[cb.dataset.id] = cb.checked;
+      updateColumnHeaders();
+    });
+  });
+  document.getElementById('col-line-all').addEventListener('change', e => toggleColumn(LINE_IDS, e.target.checked));
+  document.getElementById('col-space-all').addEventListener('change', e => toggleColumn(SPACE_IDS, e.target.checked));
+  document.getElementById('col-ext-all').addEventListener('change', e => toggleColumn(EXT_IDS, e.target.checked));
+
+  document.getElementById('settings-btn').addEventListener('click', openSettingsOverlay);
+
+  document.getElementById('settings-close-btn').addEventListener('click', () => {
+    if (enabledPositions().length === 0) {
+      showToast('Select at least one note first', '#e67e22');
+      return;
+    }
+    saveLocalSettings();
+    try { localStorage.setItem(CONFIGURED_KEY, '1'); } catch (e) { /* ignore */ }
+    window.parent.postMessage({
+      type: 'taskmodule:settings',
+      modulePath: MODULE_FILE,
+      settings: settings
+    }, '*');
+    closeSettingsOverlay();
+    renderBank();
+    updateFilterSummary();
+    pickNewTarget();
+    resizeCanvas();
+    drawStaff();
+  });
+
+  // ── TaskModule interface ─────────────────────────────────────────────────
+  window.TaskModule = {
+    init(context) {
+      const fromApp = context && context.savedSettings && context.savedSettings.enabled ? context.savedSettings : null;
+      settings = fromApp || loadLocalSettings() || defaultSettings();
+      applySettingsToUI();
+      updateFilterSummary();
+
+      if (!hasEverConfigured(context)) {
+        openSettingsOverlay();
+      } else {
+        closeSettingsOverlay();
+        pickNewTarget();
+      }
+
+      setTimeout(() => {
+        resizeCanvas();
+        renderBank();
+        drawStaff();
+      }, 50);
+    },
+
+    getResponse() { return lastResponse; },
+    isComplete() { return answered; },
+    reset() {
+      if (dragClone) { dragClone.remove(); dragClone = null; }
+      dragLetter = null;
+      dragChip = null;
+    }
+  };
+
+  window.addEventListener('message', e => {
+    if (e.data && e.data.type === 'taskmodule:init') {
+      window.TaskModule.init(e.data.context || {});
+    }
+  });
+</script>
+</body>
+</html>
