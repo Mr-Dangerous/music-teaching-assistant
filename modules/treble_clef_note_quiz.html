@@ -449,9 +449,17 @@
     const lineSpacing = logicalH * 0.10;
     const halfStep = lineSpacing / 2;
     const staffBottomY = logicalH * 0.66;
-    const clefHeight = lineSpacing * 4 * 2.15;
+    const staffTopY = staffBottomY - lineSpacing * 4;
+
+    // Standard engraving proportions: a treble clef glyph spans about 2
+    // line-spaces above the top staff line to 1 line-space below the
+    // bottom line (7 spaces total), with its curl wrapping the G line.
+    const clefHeight = lineSpacing * 7.2;
     const clefWidth = clefHeight * (242 / 690);
-    const staffLeft = 24 * scale + clefWidth + 18;
+    const clefX = 12 * scale;
+    const clefY = staffTopY - lineSpacing * 2;
+
+    const staffLeft = clefX + clefWidth + 18;
     const staffRight = logicalW - 30;
 
     ctx.strokeStyle = '#2c3e50';
@@ -465,8 +473,7 @@
     });
 
     if (clefImg.complete && clefImg.naturalWidth > 0) {
-      const clefY = staffBottomY - 8 * halfStep - (clefHeight - 4 * lineSpacing) * 0.42;
-      ctx.drawImage(clefImg, 12, clefY, clefWidth, clefHeight);
+      ctx.drawImage(clefImg, clefX, clefY, clefWidth, clefHeight);
     }
 
     if (currentTarget) {
@@ -474,9 +481,10 @@
       const noteX = staffLeft + (staffRight - staffLeft) * 0.55;
 
       if (currentTarget.ledger) {
+        const ledgerHalfWidth = NOTE_RADIUS * 1.7;
         ctx.beginPath();
-        ctx.moveTo(noteX - 22, y);
-        ctx.lineTo(noteX + 22, y);
+        ctx.moveTo(noteX - ledgerHalfWidth, y);
+        ctx.lineTo(noteX + ledgerHalfWidth, y);
         ctx.stroke();
       }
 
@@ -490,8 +498,11 @@
     }
   }
 
+  const NOTE_SCALE = 1.75;
+  const NOTE_RADIUS = 13 * NOTE_SCALE;
+
   function drawNotehead(ctx, x, y, status) {
-    const r = 13;
+    const r = NOTE_RADIUS;
     const color = status === 'correct' ? '#2ecc71' : status === 'wrong' ? '#e74c3c' : '#2c3e50';
     ctx.fillStyle = color;
     ctx.beginPath();
@@ -499,10 +510,10 @@
     ctx.fill();
 
     ctx.strokeStyle = color;
-    ctx.lineWidth = 2.5;
+    ctx.lineWidth = 2.5 * NOTE_SCALE;
     ctx.beginPath();
     ctx.moveTo(x + r, y);
-    ctx.lineTo(x + r, y - 60);
+    ctx.lineTo(x + r, y - 60 * NOTE_SCALE);
     ctx.stroke();
   }
 

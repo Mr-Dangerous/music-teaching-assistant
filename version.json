@@ -1,5 +1,5 @@
 {
-  "version": "3.50.2",
+  "version": "3.50.3",
   "lastUpdated": "2026-09-14",
-  "description": "Fix stale module caching: iframe-loaded task modules now get a per-page-load cache-busting query param so a page reload always picks up the latest deployed module"
+  "description": "Treble Clef Note Quiz: enlarge notehead 75% and reposition/resize the clef using real staff-line proportions so it sits properly on the staff"
 }
