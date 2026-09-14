@@ -36,18 +36,24 @@
   .title { font-size: 22px; font-weight: bold; color: #2c3e50; line-height: 1.2; }
   .subtitle { font-size: 14px; color: #666; font-weight: 600; }
 
-  .gear-btn {
-    background: linear-gradient(135deg,#4e54c8,#8f94fb);
-    color: #fff;
-    border: none;
-    border-radius: 50%;
-    width: 42px;
-    height: 42px;
-    font-size: 20px;
-    cursor: pointer;
+  .toolbar-btns {
+    display: flex;
+    gap: 8px;
     flex-shrink: 0;
   }
-  .gear-btn:hover { opacity: 0.88; }
+  .toolbar-btn {
+    border: none;
+    border-radius: 20px;
+    padding: 9px 18px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    white-space: nowrap;
+    color: #fff;
+  }
+  .toolbar-btn:hover { opacity: 0.88; }
+  .btn-select-notes { background: linear-gradient(135deg,#4e54c8,#8f94fb); }
+  .btn-new-note { background: linear-gradient(135deg,#f7971e,#ffd200); color: #333; }
 
   .staff-wrap {
     flex: 1;
@@ -91,14 +97,15 @@
 
   /* Settings overlay */
   .overlay {
+    display: none;
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,0.45);
-    display: flex;
     align-items: center;
     justify-content: center;
     z-index: 500;
   }
+  .overlay.show { display: flex; }
   .panel {
     background: #fff;
     border-radius: 18px;
@@ -177,7 +184,10 @@
       <div class="title">Treble Clef Notes</div>
       <div class="subtitle" id="filter-summary">Practicing: ...</div>
     </div>
-    <button class="gear-btn" id="settings-btn" title="Choose which notes to practice">&#9881;</button>
+    <div class="toolbar-btns">
+      <button class="toolbar-btn btn-new-note" id="new-note-btn" title="Give this student a new note to identify">&#128260; New Note</button>
+      <button class="toolbar-btn btn-select-notes" id="settings-btn" title="Choose which notes to practice">&#9881; Select Notes</button>
+    </div>
   </div>
 
   <div class="staff-wrap" id="staff-zone" data-zone="staff">
@@ -187,7 +197,7 @@
   <div class="bank" id="letter-bank" data-zone="bank"></div>
 </div>
 
-<div id="settings-overlay" class="overlay" hidden>
+<div id="settings-overlay" class="overlay">
   <div class="panel">
     <h2>Choose Notes to Practice</h2>
     <div class="columns">
@@ -213,7 +223,7 @@
       </div>
     </div>
     <div class="panel-actions">
-      <button class="btn-start" id="settings-close-btn">Start Quiz</button>
+      <button class="btn-start" id="settings-close-btn">Done</button>
     </div>
   </div>
 </div>
@@ -289,8 +299,8 @@
   }
 
   // ── Settings overlay ─────────────────────────────────────────────────────
-  function openSettingsOverlay() { document.getElementById('settings-overlay').hidden = false; }
-  function closeSettingsOverlay() { document.getElementById('settings-overlay').hidden = true; }
+  function openSettingsOverlay() { document.getElementById('settings-overlay').classList.add('show'); }
+  function closeSettingsOverlay() { document.getElementById('settings-overlay').classList.remove('show'); }
 
   function applySettingsToUI() {
     document.querySelectorAll('.note-cb').forEach(cb => {
@@ -510,23 +520,9 @@
   }
 
   // ── Settings panel wiring ────────────────────────────────────────────────
-  document.querySelectorAll('.note-cb').forEach(cb => {
-    cb.addEventListener('change', () => {
-      settings.enabled[cb.dataset.id] = cb.checked;
-      updateColumnHeaders();
-    });
-  });
-  document.getElementById('col-line-all').addEventListener('change', e => toggleColumn(LINE_IDS, e.target.checked));
-  document.getElementById('col-space-all').addEventListener('change', e => toggleColumn(SPACE_IDS, e.target.checked));
-  document.getElementById('col-ext-all').addEventListener('change', e => toggleColumn(EXT_IDS, e.target.checked));
-
-  document.getElementById('settings-btn').addEventListener('click', openSettingsOverlay);
-
-  document.getElementById('settings-close-btn').addEventListener('click', () => {
-    if (enabledPositions().length === 0) {
-      showToast('Select at least one note first', '#e67e22');
-      return;
-    }
+  // Every change applies immediately and persists (localStorage + parent app),
+  // so filters are always live and carry over to the next student/question.
+  function saveAndBroadcastSettings() {
     saveLocalSettings();
     try { localStorage.setItem(CONFIGURED_KEY, '1'); } catch (e) { /* ignore */ }
     window.parent.postMessage({
@@ -534,10 +530,45 @@
       modulePath: MODULE_FILE,
       settings: settings
     }, '*');
-    closeSettingsOverlay();
-    renderBank();
+  }
+  function handleSettingsChange() {
+    applySettingsToUI();
     updateFilterSummary();
+    renderBank();
+    saveAndBroadcastSettings();
+  }
+
+  document.querySelectorAll('.note-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      settings.enabled[cb.dataset.id] = cb.checked;
+      handleSettingsChange();
+    });
+  });
+  document.getElementById('col-line-all').addEventListener('change', e => { toggleColumn(LINE_IDS, e.target.checked); handleSettingsChange(); });
+  document.getElementById('col-space-all').addEventListener('change', e => { toggleColumn(SPACE_IDS, e.target.checked); handleSettingsChange(); });
+  document.getElementById('col-ext-all').addEventListener('change', e => { toggleColumn(EXT_IDS, e.target.checked); handleSettingsChange(); });
+
+  document.getElementById('settings-btn').addEventListener('click', openSettingsOverlay);
+
+  document.getElementById('new-note-btn').addEventListener('click', () => {
+    if (enabledPositions().length === 0) {
+      showToast('Select at least one note first', '#e67e22');
+      openSettingsOverlay();
+      return;
+    }
     pickNewTarget();
+    resizeCanvas();
+    drawStaff();
+  });
+
+  document.getElementById('settings-close-btn').addEventListener('click', () => {
+    saveAndBroadcastSettings();
+    if (enabledPositions().length === 0) {
+      showToast('No notes selected — pick at least one to start quizzing', '#e67e22');
+    } else if (!currentTarget) {
+      pickNewTarget();
+    }
+    closeSettingsOverlay();
     resizeCanvas();
     drawStaff();
   });

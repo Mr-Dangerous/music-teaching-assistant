@@ -1,5 +1,5 @@
 {
-  "version": "3.49.1",
+  "version": "3.50.1",
   "lastUpdated": "2026-09-14",
-  "description": "Add Treble Clef Note Quiz module with configurable line/space/below-staff note filters and drag-to-answer staff quiz"
+  "description": "Fix Treble Clef Note Quiz settings panel not closing (CSS specificity bug); add always-visible Select Notes/New Note toolbar buttons with live-persisting filters"
 }
