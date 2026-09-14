@@ -5,6 +5,10 @@ class ModuleLoader {
   constructor() {
     this.currentQuestionModule = null;
     this.currentResponseModule = null;
+    // Shared per-page-load token: busts the browser cache for every module
+    // fetched during this session, so a page refresh always picks up the
+    // latest deployed module instead of a stale cached copy.
+    this.cacheBust = Date.now();
   }
 
   /**
@@ -19,7 +23,8 @@ class ModuleLoader {
     container.innerHTML = '';
 
     const iframe = document.createElement('iframe');
-    iframe.src = moduleUrl;
+    const separator = moduleUrl.includes('?') ? '&' : '?';
+    iframe.src = `${moduleUrl}${separator}v=${this.cacheBust}`;
     iframe.style.width = '100%';
     iframe.style.height = '100%';
     iframe.style.border = 'none';

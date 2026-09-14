@@ -1,5 +1,5 @@
 {
-  "version": "3.50.1",
+  "version": "3.50.2",
   "lastUpdated": "2026-09-14",
-  "description": "Fix Treble Clef Note Quiz settings panel not closing (CSS specificity bug); add always-visible Select Notes/New Note toolbar buttons with live-persisting filters"
+  "description": "Fix stale module caching: iframe-loaded task modules now get a per-page-load cache-busting query param so a page reload always picks up the latest deployed module"
 }
