@@ -1,5 +1,5 @@
 {
-  "version": "3.50.3",
+  "version": "3.51.1",
   "lastUpdated": "2026-09-14",
-  "description": "Treble Clef Note Quiz: enlarge notehead 75% and reposition/resize the clef using real staff-line proportions so it sits properly on the staff"
+  "description": "Treble Clef Note Quiz: add Reveal Hint/Reveal G/Reveal All Lines/Reveal All Spaces teaching aids; move clef onto the staff and shift it up to align with the G line"
 }

@@ -52,8 +52,35 @@
     color: #fff;
   }
   .toolbar-btn:hover { opacity: 0.88; }
+  .toolbar-btn.active { filter: brightness(0.82); box-shadow: inset 0 2px 6px rgba(0,0,0,0.35); }
   .btn-select-notes { background: linear-gradient(135deg,#4e54c8,#8f94fb); }
   .btn-new-note { background: linear-gradient(135deg,#f7971e,#ffd200); color: #333; }
+
+  .hint-toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .btn-hint { background: linear-gradient(135deg,#ff5f6d,#ffc371); color: #333; }
+  .btn-reveal { background: linear-gradient(135deg,#00b09b,#96c93d); }
+
+  .hint-banner {
+    display: none;
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    background: rgba(255,255,255,0.97);
+    border: 2px solid #f7971e;
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: 15px;
+    color: #2c3e50;
+    line-height: 1.6;
+    z-index: 30;
+  }
+  .hint-banner.show { display: block; }
 
   .staff-wrap {
     flex: 1;
@@ -190,8 +217,19 @@
     </div>
   </div>
 
+  <div class="hint-toolbar">
+    <button class="toolbar-btn btn-hint" id="hint-btn">&#128161; Reveal Hint</button>
+    <button class="toolbar-btn btn-reveal" id="reveal-g-btn">&#10132; Reveal G</button>
+    <button class="toolbar-btn btn-reveal" id="reveal-lines-btn">&#128207; Reveal All Lines</button>
+    <button class="toolbar-btn btn-reveal" id="reveal-spaces-btn">&#128209; Reveal All Spaces</button>
+  </div>
+
   <div class="staff-wrap" id="staff-zone" data-zone="staff">
     <canvas id="staff-canvas"></canvas>
+    <div class="hint-banner" id="hint-banner">
+      <div><b>Line Notes:</b> <b>E</b>very <b>G</b>ood <b>B</b>urger <b>D</b>eserves <b>F</b>ries.</div>
+      <div><b>Space Notes:</b> You put your <b>FACE</b> in the space.</div>
+    </div>
   </div>
 
   <div class="bank" id="letter-bank" data-zone="bank"></div>
@@ -249,9 +287,13 @@
   const LINE_IDS = ['E4', 'G4', 'B4', 'D5', 'F5'];
   const SPACE_IDS = ['F4', 'A4', 'C5', 'E5'];
   const EXT_IDS = ['D4', 'C4'];
+  const G_STEP = 2; // G4 — second line from the bottom
   const LS_KEY = 'trebleClefNoteQuiz_settings_v1';
   const CONFIGURED_KEY = 'trebleClefNoteQuizConfigured';
   const MODULE_FILE = 'treble_clef_note_quiz.html';
+
+  const LINE_POSITIONS = NOTE_POSITIONS.filter(n => LINE_IDS.includes(n.id));
+  const SPACE_POSITIONS = NOTE_POSITIONS.filter(n => SPACE_IDS.includes(n.id));
 
   function defaultSettings() {
     const enabled = {};
@@ -265,6 +307,7 @@
   let answered = false;
   let lastResponse = null;
   let logicalW = 0, logicalH = 0;
+  let showG = false, showLines = false, showSpaces = false;
 
   const clefImg = new Image();
   clefImg.src = '../assets/clefs/symbol_treble_clef.png';
@@ -451,23 +494,33 @@
     const staffBottomY = logicalH * 0.66;
     const staffTopY = staffBottomY - lineSpacing * 4;
 
+    // Reserve a margin on the far left for line/space letter labels, then
+    // start the staff lines right after it. The clef sits ON TOP of the
+    // start of the staff (overlapping it), like real engraving, instead of
+    // in its own separate column to the left.
+    const labelMargin = 34 * scale;
+    const staffLineLeft = labelMargin;
+    const staffRight = logicalW - 30;
+
     // Standard engraving proportions: a treble clef glyph spans about 2
     // line-spaces above the top staff line to 1 line-space below the
-    // bottom line (7 spaces total), with its curl wrapping the G line.
+    // bottom line (7 spaces total), with its curl wrapping the G line
+    // (2nd line from the bottom) — shifted up half a step from the
+    // original estimate, which landed the curl a step too low.
     const clefHeight = lineSpacing * 7.2;
     const clefWidth = clefHeight * (242 / 690);
-    const clefX = 12 * scale;
-    const clefY = staffTopY - lineSpacing * 2;
+    const clefX = staffLineLeft;
+    const clefY = staffTopY - lineSpacing * 2 - halfStep;
 
-    const staffLeft = clefX + clefWidth + 18;
-    const staffRight = logicalW - 30;
+    // Notes are placed to the right of the clef so they never overlap it.
+    const noteAreaLeft = clefX + clefWidth + 15;
 
     ctx.strokeStyle = '#2c3e50';
     ctx.lineWidth = 3;
     [0, 2, 4, 6, 8].forEach(step => {
       const y = staffBottomY - step * halfStep;
       ctx.beginPath();
-      ctx.moveTo(staffLeft, y);
+      ctx.moveTo(staffLineLeft, y);
       ctx.lineTo(staffRight, y);
       ctx.stroke();
     });
@@ -476,9 +529,13 @@
       ctx.drawImage(clefImg, clefX, clefY, clefWidth, clefHeight);
     }
 
+    if (showLines) drawLetterLabels(ctx, LINE_POSITIONS, staffLineLeft, staffBottomY, halfStep, scale);
+    if (showSpaces) drawLetterLabels(ctx, SPACE_POSITIONS, staffLineLeft, staffBottomY, halfStep, scale);
+    if (showG) drawArrowToLine(ctx, staffBottomY - G_STEP * halfStep, staffRight, scale);
+
     if (currentTarget) {
       const y = staffBottomY - currentTarget.step * halfStep;
-      const noteX = staffLeft + (staffRight - staffLeft) * 0.55;
+      const noteX = noteAreaLeft + (staffRight - noteAreaLeft) * 0.5;
 
       if (currentTarget.ledger) {
         const ledgerHalfWidth = NOTE_RADIUS * 1.7;
@@ -496,6 +553,39 @@
       ctx.textBaseline = 'middle';
       ctx.fillText('Select at least one note in settings ⚙', logicalW / 2, logicalH / 2);
     }
+  }
+
+  function drawLetterLabels(ctx, positions, staffLineLeft, staffBottomY, halfStep, scale) {
+    ctx.font = `bold ${18 * scale}px Arial`;
+    ctx.fillStyle = '#2c3e50';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    positions.forEach(n => {
+      const y = staffBottomY - n.step * halfStep;
+      ctx.fillText(n.letter, staffLineLeft - 8, y);
+    });
+  }
+
+  function drawArrowToLine(ctx, y, staffRight, scale) {
+    const tipX = staffRight - 20;
+    const tailX = tipX + 55;
+    ctx.strokeStyle = '#e74c3c';
+    ctx.fillStyle = '#e74c3c';
+    ctx.lineWidth = 4 * scale;
+    ctx.beginPath();
+    ctx.moveTo(tailX, y);
+    ctx.lineTo(tipX + 10, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(tipX, y);
+    ctx.lineTo(tipX + 14, y - 9);
+    ctx.lineTo(tipX + 14, y + 9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.font = `bold ${18 * scale}px Arial`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('G', tailX + 6, y);
   }
 
   const NOTE_SCALE = 1.75;
@@ -560,6 +650,27 @@
   document.getElementById('col-ext-all').addEventListener('change', e => { toggleColumn(EXT_IDS, e.target.checked); handleSettingsChange(); });
 
   document.getElementById('settings-btn').addEventListener('click', openSettingsOverlay);
+
+  document.getElementById('hint-btn').addEventListener('click', () => {
+    const showHint = !document.getElementById('hint-banner').classList.contains('show');
+    document.getElementById('hint-banner').classList.toggle('show', showHint);
+    document.getElementById('hint-btn').classList.toggle('active', showHint);
+  });
+  document.getElementById('reveal-g-btn').addEventListener('click', () => {
+    showG = !showG;
+    document.getElementById('reveal-g-btn').classList.toggle('active', showG);
+    drawStaff();
+  });
+  document.getElementById('reveal-lines-btn').addEventListener('click', () => {
+    showLines = !showLines;
+    document.getElementById('reveal-lines-btn').classList.toggle('active', showLines);
+    drawStaff();
+  });
+  document.getElementById('reveal-spaces-btn').addEventListener('click', () => {
+    showSpaces = !showSpaces;
+    document.getElementById('reveal-spaces-btn').classList.toggle('active', showSpaces);
+    drawStaff();
+  });
 
   document.getElementById('new-note-btn').addEventListener('click', () => {
     if (enabledPositions().length === 0) {
