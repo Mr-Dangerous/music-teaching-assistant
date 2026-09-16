@@ -1,5 +1,5 @@
 {
-  "version": "3.53.1",
+  "version": "3.53.2",
   "lastUpdated": "2026-09-16",
-  "description": "Add Assignment Status module (whole-class grid view); touch-friendly score stepper and hang-fix for Written Assessment Scorer"
+  "description": "Fix Assignment Status long-press triggering native right-click context menu on touchscreens"
 }
