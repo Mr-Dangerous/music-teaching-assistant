@@ -1,4 +1,5 @@
 [
+  { "task_id": "assignment_status",         "question": "Assignment Status",             "module_path": "modules/assignment_status.html" },
   { "task_id": "audio-player",              "question": "Audio Player",                  "module_path": "modules/audio-player.html" },
   { "task_id": "boomwhacker_assigner",      "question": "Boomwhacker Assigner",          "module_path": "modules/boomwhacker_assigner.html" },
   { "task_id": "class_seating_chart",       "question": "Class Seating Chart",           "module_path": "modules/class_seating_chart.html" },

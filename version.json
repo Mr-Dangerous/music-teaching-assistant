@@ -1,5 +1,5 @@
 {
-  "version": "3.52.2",
+  "version": "3.53.1",
   "lastUpdated": "2026-09-16",
-  "description": "Untrack data_to_not_upload/ from git and add it to .gitignore (files were being pushed to public repo)"
+  "description": "Add Assignment Status module (whole-class grid view); touch-friendly score stepper and hang-fix for Written Assessment Scorer"
 }

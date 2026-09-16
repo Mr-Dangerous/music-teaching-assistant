@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Assignment Status</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 16px 20px;
+      background: white;
+      color: #1f2937;
+      display: flex;
+      flex-direction: column;
+    }
+    .header-row {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    h2 {
+      margin: 0;
+      font-size: 22px;
+      color: #3b82f6;
+      white-space: nowrap;
+    }
+    #assessment-select {
+      flex: 1;
+      min-width: 200px;
+      padding: 8px 12px;
+      font-size: 16px;
+      border: 2px solid #d1d5db;
+      border-radius: 10px;
+      background: white;
+      color: #1f2937;
+    }
+    .legend {
+      display: flex;
+      gap: 14px;
+      font-size: 13px;
+      color: #4b5563;
+      white-space: nowrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .legend-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .legend-dot.red { background: #ef4444; }
+    .legend-dot.yellow { background: #f59e0b; }
+    .legend-dot.green { background: #10b981; }
+
+    .status-message {
+      padding: 16px;
+      text-align: center;
+      color: #6b7280;
+      font-size: 16px;
+    }
+    .error-banner {
+      padding: 10px 16px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      background: #fee2e2;
+      color: #991b1b;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .grid-area {
+      flex: 1;
+      overflow-y: auto;
+    }
+    .student-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+    }
+    .student-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 12px 8px;
+      border-radius: 15px;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      background: #f3f4f6;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    .student-card:active {
+      transform: scale(0.97);
+    }
+    .student-card.absent {
+      opacity: 0.4;
+    }
+    .status-light {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: #ef4444;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
+    .status-light.yellow { background: #f59e0b; }
+    .status-light.green { background: #10b981; }
+    .student-name {
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      color: #1f2937;
+    }
+    .student-name.absent-label {
+      text-decoration: line-through;
+    }
+
+    /* Score popup (same convention as written_assessment_scorer.html) */
+    .overlay-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      align-items: center;
+      justify-content: flex-start;
+      z-index: 100;
+    }
+    .overlay-backdrop.open {
+      display: flex;
+    }
+    .overlay-box {
+      background: white;
+      border-radius: 20px;
+      padding: 24px;
+      width: min(420px, 90vw);
+      margin-left: 5vw;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    }
+    .overlay-box h3 {
+      margin: 0 0 4px 0;
+      color: #3b82f6;
+    }
+    .overlay-hint {
+      margin: 0 0 16px 0;
+      font-size: 13px;
+      color: #6b7280;
+    }
+    .form-row {
+      margin-bottom: 14px;
+    }
+    .form-row label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #374151;
+    }
+    .form-row textarea {
+      width: 100%;
+      min-height: 70px;
+      padding: 10px 12px;
+      font-size: 15px;
+      border: 2px solid #d1d5db;
+      border-radius: 10px;
+      font-family: inherit;
+      resize: vertical;
+    }
+    .score-stepper {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .score-stepper-buttons-left,
+    .score-stepper-buttons-right {
+      display: flex;
+      gap: 8px;
+    }
+    .score-stepper-value {
+      min-width: 64px;
+      text-align: center;
+      font-size: 36px;
+      font-weight: 700;
+      color: #1f2937;
+    }
+    .stepper-btn {
+      width: 48px;
+      height: 48px;
+      border: none;
+      border-radius: 50%;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      color: white;
+      background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
+      touch-action: manipulation;
+    }
+    .stepper-btn:active {
+      transform: scale(0.92);
+    }
+    .stepper-btn.stepper-btn-big {
+      width: 56px;
+      height: 56px;
+      font-size: 15px;
+    }
+    .stepper-btn:disabled {
+      background: #d1d5db;
+      cursor: not-allowed;
+    }
+    .overlay-buttons {
+      display: flex;
+      justify-content: flex-start;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .overlay-buttons button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 20px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-save {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+    .btn-cancel {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .error-text {
+      color: #ef4444;
+      font-size: 13px;
+      margin-top: 8px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="header-row">
+    <h2>Assignment Status</h2>
+    <select id="assessment-select"><option value="">Select assessment...</option></select>
+    <div class="legend">
+      <span class="legend-item"><span class="legend-dot red"></span>Not turned in</span>
+      <span class="legend-item"><span class="legend-dot yellow"></span>Turned in</span>
+      <span class="legend-item"><span class="legend-dot green"></span>Done</span>
+    </div>
+  </div>
+
+  <div id="error-banner" class="error-banner" style="display: none;"></div>
+  <div id="status-message" class="status-message">Loading...</div>
+  <div class="grid-area">
+    <div id="student-grid" class="student-grid" style="display: none;"></div>
+  </div>
+
+  <!-- Score entry popup -->
+  <div id="score-overlay" class="overlay-backdrop">
+    <div class="overlay-box">
+      <h3 id="score-overlay-title"></h3>
+      <p class="overlay-hint" id="score-overlay-range"></p>
+      <div class="form-row">
+        <label>Score</label>
+        <div class="score-stepper">
+          <div class="score-stepper-buttons-left">
+            <button type="button" class="stepper-btn stepper-btn-big" id="score-minus-5">-5</button>
+            <button type="button" class="stepper-btn" id="score-minus-1">-1</button>
+          </div>
+          <div class="score-stepper-value" id="score-value-display">0</div>
+          <div class="score-stepper-buttons-right">
+            <button type="button" class="stepper-btn" id="score-plus-1">+1</button>
+            <button type="button" class="stepper-btn stepper-btn-big" id="score-plus-5">+5</button>
+          </div>
+        </div>
+      </div>
+      <div class="form-row">
+        <label for="note-input">Note</label>
+        <textarea id="note-input" placeholder="Optional note..."></textarea>
+      </div>
+      <p class="error-text" id="score-error-text"></p>
+      <div class="overlay-buttons">
+        <button class="btn-save" id="score-save-btn">Save</button>
+        <button class="btn-cancel" id="score-cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const TASK_ID = 'written_assessment_scorer';
+
+    let moduleContext = null;
+    let allAssessments = [];          // grade-filtered assessment definitions
+    let selectedAssessmentId = null;
+    let studentScoreMaps = {};        // student_id -> { assessment_id: entry, ... }
+    let definitionsRequestTimeout = null;
+
+    let activeAssessment = null;      // assessment currently open in the score popup
+    let activeStudentId = null;       // student currently open in the score popup
+    let currentScoreValue = 0;
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function requestAssessmentDefinitions() {
+      clearTimeout(definitionsRequestTimeout);
+      window.parent.postMessage({ type: 'assessmentdef:request' }, '*');
+
+      definitionsRequestTimeout = setTimeout(() => {
+        const statusEl = document.getElementById('status-message');
+        statusEl.innerHTML = 'Could not load assessments (no response from the app). ' +
+          'Try a hard refresh of the page (Ctrl+Shift+R / Cmd+Shift+R). ' +
+          '<button id="retry-load-btn" style="margin-left:8px;padding:6px 14px;border:none;' +
+          'border-radius:14px;background:#3b82f6;color:white;cursor:pointer;">Retry</button>';
+        statusEl.style.display = 'block';
+        document.getElementById('student-grid').style.display = 'none';
+        const retryBtn = document.getElementById('retry-load-btn');
+        if (retryBtn) {
+          retryBtn.addEventListener('click', requestAssessmentDefinitions);
+        }
+      }, 4000);
+    }
+
+    function loadResultsFromParent() {
+      studentScoreMaps = {};
+
+      if (!window.parent.app || !moduleContext || !moduleContext.classStudents) {
+        return;
+      }
+
+      const results = window.parent.app.results || [];
+
+      moduleContext.classStudents.forEach(student => {
+        // Find this student's most recent written_assessment_scorer row
+        let mostRecent = null;
+        results.forEach(r => {
+          if (r.student_id !== student.id || r.task_id !== TASK_ID) return;
+          if (!mostRecent || (r.completed_date || '') > (mostRecent.completed_date || '')) {
+            mostRecent = r;
+          }
+        });
+
+        let scoreMap = {};
+        if (mostRecent && mostRecent.response) {
+          try {
+            scoreMap = JSON.parse(mostRecent.response) || {};
+          } catch (e) {
+            scoreMap = {};
+          }
+        }
+        studentScoreMaps[student.id] = scoreMap;
+      });
+    }
+
+    function populateAssessmentSelect() {
+      const select = document.getElementById('assessment-select');
+      select.innerHTML = '';
+
+      if (allAssessments.length === 0) {
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = 'No assessments yet for this grade';
+        select.appendChild(opt);
+        return;
+      }
+
+      allAssessments.forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.assessment_id;
+        opt.textContent = a.title;
+        select.appendChild(opt);
+      });
+
+      if (!selectedAssessmentId || !allAssessments.find(a => a.assessment_id === selectedAssessmentId)) {
+        selectedAssessmentId = allAssessments[0].assessment_id;
+      }
+      select.value = selectedAssessmentId;
+    }
+
+    function getAssessmentById(id) {
+      return allAssessments.find(a => a.assessment_id === id) || null;
+    }
+
+    function renderGrid() {
+      const statusEl = document.getElementById('status-message');
+      const gridEl = document.getElementById('student-grid');
+
+      if (allAssessments.length === 0) {
+        statusEl.textContent = 'No written assessments yet for this grade. Create one in Written Assessment Scorer first.';
+        statusEl.style.display = 'block';
+        gridEl.style.display = 'none';
+        return;
+      }
+
+      if (!moduleContext || !moduleContext.classStudents || moduleContext.classStudents.length === 0) {
+        statusEl.textContent = 'No students found for this class.';
+        statusEl.style.display = 'block';
+        gridEl.style.display = 'none';
+        return;
+      }
+
+      // Cancel any in-flight long-press before the pressed card is torn down.
+      cancelActivePress();
+
+      statusEl.style.display = 'none';
+      gridEl.style.display = 'grid';
+      gridEl.innerHTML = '';
+
+      const sortedStudents = [...moduleContext.classStudents].sort((a, b) => a.name.localeCompare(b.name));
+
+      sortedStudents.forEach(student => {
+        gridEl.appendChild(buildStudentCard(student));
+      });
+    }
+
+    function statusFor(studentId) {
+      const scoreMap = studentScoreMaps[studentId] || {};
+      const entry = selectedAssessmentId ? scoreMap[selectedAssessmentId] : null;
+      const hasScore = entry && entry.score !== undefined && entry.score !== null;
+
+      if (hasScore) return 'green';
+      if (entry && entry.turned_in) return 'yellow';
+      return 'red';
+    }
+
+    function buildStudentCard(student) {
+      const card = document.createElement('button');
+      card.className = 'student-card' + (student.present === false ? ' absent' : '');
+      card.dataset.studentId = student.id;
+
+      const light = document.createElement('div');
+      light.className = 'status-light ' + statusFor(student.id);
+
+      const name = document.createElement('div');
+      name.className = 'student-name' + (student.present === false ? ' absent-label' : '');
+      name.textContent = student.name;
+
+      card.appendChild(light);
+      card.appendChild(name);
+
+      attachPressHandlers(card, student);
+
+      return card;
+    }
+
+    function updateCardStatus(studentId) {
+      const card = document.querySelector(`.student-card[data-student-id="${CSS.escape(studentId)}"]`);
+      if (!card) return;
+      const light = card.querySelector('.status-light');
+      light.className = 'status-light ' + statusFor(studentId);
+    }
+
+    // Module-level (not per-card) press state, so a re-render triggered by an
+    // async message mid-press can always find and cancel the pending timer -
+    // only one card can be actively pressed at a time anyway.
+    let activePressTimer = null;
+    let activePressMoved = false;
+    let activePressLongPressTriggered = false;
+
+    function cancelActivePress() {
+      if (activePressTimer) {
+        clearTimeout(activePressTimer);
+        activePressTimer = null;
+      }
+    }
+
+    function attachPressHandlers(card, student) {
+      const startPress = () => {
+        activePressMoved = false;
+        activePressLongPressTriggered = false;
+        cancelActivePress();
+        activePressTimer = setTimeout(() => {
+          activePressLongPressTriggered = true;
+          activePressTimer = null;
+          if (navigator.vibrate) navigator.vibrate(50);
+          openScorePopup(student);
+        }, 800);
+      };
+      const moveCancel = () => { activePressMoved = true; cancelActivePress(); };
+
+      card.addEventListener('mousedown', startPress);
+      card.addEventListener('mouseup', cancelActivePress);
+      card.addEventListener('mouseleave', cancelActivePress);
+      card.addEventListener('touchstart', startPress, { passive: true });
+      card.addEventListener('touchmove', moveCancel);
+      card.addEventListener('touchend', cancelActivePress);
+
+      card.addEventListener('click', (e) => {
+        if (activePressLongPressTriggered) {
+          activePressLongPressTriggered = false;
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        if (activePressMoved) return;
+        toggleTurnedIn(student);
+      });
+    }
+
+    function toggleTurnedIn(student) {
+      if (!selectedAssessmentId) return;
+
+      const scoreMap = studentScoreMaps[student.id] || {};
+      const existing = scoreMap[selectedAssessmentId];
+      const hasScore = existing && existing.score !== undefined && existing.score !== null;
+
+      // Toggling has no visible effect once scored (green always wins),
+      // but still record the flag so a later un-score reverts to yellow.
+      const newTurnedIn = !(existing && existing.turned_in);
+
+      const entry = {
+        turned_in: newTurnedIn,
+        score: hasScore ? existing.score : undefined,
+        note: existing ? existing.note : undefined,
+        completed_date: new Date().toISOString()
+      };
+
+      sendUpdate(student.id, selectedAssessmentId, entry);
+    }
+
+    let pendingPriorEntries = {}; // "studentId:assessmentId" -> entry before the optimistic update
+
+    function sendUpdate(studentId, assessmentId, entry) {
+      const key = studentId + ':' + assessmentId;
+      if (!studentScoreMaps[studentId]) studentScoreMaps[studentId] = {};
+
+      // Remember what was there before, in case the parent fails to save
+      // and we need to roll the optimistic update back.
+      pendingPriorEntries[key] = studentScoreMaps[studentId][assessmentId];
+
+      studentScoreMaps[studentId][assessmentId] = entry;
+      updateCardStatus(studentId);
+
+      window.parent.postMessage({
+        type: 'assignmentstatus:update',
+        student_id: studentId,
+        assessment_id: assessmentId,
+        entry: entry
+      }, '*');
+    }
+
+    let errorBannerTimeout = null;
+
+    function showErrorBanner(message) {
+      const banner = document.getElementById('error-banner');
+      banner.textContent = message;
+      banner.style.display = 'block';
+      clearTimeout(errorBannerTimeout);
+      errorBannerTimeout = setTimeout(() => {
+        banner.style.display = 'none';
+      }, 4000);
+    }
+
+    function openScorePopup(student) {
+      if (!selectedAssessmentId) return;
+      const assessment = getAssessmentById(selectedAssessmentId);
+      if (!assessment) return;
+
+      activeAssessment = assessment;
+      activeStudentId = student.id;
+
+      const scoreMap = studentScoreMaps[student.id] || {};
+      const existing = scoreMap[selectedAssessmentId];
+      const hasScore = existing && existing.score !== undefined && existing.score !== null;
+
+      document.getElementById('score-overlay-title').textContent = `${student.name} — ${assessment.title}`;
+      document.getElementById('score-overlay-range').textContent =
+        `Score range: ${assessment.min_score} to ${assessment.max_score}`;
+
+      currentScoreValue = hasScore ? Number(existing.score) : Number(assessment.max_score);
+      updateScoreDisplay();
+
+      document.getElementById('note-input').value = existing ? (existing.note || '') : '';
+      document.getElementById('score-error-text').style.display = 'none';
+
+      document.getElementById('score-overlay').classList.add('open');
+    }
+
+    function closeScorePopup() {
+      activeAssessment = null;
+      activeStudentId = null;
+      document.getElementById('score-overlay').classList.remove('open');
+    }
+
+    function adjustScore(delta) {
+      if (!activeAssessment) return;
+      const min = Number(activeAssessment.min_score);
+      const max = Number(activeAssessment.max_score);
+      currentScoreValue = Math.min(max, Math.max(min, currentScoreValue + delta));
+      updateScoreDisplay();
+    }
+
+    function updateScoreDisplay() {
+      document.getElementById('score-value-display').textContent = currentScoreValue;
+
+      if (!activeAssessment) return;
+      const min = Number(activeAssessment.min_score);
+      const max = Number(activeAssessment.max_score);
+      document.getElementById('score-minus-5').disabled = currentScoreValue <= min;
+      document.getElementById('score-minus-1').disabled = currentScoreValue <= min;
+      document.getElementById('score-plus-1').disabled = currentScoreValue >= max;
+      document.getElementById('score-plus-5').disabled = currentScoreValue >= max;
+    }
+
+    function saveScore() {
+      const noteInput = document.getElementById('note-input');
+
+      const entry = {
+        turned_in: true,
+        score: currentScoreValue,
+        note: noteInput.value,
+        completed_date: new Date().toISOString()
+      };
+
+      sendUpdate(activeStudentId, activeAssessment.assessment_id, entry);
+      closeScorePopup();
+    }
+
+    window.TaskModule = {
+      init: function(context) {
+        moduleContext = context;
+        loadResultsFromParent();
+        requestAssessmentDefinitions();
+      },
+      getResponse: function() {
+        return null;
+      },
+      isComplete: function() {
+        return false;
+      },
+      reset: function() {
+        closeScorePopup();
+      }
+    };
+
+    window.addEventListener('message', (event) => {
+      const data = event.data || {};
+
+      if (data.type === 'taskmodule:init') {
+        window.TaskModule.init(data.context);
+      } else if (data.type === 'assessmentdef:data') {
+        clearTimeout(definitionsRequestTimeout);
+        allAssessments = (data.assessments || []).filter(a => a.grade === (moduleContext ? moduleContext.grade : null));
+        populateAssessmentSelect();
+        renderGrid();
+      } else if (data.type === 'assessmentdef:saved') {
+        allAssessments = (data.assessments || allAssessments).filter(a => a.grade === (moduleContext ? moduleContext.grade : null));
+        populateAssessmentSelect();
+        renderGrid();
+      } else if (data.type === 'assignmentstatus:updated') {
+        // Save confirmed - drop the rollback snapshot for this entry.
+        delete pendingPriorEntries[data.student_id + ':' + data.assessment_id];
+      } else if (data.type === 'assignmentstatus:error') {
+        console.error('Failed to save status update:', data.message);
+
+        // Roll back the optimistic update so the grid doesn't show a status
+        // that never actually made it into results.csv.
+        if (data.student_id && data.assessment_id) {
+          const key = data.student_id + ':' + data.assessment_id;
+          const priorEntry = pendingPriorEntries[key];
+          delete pendingPriorEntries[key];
+
+          if (studentScoreMaps[data.student_id]) {
+            if (priorEntry === undefined) {
+              delete studentScoreMaps[data.student_id][data.assessment_id];
+            } else {
+              studentScoreMaps[data.student_id][data.assessment_id] = priorEntry;
+            }
+            updateCardStatus(data.student_id);
+          }
+        }
+
+        showErrorBanner('Could not save that change - please try again. (' + (data.message || 'unknown error') + ')');
+      }
+    });
+
+    document.getElementById('assessment-select').addEventListener('change', (e) => {
+      selectedAssessmentId = e.target.value;
+      renderGrid();
+    });
+
+    document.getElementById('score-save-btn').addEventListener('click', saveScore);
+    document.getElementById('score-cancel-btn').addEventListener('click', closeScorePopup);
+    document.getElementById('score-minus-5').addEventListener('click', () => adjustScore(-5));
+    document.getElementById('score-minus-1').addEventListener('click', () => adjustScore(-1));
+    document.getElementById('score-plus-1').addEventListener('click', () => adjustScore(1));
+    document.getElementById('score-plus-5').addEventListener('click', () => adjustScore(5));
+  </script>
+</body>
+</html>

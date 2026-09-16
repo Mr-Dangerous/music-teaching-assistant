@@ -240,6 +240,9 @@ class TeachingAssistantApp {
       } else if (event.data.type === 'assessmentdef:save') {
         // Written assessment scorer module is saving a new assessment definition
         this.handleAssessmentDefSave(event);
+      } else if (event.data.type === 'assignmentstatus:update') {
+        // Assignment status module is updating a student's turned-in/score status
+        this.handleAssignmentStatusUpdate(event);
       } else if (event.data.type === 'saveBoomwhackerSong') {
         // Save boomwhacker song configuration
         this.saveBoomwhackerSong(event.data.songName, event.data.configJson);
@@ -624,6 +627,7 @@ class TeachingAssistantApp {
    */
   async loadKnownModules() {
     const knownModules = [
+      'assignment_status.html',
       'audio-player.html',
       'boomwhacker_assigner.html',
       'class_seating_chart.html',
@@ -3059,20 +3063,39 @@ class TeachingAssistantApp {
     if (!this.assessmentsLoaded) {
       try {
         const response = await fetch('data/assessments.csv');
+        if (!response.ok) {
+          throw new Error(`assessments.csv not found (status ${response.status})`);
+        }
         const csvText = await response.text();
         this.assessments = this.parseAssessmentsCSV(csvText);
       } catch (error) {
-        // File doesn't exist yet - start with an empty list
+        // File doesn't exist yet - start with an empty list and create it
+        // on disk (if a data folder has been selected) so future saves/loads
+        // have a real file to work with.
+        console.warn('assessments.csv not found, starting with an empty list:', error.message);
         this.assessments = [];
+
+        if (this.fileManager && this.fileManager.folderHandle) {
+          try {
+            const headerOnlyCsv = 'assessment_id,title,grade,min_score,max_score';
+            const blob = new Blob([headerOnlyCsv], { type: 'text/csv' });
+            await this.fileManager.saveFileToFolder('assessments.csv', blob);
+            console.log('Created assessments.csv with header row');
+          } catch (createError) {
+            console.warn('Could not auto-create assessments.csv:', createError.message);
+          }
+        }
       }
       this.assessmentsLoaded = true;
     }
 
+    // Always reply, even if something above went unexpectedly wrong, so the
+    // module never hangs on "Loading assessments..." indefinitely.
     const moduleIframe = document.querySelector('#task-image-container iframe');
     if (moduleIframe && moduleIframe.contentWindow) {
       moduleIframe.contentWindow.postMessage({
         type: 'assessmentdef:data',
-        assessments: this.assessments
+        assessments: this.assessments || []
       }, '*');
     }
   }
@@ -3105,6 +3128,61 @@ class TeachingAssistantApp {
       if (moduleIframe && moduleIframe.contentWindow) {
         moduleIframe.contentWindow.postMessage({
           type: 'assessmentdef:error',
+          message: error.message
+        }, '*');
+      }
+    }
+  }
+
+  /**
+   * Handle a turned-in/score status update for an arbitrary student from the
+   * assignment status module. Unlike normal task responses, this can target
+   * any student in the class, not just the currently selected one - so it
+   * writes directly into this.results and saves silently (no countdown
+   * overlay), mirroring how handlePeerResponse() saves WebRTC responses.
+   */
+  async handleAssignmentStatusUpdate(event) {
+    const moduleIframe = document.querySelector('#task-image-container iframe');
+    const { student_id, assessment_id, entry } = event.data;
+
+    try {
+      const existingResult = this.getMostRecentResult(student_id, 'written_assessment_scorer');
+      let scoreMap = {};
+      if (existingResult && existingResult.response) {
+        try {
+          scoreMap = JSON.parse(existingResult.response) || {};
+        } catch (e) {
+          scoreMap = {};
+        }
+      }
+      scoreMap[assessment_id] = entry;
+
+      this.results.push({
+        student_id,
+        task_id: 'written_assessment_scorer',
+        response: JSON.stringify(scoreMap),
+        completed_date: new Date().toISOString()
+      });
+
+      this.markUnsaved();
+      this.updateLocalStorage();
+      await this.saveFile(true); // silent save - no countdown overlay
+
+      if (moduleIframe && moduleIframe.contentWindow) {
+        moduleIframe.contentWindow.postMessage({
+          type: 'assignmentstatus:updated',
+          student_id,
+          assessment_id,
+          entry
+        }, '*');
+      }
+    } catch (error) {
+      console.error('Failed to save assignment status update:', error);
+      if (moduleIframe && moduleIframe.contentWindow) {
+        moduleIframe.contentWindow.postMessage({
+          type: 'assignmentstatus:error',
+          student_id,
+          assessment_id,
           message: error.message
         }, '*');
       }
