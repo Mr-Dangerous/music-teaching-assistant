@@ -1,5 +1,5 @@
 {
-  "version": "3.52.1",
+  "version": "3.52.2",
   "lastUpdated": "2026-09-16",
-  "description": "Add Written Assessment Scorer module for recording paper-based assessment scores per student, grade-scoped"
+  "description": "Untrack data_to_not_upload/ from git and add it to .gitignore (files were being pushed to public repo)"
 }

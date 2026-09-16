@@ -9,6 +9,7 @@ results.csv
 data/
 audio_files/
 video_files/
+data_to_not_upload/
 
 # Task Images (may contain student work)
 tasks/*/
