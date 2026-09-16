@@ -240,9 +240,10 @@ class TeachingAssistantApp {
       } else if (event.data.type === 'assessmentdef:save') {
         // Written assessment scorer module is saving a new assessment definition
         this.handleAssessmentDefSave(event);
-      } else if (event.data.type === 'assignmentstatus:update') {
-        // Assignment status module is updating a student's turned-in/score status
-        this.handleAssignmentStatusUpdate(event);
+      } else if (event.data.type === 'assessmentresult:save') {
+        // Written assessment scorer / assignment status module is saving a
+        // per-assessment result for a student
+        this.handleAssessmentResultSave(event);
       } else if (event.data.type === 'saveBoomwhackerSong') {
         // Save boomwhacker song configuration
         this.saveBoomwhackerSong(event.data.songName, event.data.configJson);
@@ -3136,32 +3137,25 @@ class TeachingAssistantApp {
   }
 
   /**
-   * Handle a turned-in/score status update for an arbitrary student from the
-   * assignment status module. Unlike normal task responses, this can target
-   * any student in the class, not just the currently selected one - so it
-   * writes directly into this.results and saves silently (no countdown
-   * overlay), mirroring how handlePeerResponse() saves WebRTC responses.
+   * Handle a per-assessment result save from either the written assessment
+   * scorer or assignment status module. Each assessment gets its OWN task_id
+   * (the assessment_id) and a plain, glanceable response value ("turned in",
+   * "", or a small {score, note} JSON blob) - one row per (student,
+   * assessment) in results.csv, instead of one shared blob per student.
+   * Unlike a normal task response, this can target any student in the class,
+   * not just the currently selected one - so it writes directly into
+   * this.results and saves silently (no countdown overlay), mirroring how
+   * handlePeerResponse() saves WebRTC responses.
    */
-  async handleAssignmentStatusUpdate(event) {
+  async handleAssessmentResultSave(event) {
     const moduleIframe = document.querySelector('#task-image-container iframe');
-    const { student_id, assessment_id, entry } = event.data;
+    const { student_id, assessment_id, response } = event.data;
 
     try {
-      const existingResult = this.getMostRecentResult(student_id, 'written_assessment_scorer');
-      let scoreMap = {};
-      if (existingResult && existingResult.response) {
-        try {
-          scoreMap = JSON.parse(existingResult.response) || {};
-        } catch (e) {
-          scoreMap = {};
-        }
-      }
-      scoreMap[assessment_id] = entry;
-
       this.results.push({
         student_id,
-        task_id: 'written_assessment_scorer',
-        response: JSON.stringify(scoreMap),
+        task_id: assessment_id,
+        response,
         completed_date: new Date().toISOString()
       });
 
@@ -3171,17 +3165,17 @@ class TeachingAssistantApp {
 
       if (moduleIframe && moduleIframe.contentWindow) {
         moduleIframe.contentWindow.postMessage({
-          type: 'assignmentstatus:updated',
+          type: 'assessmentresult:saved',
           student_id,
           assessment_id,
-          entry
+          response
         }, '*');
       }
     } catch (error) {
-      console.error('Failed to save assignment status update:', error);
+      console.error('Failed to save assessment result:', error);
       if (moduleIframe && moduleIframe.contentWindow) {
         moduleIframe.contentWindow.postMessage({
-          type: 'assignmentstatus:error',
+          type: 'assessmentresult:error',
           student_id,
           assessment_id,
           message: error.message

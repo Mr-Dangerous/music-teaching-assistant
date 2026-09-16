@@ -314,12 +314,9 @@
   </div>
 
   <script>
-    const TASK_ID = 'written_assessment_scorer';
-
     let moduleContext = null;
     let allAssessments = [];          // grade-filtered assessment definitions
     let selectedAssessmentId = null;
-    let studentScoreMaps = {};        // student_id -> { assessment_id: entry, ... }
     let definitionsRequestTimeout = null;
 
     let activeAssessment = null;      // assessment currently open in the score popup
@@ -351,35 +348,54 @@
       }, 4000);
     }
 
+    // "studentId:assessmentId" -> most recent raw response string for that
+    // (student, assessment) pair. Each assessment is its own task_id in
+    // results.csv, so a plain single pass over the full results array,
+    // keeping only the latest row per key, gives us everything we need.
+    let studentResponses = {};
+
     function loadResultsFromParent() {
-      studentScoreMaps = {};
+      studentResponses = {};
 
       if (!window.parent.app || !moduleContext || !moduleContext.classStudents) {
         return;
       }
 
       const results = window.parent.app.results || [];
+      const classStudentIds = new Set(moduleContext.classStudents.map(s => s.id));
+      const latestByKey = {}; // key -> completed_date of the row currently stored
 
-      moduleContext.classStudents.forEach(student => {
-        // Find this student's most recent written_assessment_scorer row
-        let mostRecent = null;
-        results.forEach(r => {
-          if (r.student_id !== student.id || r.task_id !== TASK_ID) return;
-          if (!mostRecent || (r.completed_date || '') > (mostRecent.completed_date || '')) {
-            mostRecent = r;
-          }
-        });
-
-        let scoreMap = {};
-        if (mostRecent && mostRecent.response) {
-          try {
-            scoreMap = JSON.parse(mostRecent.response) || {};
-          } catch (e) {
-            scoreMap = {};
-          }
+      results.forEach(r => {
+        if (!classStudentIds.has(r.student_id)) return;
+        const key = r.student_id + ':' + r.task_id;
+        const existingDate = latestByKey[key];
+        if (existingDate === undefined || (r.completed_date || '') > existingDate) {
+          latestByKey[key] = r.completed_date || '';
+          studentResponses[key] = r.response;
         }
-        studentScoreMaps[student.id] = scoreMap;
       });
+    }
+
+    // Derive a red/yellow/green status (plus score/note when scored) from a
+    // raw response string. Response shapes: undefined/'' -> not turned in,
+    // the literal text "turned in" -> turned in but not scored, otherwise a
+    // {"score":N,"note":"..."} JSON blob -> scored.
+    function deriveStatus(response) {
+      if (response === undefined || response === null || response === '') {
+        return { status: 'red' };
+      }
+      if (response === 'turned in') {
+        return { status: 'yellow' };
+      }
+      try {
+        const parsed = JSON.parse(response);
+        if (parsed && parsed.score !== undefined && parsed.score !== null) {
+          return { status: 'green', score: parsed.score, note: parsed.note };
+        }
+      } catch (e) {
+        // Not JSON - treat as unrecognized/not turned in.
+      }
+      return { status: 'red' };
     }
 
     function populateAssessmentSelect() {
@@ -489,13 +505,9 @@
     }
 
     function statusFor(studentId) {
-      const scoreMap = studentScoreMaps[studentId] || {};
-      const entry = selectedAssessmentId ? scoreMap[selectedAssessmentId] : null;
-      const hasScore = entry && entry.score !== undefined && entry.score !== null;
-
-      if (hasScore) return 'green';
-      if (entry && entry.turned_in) return 'yellow';
-      return 'red';
+      if (!selectedAssessmentId) return 'red';
+      const response = studentResponses[studentId + ':' + selectedAssessmentId];
+      return deriveStatus(response).status;
     }
 
     function buildStudentCard(student) {
@@ -575,42 +587,33 @@
     function toggleTurnedIn(student) {
       if (!selectedAssessmentId) return;
 
-      const scoreMap = studentScoreMaps[student.id] || {};
-      const existing = scoreMap[selectedAssessmentId];
-      const hasScore = existing && existing.score !== undefined && existing.score !== null;
+      const current = deriveStatus(studentResponses[student.id + ':' + selectedAssessmentId]);
 
-      // Toggling has no visible effect once scored (green always wins),
-      // but still record the flag so a later un-score reverts to yellow.
-      const newTurnedIn = !(existing && existing.turned_in);
+      // Scored (green) always wins visually, so tapping an already-scored
+      // student is a no-op - clearing a score isn't a single-tap action.
+      if (current.status === 'green') return;
 
-      const entry = {
-        turned_in: newTurnedIn,
-        score: hasScore ? existing.score : undefined,
-        note: existing ? existing.note : undefined,
-        completed_date: new Date().toISOString()
-      };
-
-      sendUpdate(student.id, selectedAssessmentId, entry);
+      const newResponse = current.status === 'yellow' ? '' : 'turned in';
+      sendUpdate(student.id, selectedAssessmentId, newResponse);
     }
 
-    let pendingPriorEntries = {}; // "studentId:assessmentId" -> entry before the optimistic update
+    let pendingPriorResponses = {}; // "studentId:assessmentId" -> response before the optimistic update
 
-    function sendUpdate(studentId, assessmentId, entry) {
+    function sendUpdate(studentId, assessmentId, response) {
       const key = studentId + ':' + assessmentId;
-      if (!studentScoreMaps[studentId]) studentScoreMaps[studentId] = {};
 
       // Remember what was there before, in case the parent fails to save
       // and we need to roll the optimistic update back.
-      pendingPriorEntries[key] = studentScoreMaps[studentId][assessmentId];
+      pendingPriorResponses[key] = studentResponses[key];
 
-      studentScoreMaps[studentId][assessmentId] = entry;
+      studentResponses[key] = response;
       updateCardStatus(studentId);
 
       window.parent.postMessage({
-        type: 'assignmentstatus:update',
+        type: 'assessmentresult:save',
         student_id: studentId,
         assessment_id: assessmentId,
-        entry: entry
+        response: response
       }, '*');
     }
 
@@ -634,9 +637,8 @@
       activeAssessment = assessment;
       activeStudentId = student.id;
 
-      const scoreMap = studentScoreMaps[student.id] || {};
-      const existing = scoreMap[selectedAssessmentId];
-      const hasScore = existing && existing.score !== undefined && existing.score !== null;
+      const existing = deriveStatus(studentResponses[student.id + ':' + selectedAssessmentId]);
+      const hasScore = existing.status === 'green';
 
       document.getElementById('score-overlay-title').textContent = `${student.name} — ${assessment.title}`;
       document.getElementById('score-overlay-range').textContent =
@@ -645,7 +647,7 @@
       currentScoreValue = hasScore ? Number(existing.score) : Number(assessment.max_score);
       updateScoreDisplay();
 
-      document.getElementById('note-input').value = existing ? (existing.note || '') : '';
+      document.getElementById('note-input').value = hasScore ? (existing.note || '') : '';
       document.getElementById('score-error-text').style.display = 'none';
 
       document.getElementById('score-overlay').classList.add('open');
@@ -680,14 +682,12 @@
     function saveScore() {
       const noteInput = document.getElementById('note-input');
 
-      const entry = {
-        turned_in: true,
+      const response = JSON.stringify({
         score: currentScoreValue,
-        note: noteInput.value,
-        completed_date: new Date().toISOString()
-      };
+        note: noteInput.value
+      });
 
-      sendUpdate(activeStudentId, activeAssessment.assessment_id, entry);
+      sendUpdate(activeStudentId, activeAssessment.assessment_id, response);
       closeScorePopup();
     }
 
@@ -722,27 +722,25 @@
         allAssessments = (data.assessments || allAssessments).filter(a => getPresentGrades().has(a.grade));
         populateAssessmentSelect();
         renderGrid();
-      } else if (data.type === 'assignmentstatus:updated') {
+      } else if (data.type === 'assessmentresult:saved') {
         // Save confirmed - drop the rollback snapshot for this entry.
-        delete pendingPriorEntries[data.student_id + ':' + data.assessment_id];
-      } else if (data.type === 'assignmentstatus:error') {
-        console.error('Failed to save status update:', data.message);
+        delete pendingPriorResponses[data.student_id + ':' + data.assessment_id];
+      } else if (data.type === 'assessmentresult:error') {
+        console.error('Failed to save assessment result:', data.message);
 
         // Roll back the optimistic update so the grid doesn't show a status
         // that never actually made it into results.csv.
         if (data.student_id && data.assessment_id) {
           const key = data.student_id + ':' + data.assessment_id;
-          const priorEntry = pendingPriorEntries[key];
-          delete pendingPriorEntries[key];
+          const priorResponse = pendingPriorResponses[key];
+          delete pendingPriorResponses[key];
 
-          if (studentScoreMaps[data.student_id]) {
-            if (priorEntry === undefined) {
-              delete studentScoreMaps[data.student_id][data.assessment_id];
-            } else {
-              studentScoreMaps[data.student_id][data.assessment_id] = priorEntry;
-            }
-            updateCardStatus(data.student_id);
+          if (priorResponse === undefined) {
+            delete studentResponses[key];
+          } else {
+            studentResponses[key] = priorResponse;
           }
+          updateCardStatus(data.student_id);
         }
 
         showErrorBanner('Could not save that change - please try again. (' + (data.message || 'unknown error') + ')');

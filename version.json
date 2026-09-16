@@ -1,5 +1,5 @@
 {
-  "version": "3.54.1",
+  "version": "3.55.1",
   "lastUpdated": "2026-09-16",
-  "description": "Assignment Status: fix combined-class roster, group by class, support multi-grade assessment lists"
+  "description": "Assessment results now save one row per assignment in results.csv instead of a shared per-student JSON blob"
 }

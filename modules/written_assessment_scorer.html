@@ -29,6 +29,16 @@
       color: #6b7280;
       font-size: 16px;
     }
+    .error-banner {
+      padding: 10px 16px;
+      margin-bottom: 10px;
+      border-radius: 10px;
+      background: #fee2e2;
+      color: #991b1b;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+    }
     .assessment-list {
       display: flex;
       flex-direction: column;
@@ -226,6 +236,7 @@
   <h2>Written Assessments</h2>
   <p class="grade-label" id="grade-label"></p>
 
+  <div id="error-banner" class="error-banner" style="display: none;"></div>
   <div id="status-message" class="status-message">Loading assessments…</div>
   <div id="assessment-list" class="assessment-list" style="display: none;"></div>
   <button id="new-assessment-btn" class="new-assessment-btn" style="display: none;">+ New Assessment</button>
@@ -290,17 +301,79 @@
 
   <script>
     let moduleContext = null;
-    let scoreMap = {};          // assessment_id -> { score, note, completed_date }
     let allAssessments = [];    // full list from parent
     let activeAssessment = null; // assessment currently open in the score popup
     let definitionsRequestTimeout = null;
 
-    function notifyParent(response, isComplete) {
+    // assessment_id -> most recent raw response string for THIS student.
+    // Each assessment is its own task_id in results.csv, so this student's
+    // rows are indexed by task_id once and looked up per assessment.
+    let studentResponses = {};
+
+    function loadResultsFromParent() {
+      studentResponses = {};
+      if (!window.parent.app || !moduleContext) return;
+
+      const results = window.parent.app.results || [];
+      const latestDateByTaskId = {};
+
+      results.forEach(r => {
+        if (r.student_id !== moduleContext.studentId) return;
+        const existingDate = latestDateByTaskId[r.task_id];
+        if (existingDate === undefined || (r.completed_date || '') > existingDate) {
+          latestDateByTaskId[r.task_id] = r.completed_date || '';
+          studentResponses[r.task_id] = r.response;
+        }
+      });
+    }
+
+    // Derive a scored/turned-in/nothing status from a raw response string.
+    // Response shapes: undefined/'' -> nothing yet, the literal text
+    // "turned in" -> turned in but not scored, otherwise a
+    // {"score":N,"note":"..."} JSON blob -> scored.
+    function deriveStatus(response) {
+      if (response === undefined || response === null || response === '') {
+        return { status: 'none' };
+      }
+      if (response === 'turned in') {
+        return { status: 'turned_in' };
+      }
+      try {
+        const parsed = JSON.parse(response);
+        if (parsed && parsed.score !== undefined && parsed.score !== null) {
+          return { status: 'scored', score: parsed.score, note: parsed.note };
+        }
+      } catch (e) {
+        // Not JSON - treat as nothing recognizable.
+      }
+      return { status: 'none' };
+    }
+
+    let pendingPriorResponses = {}; // assessment_id -> response before the optimistic update
+
+    function sendResult(assessmentId, response) {
+      pendingPriorResponses[assessmentId] = studentResponses[assessmentId];
+      studentResponses[assessmentId] = response;
+      renderList();
+
       window.parent.postMessage({
-        type: 'taskmodule:response',
-        value: response,
-        isComplete: isComplete
+        type: 'assessmentresult:save',
+        student_id: moduleContext.studentId,
+        assessment_id: assessmentId,
+        response: response
       }, '*');
+    }
+
+    let errorBannerTimeout = null;
+
+    function showErrorBanner(message) {
+      const banner = document.getElementById('error-banner');
+      banner.textContent = message;
+      banner.style.display = 'block';
+      clearTimeout(errorBannerTimeout);
+      errorBannerTimeout = setTimeout(() => {
+        banner.style.display = 'none';
+      }, 4000);
     }
 
     function requestAssessmentDefinitions() {
@@ -351,21 +424,19 @@
       listEl.innerHTML = '';
 
       gradeItems.forEach(a => {
-        const existing = scoreMap[a.assessment_id];
-        const hasScore = existing && existing.score !== undefined && existing.score !== null;
-        const turnedInOnly = existing && existing.turned_in && !hasScore;
+        const existing = deriveStatus(studentResponses[a.assessment_id]);
 
         let statusText;
-        if (hasScore) {
+        if (existing.status === 'scored') {
           statusText = `Score: ${escapeHtml(String(existing.score))} / ${a.max_score}`;
-        } else if (turnedInOnly) {
+        } else if (existing.status === 'turned_in') {
           statusText = 'Turned in, not yet scored';
         } else {
           statusText = `Not yet scored (${a.min_score}-${a.max_score})`;
         }
 
         const card = document.createElement('button');
-        card.className = 'assessment-card' + (hasScore ? ' scored' : (turnedInOnly ? ' turned-in' : ''));
+        card.className = 'assessment-card' + (existing.status === 'scored' ? ' scored' : (existing.status === 'turned_in' ? ' turned-in' : ''));
         card.innerHTML = `
           <span class="assessment-card-title">${escapeHtml(a.title)}</span>
           <span class="assessment-card-status">${statusText}</span>
@@ -385,7 +456,8 @@
 
     function openScorePopup(assessment) {
       activeAssessment = assessment;
-      const existing = scoreMap[assessment.assessment_id];
+      const existing = deriveStatus(studentResponses[assessment.assessment_id]);
+      const hasScore = existing.status === 'scored';
 
       document.getElementById('score-overlay-title').textContent = assessment.title;
       document.getElementById('score-overlay-range').textContent =
@@ -394,10 +466,10 @@
       // Start at the existing score if this student already has one,
       // otherwise default to the max score (most paper assessments start
       // at full credit and get adjusted down).
-      currentScoreValue = existing ? Number(existing.score) : Number(assessment.max_score);
+      currentScoreValue = hasScore ? Number(existing.score) : Number(assessment.max_score);
       updateScoreDisplay();
 
-      document.getElementById('note-input').value = existing ? (existing.note || '') : '';
+      document.getElementById('note-input').value = hasScore ? (existing.note || '') : '';
       document.getElementById('score-error-text').style.display = 'none';
 
       document.getElementById('score-overlay').classList.add('open');
@@ -431,17 +503,13 @@
 
     function saveScore() {
       const noteInput = document.getElementById('note-input');
-
-      scoreMap[activeAssessment.assessment_id] = {
+      const response = JSON.stringify({
         score: currentScoreValue,
-        note: noteInput.value,
-        completed_date: new Date().toISOString(),
-        turned_in: true
-      };
+        note: noteInput.value
+      });
 
+      sendResult(activeAssessment.assessment_id, response);
       closeScorePopup();
-      renderList();
-      notifyParent(JSON.stringify(scoreMap), true);
     }
 
     function openNewAssessmentPopup() {
@@ -493,25 +561,20 @@
         document.getElementById('grade-label').textContent =
           context.grade ? `Grade ${context.grade}` : '';
 
-        if (context.existingResponse) {
-          try {
-            scoreMap = JSON.parse(context.existingResponse) || {};
-          } catch (e) {
-            scoreMap = {};
-          }
-        } else {
-          scoreMap = {};
-        }
-
+        loadResultsFromParent();
         requestAssessmentDefinitions();
       },
 
+      // This module manages many independent per-assessment results (each
+      // saved immediately via assessmentresult:save as it happens), rather
+      // than producing one single "response" for the task - so there's
+      // nothing meaningful to report back through the normal response flow.
       getResponse: function() {
-        return JSON.stringify(scoreMap);
+        return null;
       },
 
       isComplete: function() {
-        return Object.keys(scoreMap).length > 0;
+        return false;
       },
 
       reset: function() {
@@ -537,6 +600,27 @@
         errorEl.textContent = data.message || 'Failed to save assessment.';
         errorEl.style.display = 'block';
         document.getElementById('new-assessment-overlay').classList.add('open');
+      } else if (data.type === 'assessmentresult:saved') {
+        // Save confirmed - drop the rollback snapshot for this entry.
+        delete pendingPriorResponses[data.assessment_id];
+      } else if (data.type === 'assessmentresult:error') {
+        console.error('Failed to save assessment result:', data.message);
+
+        // Roll back the optimistic update so the card doesn't show a status
+        // that never actually made it into results.csv.
+        if (data.assessment_id) {
+          const priorResponse = pendingPriorResponses[data.assessment_id];
+          delete pendingPriorResponses[data.assessment_id];
+
+          if (priorResponse === undefined) {
+            delete studentResponses[data.assessment_id];
+          } else {
+            studentResponses[data.assessment_id] = priorResponse;
+          }
+          renderList();
+        }
+
+        showErrorBanner('Could not save that score - please try again. (' + (data.message || 'unknown error') + ')');
       }
     });
 
