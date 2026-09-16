@@ -15,6 +15,8 @@ class TeachingAssistantApp {
     this.students = [];        // From students.csv
     this.results = [];         // From results.csv
     this.tasks = [];           // Unique tasks extracted from results
+    this.assessments = [];     // Written assessment definitions, lazily loaded from data/assessments.csv
+    this.assessmentsLoaded = false;
 
     this.currentScreen = 'file-load';
     this.selectedClass = null;
@@ -232,6 +234,12 @@ class TeachingAssistantApp {
       } else if (event.data.type === 'editstudents:save') {
         // Edit student list module is saving updated student data
         this.handleEditStudentsSave(event);
+      } else if (event.data.type === 'assessmentdef:request') {
+        // Written assessment scorer module is requesting assessment definitions
+        this.handleAssessmentDefRequest(event);
+      } else if (event.data.type === 'assessmentdef:save') {
+        // Written assessment scorer module is saving a new assessment definition
+        this.handleAssessmentDefSave(event);
       } else if (event.data.type === 'saveBoomwhackerSong') {
         // Save boomwhacker song configuration
         this.saveBoomwhackerSong(event.data.songName, event.data.configJson);
@@ -536,6 +544,52 @@ class TeachingAssistantApp {
   }
 
   /**
+   * Parse assessments.csv content (written assessment definitions)
+   */
+  parseAssessmentsCSV(csvText) {
+    const lines = this.csvHandler.parseCSVLines(csvText);
+    if (lines.length === 0) return [];
+
+    const assessments = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      if (line.length === 0 || (line.length === 1 && line[0] === '')) continue;
+
+      assessments.push({
+        assessment_id: line[0],
+        title: line[1],
+        grade: line[2],
+        min_score: Number(line[3]),
+        max_score: Number(line[4])
+      });
+    }
+
+    return assessments;
+  }
+
+  /**
+   * Convert assessments array to CSV format
+   */
+  assessmentsToCSV() {
+    const headers = ['assessment_id', 'title', 'grade', 'min_score', 'max_score'];
+    const lines = [headers.join(',')];
+
+    this.assessments.forEach(a => {
+      const row = [
+        a.assessment_id,
+        this.escapeCSVField(a.title),
+        a.grade,
+        a.min_score,
+        a.max_score
+      ];
+      lines.push(row.join(','));
+    });
+
+    return lines.join('\n');
+  }
+
+  /**
    * Parse tasks.csv content
    */
   /**
@@ -591,6 +645,7 @@ class TeachingAssistantApp {
       'instrument_assigner.html',
       'group_assigner.html',
       'treble_clef_note_quiz.html',
+      'written_assessment_scorer.html',
     ];
 
     const tasks = knownModules.map(moduleFile => {
@@ -2990,6 +3045,66 @@ class TeachingAssistantApp {
       if (moduleIframe && moduleIframe.contentWindow) {
         moduleIframe.contentWindow.postMessage({
           type: 'editstudents:error',
+          message: error.message
+        }, '*');
+      }
+    }
+  }
+
+  /**
+   * Handle request for assessment definitions from written assessment scorer module
+   */
+  async handleAssessmentDefRequest(event) {
+    // Lazily load assessments.csv on first request
+    if (!this.assessmentsLoaded) {
+      try {
+        const response = await fetch('data/assessments.csv');
+        const csvText = await response.text();
+        this.assessments = this.parseAssessmentsCSV(csvText);
+      } catch (error) {
+        // File doesn't exist yet - start with an empty list
+        this.assessments = [];
+      }
+      this.assessmentsLoaded = true;
+    }
+
+    const moduleIframe = document.querySelector('#task-image-container iframe');
+    if (moduleIframe && moduleIframe.contentWindow) {
+      moduleIframe.contentWindow.postMessage({
+        type: 'assessmentdef:data',
+        assessments: this.assessments
+      }, '*');
+    }
+  }
+
+  /**
+   * Handle save request for a new assessment definition from written assessment scorer module
+   */
+  async handleAssessmentDefSave(event) {
+    const moduleIframe = document.querySelector('#task-image-container iframe');
+
+    try {
+      const { title, grade, min_score, max_score } = event.data;
+      const assessment_id = 'assessment_' + Date.now();
+
+      this.assessments.push({ assessment_id, title, grade, min_score, max_score });
+      this.assessmentsLoaded = true;
+
+      const csvContent = this.assessmentsToCSV();
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      await this.fileManager.saveFileToFolder('assessments.csv', blob);
+
+      if (moduleIframe && moduleIframe.contentWindow) {
+        moduleIframe.contentWindow.postMessage({
+          type: 'assessmentdef:saved',
+          assessments: this.assessments
+        }, '*');
+      }
+    } catch (error) {
+      console.error('Failed to save assessment definition:', error);
+      if (moduleIframe && moduleIframe.contentWindow) {
+        moduleIframe.contentWindow.postMessage({
+          type: 'assessmentdef:error',
           message: error.message
         }, '*');
       }

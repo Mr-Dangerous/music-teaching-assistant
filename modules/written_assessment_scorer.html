@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Written Assessment Scorer</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background: white;
+      color: #1f2937;
+    }
+    h2 {
+      margin: 0 0 4px 0;
+      font-size: 24px;
+      color: #3b82f6;
+    }
+    .grade-label {
+      margin: 0 0 16px 0;
+      font-size: 14px;
+      color: #6b7280;
+    }
+    .status-message {
+      padding: 16px;
+      text-align: center;
+      color: #6b7280;
+      font-size: 16px;
+    }
+    .assessment-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .assessment-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 14px 16px;
+      border-radius: 15px;
+      border: none;
+      cursor: pointer;
+      text-align: left;
+      font-size: 16px;
+      font-family: inherit;
+      background: linear-gradient(135deg, #ddd6fe 0%, #c7d2fe 100%);
+      transition: transform 150ms ease, box-shadow 150ms ease;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
+    .assessment-card:hover {
+      transform: translateX(4px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+    }
+    .assessment-card.scored {
+      background: linear-gradient(135deg, #6ee7b7 0%, #34d399 100%);
+    }
+    .assessment-card-title {
+      font-weight: 600;
+    }
+    .assessment-card-status {
+      font-size: 14px;
+      color: #374151;
+      white-space: nowrap;
+    }
+    .new-assessment-btn {
+      margin-top: 14px;
+      align-self: flex-start;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 20px;
+      background: linear-gradient(135deg, #3b82f6 0%, #a855f7 100%);
+      color: white;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .new-assessment-btn:hover {
+      opacity: 0.9;
+    }
+
+    /* Overlay popup (in-module, not a browser dialog) */
+    .overlay-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.45);
+      align-items: center;
+      justify-content: flex-start;
+      z-index: 100;
+    }
+    .overlay-backdrop.open {
+      display: flex;
+    }
+    .overlay-box {
+      background: white;
+      border-radius: 20px;
+      padding: 24px;
+      width: min(420px, 90vw);
+      margin-left: 5vw;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+    }
+    .overlay-box h3 {
+      margin: 0 0 4px 0;
+      color: #3b82f6;
+    }
+    .overlay-hint {
+      margin: 0 0 16px 0;
+      font-size: 13px;
+      color: #6b7280;
+    }
+    .form-row {
+      margin-bottom: 14px;
+    }
+    .form-row label {
+      display: block;
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #374151;
+    }
+    .form-row input[type="number"],
+    .form-row input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      font-size: 16px;
+      border: 2px solid #d1d5db;
+      border-radius: 10px;
+    }
+    .form-row textarea {
+      width: 100%;
+      min-height: 70px;
+      padding: 10px 12px;
+      font-size: 15px;
+      border: 2px solid #d1d5db;
+      border-radius: 10px;
+      font-family: inherit;
+      resize: vertical;
+    }
+    .min-max-row {
+      display: flex;
+      gap: 12px;
+    }
+    .min-max-row .form-row {
+      flex: 1;
+    }
+    .overlay-buttons {
+      display: flex;
+      justify-content: flex-start;
+      gap: 10px;
+      margin-top: 4px;
+    }
+    .overlay-buttons button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 20px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .btn-save {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: white;
+    }
+    .btn-cancel {
+      background: #e5e7eb;
+      color: #374151;
+    }
+    .error-text {
+      color: #ef4444;
+      font-size: 13px;
+      margin-top: 8px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h2>Written Assessments</h2>
+  <p class="grade-label" id="grade-label"></p>
+
+  <div id="status-message" class="status-message">Loading assessments…</div>
+  <div id="assessment-list" class="assessment-list" style="display: none;"></div>
+  <button id="new-assessment-btn" class="new-assessment-btn" style="display: none;">+ New Assessment</button>
+
+  <!-- Score entry popup -->
+  <div id="score-overlay" class="overlay-backdrop">
+    <div class="overlay-box">
+      <h3 id="score-overlay-title"></h3>
+      <p class="overlay-hint" id="score-overlay-range"></p>
+      <div class="form-row">
+        <label for="score-input">Score</label>
+        <input type="number" id="score-input">
+      </div>
+      <div class="form-row">
+        <label for="note-input">Note</label>
+        <textarea id="note-input" placeholder="Optional note..."></textarea>
+      </div>
+      <p class="error-text" id="score-error-text"></p>
+      <div class="overlay-buttons">
+        <button class="btn-save" id="score-save-btn">Save</button>
+        <button class="btn-cancel" id="score-cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- New assessment popup -->
+  <div id="new-assessment-overlay" class="overlay-backdrop">
+    <div class="overlay-box">
+      <h3>New Assessment</h3>
+      <p class="overlay-hint" id="new-assessment-grade-hint"></p>
+      <div class="form-row">
+        <label for="new-title-input">Title</label>
+        <input type="text" id="new-title-input" placeholder="e.g. Rhythm Quiz #1">
+      </div>
+      <div class="min-max-row">
+        <div class="form-row">
+          <label for="new-min-input">Min Score</label>
+          <input type="number" id="new-min-input" value="0">
+        </div>
+        <div class="form-row">
+          <label for="new-max-input">Max Score</label>
+          <input type="number" id="new-max-input" value="10">
+        </div>
+      </div>
+      <p class="error-text" id="new-assessment-error-text"></p>
+      <div class="overlay-buttons">
+        <button class="btn-save" id="new-assessment-save-btn">Create</button>
+        <button class="btn-cancel" id="new-assessment-cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let moduleContext = null;
+    let scoreMap = {};          // assessment_id -> { score, note, completed_date }
+    let allAssessments = [];    // full list from parent
+    let activeAssessment = null; // assessment currently open in the score popup
+
+    function notifyParent(response, isComplete) {
+      window.parent.postMessage({
+        type: 'taskmodule:response',
+        value: response,
+        isComplete: isComplete
+      }, '*');
+    }
+
+    function gradeAssessments() {
+      if (!moduleContext) return [];
+      return allAssessments.filter(a => a.grade === moduleContext.grade);
+    }
+
+    function renderList() {
+      const statusEl = document.getElementById('status-message');
+      const listEl = document.getElementById('assessment-list');
+      const newBtn = document.getElementById('new-assessment-btn');
+
+      const gradeItems = gradeAssessments();
+
+      newBtn.style.display = 'inline-block';
+
+      if (gradeItems.length === 0) {
+        statusEl.textContent = 'No written assessments yet for this grade. Create one to get started.';
+        statusEl.style.display = 'block';
+        listEl.style.display = 'none';
+        return;
+      }
+
+      statusEl.style.display = 'none';
+      listEl.style.display = 'flex';
+      listEl.innerHTML = '';
+
+      gradeItems.forEach(a => {
+        const existing = scoreMap[a.assessment_id];
+        const card = document.createElement('button');
+        card.className = 'assessment-card' + (existing ? ' scored' : '');
+        card.innerHTML = `
+          <span class="assessment-card-title">${escapeHtml(a.title)}</span>
+          <span class="assessment-card-status">${existing ? `Score: ${escapeHtml(String(existing.score))} / ${a.max_score}` : `Not yet scored (${a.min_score}-${a.max_score})`}</span>
+        `;
+        card.addEventListener('click', () => openScorePopup(a));
+        listEl.appendChild(card);
+      });
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    function openScorePopup(assessment) {
+      activeAssessment = assessment;
+      const existing = scoreMap[assessment.assessment_id];
+
+      document.getElementById('score-overlay-title').textContent = assessment.title;
+      document.getElementById('score-overlay-range').textContent =
+        `Score range: ${assessment.min_score} to ${assessment.max_score}`;
+
+      const scoreInput = document.getElementById('score-input');
+      scoreInput.min = assessment.min_score;
+      scoreInput.max = assessment.max_score;
+      scoreInput.value = existing ? existing.score : '';
+
+      document.getElementById('note-input').value = existing ? (existing.note || '') : '';
+      document.getElementById('score-error-text').style.display = 'none';
+
+      document.getElementById('score-overlay').classList.add('open');
+      scoreInput.focus();
+    }
+
+    function closeScorePopup() {
+      activeAssessment = null;
+      document.getElementById('score-overlay').classList.remove('open');
+    }
+
+    function saveScore() {
+      const errorEl = document.getElementById('score-error-text');
+      const scoreInput = document.getElementById('score-input');
+      const noteInput = document.getElementById('note-input');
+
+      const rawValue = scoreInput.value;
+      if (rawValue === '') {
+        errorEl.textContent = 'Enter a score.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      const value = Number(rawValue);
+      const min = Number(activeAssessment.min_score);
+      const max = Number(activeAssessment.max_score);
+
+      if (isNaN(value) || value < min || value > max) {
+        errorEl.textContent = `Score must be between ${min} and ${max}.`;
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      scoreMap[activeAssessment.assessment_id] = {
+        score: value,
+        note: noteInput.value,
+        completed_date: new Date().toISOString()
+      };
+
+      closeScorePopup();
+      renderList();
+      notifyParent(JSON.stringify(scoreMap), true);
+    }
+
+    function openNewAssessmentPopup() {
+      document.getElementById('new-title-input').value = '';
+      document.getElementById('new-min-input').value = '0';
+      document.getElementById('new-max-input').value = '10';
+      document.getElementById('new-assessment-error-text').style.display = 'none';
+      document.getElementById('new-assessment-grade-hint').textContent =
+        moduleContext ? `This assessment will be created for grade ${moduleContext.grade}.` : '';
+      document.getElementById('new-assessment-overlay').classList.add('open');
+    }
+
+    function closeNewAssessmentPopup() {
+      document.getElementById('new-assessment-overlay').classList.remove('open');
+    }
+
+    function saveNewAssessment() {
+      const errorEl = document.getElementById('new-assessment-error-text');
+      const title = document.getElementById('new-title-input').value.trim();
+      const min = Number(document.getElementById('new-min-input').value);
+      const max = Number(document.getElementById('new-max-input').value);
+
+      if (!title) {
+        errorEl.textContent = 'Enter a title.';
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (isNaN(min) || isNaN(max) || max <= min) {
+        errorEl.textContent = 'Max score must be greater than min score.';
+        errorEl.style.display = 'block';
+        return;
+      }
+
+      window.parent.postMessage({
+        type: 'assessmentdef:save',
+        title: title,
+        grade: moduleContext ? moduleContext.grade : '',
+        min_score: min,
+        max_score: max
+      }, '*');
+
+      closeNewAssessmentPopup();
+    }
+
+    window.TaskModule = {
+      init: function(context) {
+        moduleContext = context;
+
+        document.getElementById('grade-label').textContent =
+          context.grade ? `Grade ${context.grade}` : '';
+
+        if (context.existingResponse) {
+          try {
+            scoreMap = JSON.parse(context.existingResponse) || {};
+          } catch (e) {
+            scoreMap = {};
+          }
+        } else {
+          scoreMap = {};
+        }
+
+        window.parent.postMessage({ type: 'assessmentdef:request' }, '*');
+      },
+
+      getResponse: function() {
+        return JSON.stringify(scoreMap);
+      },
+
+      isComplete: function() {
+        return Object.keys(scoreMap).length > 0;
+      },
+
+      reset: function() {
+        closeScorePopup();
+        closeNewAssessmentPopup();
+      }
+    };
+
+    window.addEventListener('message', (event) => {
+      const data = event.data || {};
+
+      if (data.type === 'taskmodule:init') {
+        window.TaskModule.init(data.context);
+      } else if (data.type === 'assessmentdef:data') {
+        allAssessments = data.assessments || [];
+        renderList();
+      } else if (data.type === 'assessmentdef:saved') {
+        allAssessments = data.assessments || allAssessments;
+        renderList();
+      } else if (data.type === 'assessmentdef:error') {
+        const errorEl = document.getElementById('new-assessment-error-text');
+        errorEl.textContent = data.message || 'Failed to save assessment.';
+        errorEl.style.display = 'block';
+        document.getElementById('new-assessment-overlay').classList.add('open');
+      }
+    });
+
+    document.getElementById('new-assessment-btn').addEventListener('click', openNewAssessmentPopup);
+    document.getElementById('score-save-btn').addEventListener('click', saveScore);
+    document.getElementById('score-cancel-btn').addEventListener('click', closeScorePopup);
+    document.getElementById('new-assessment-save-btn').addEventListener('click', saveNewAssessment);
+    document.getElementById('new-assessment-cancel-btn').addEventListener('click', closeNewAssessmentPopup);
+  </script>
+</body>
+</html>
