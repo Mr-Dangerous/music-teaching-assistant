@@ -1,5 +1,5 @@
 {
-  "version": "3.55.1",
+  "version": "3.55.2",
   "lastUpdated": "2026-09-16",
-  "description": "Assessment results now save one row per assignment in results.csv instead of a shared per-student JSON blob"
+  "description": "Fix assessments.csv read path so newly created assessments persist across sessions instead of being lost"
 }

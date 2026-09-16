@@ -3064,29 +3064,54 @@ class TeachingAssistantApp {
     // Lazily load assessments.csv on first request
     if (!this.assessmentsLoaded) {
       try {
-        const response = await fetch('data/assessments.csv');
-        if (!response.ok) {
-          throw new Error(`assessments.csv not found (status ${response.status})`);
-        }
-        const csvText = await response.text();
-        this.assessments = this.parseAssessmentsCSV(csvText);
-      } catch (error) {
-        // File doesn't exist yet - start with an empty list and create it
-        // on disk (if a data folder has been selected) so future saves/loads
-        // have a real file to work with.
-        console.warn('assessments.csv not found, starting with an empty list:', error.message);
-        this.assessments = [];
+        let csvText = null;
 
         if (this.fileManager && this.fileManager.folderHandle) {
+          // Read from the SAME folder saveFileToFolder() writes assessments.csv
+          // into (the folder chosen when loading students.csv/results.csv).
+          // A plain fetch('data/assessments.csv') would read from the app's
+          // own served directory instead - a different location entirely,
+          // and one that always 404s on GitHub Pages since data/ is
+          // gitignored there. That mismatch is why newly created assessments
+          // were being "lost" between sessions.
+          csvText = await this.fileManager.loadFileFromFolder('assessments.csv');
+        } else {
+          // No folder selected (e.g. the individual-file-picker flow was
+          // used instead) - fall back to a same-origin fetch as a last
+          // resort; this only works for local dev setups where data/
+          // happens to be served alongside index.html.
           try {
-            const headerOnlyCsv = 'assessment_id,title,grade,min_score,max_score';
-            const blob = new Blob([headerOnlyCsv], { type: 'text/csv' });
-            await this.fileManager.saveFileToFolder('assessments.csv', blob);
-            console.log('Created assessments.csv with header row');
-          } catch (createError) {
-            console.warn('Could not auto-create assessments.csv:', createError.message);
+            const response = await fetch('data/assessments.csv');
+            if (response.ok) {
+              csvText = await response.text();
+            }
+          } catch (fetchError) {
+            csvText = null;
           }
         }
+
+        if (csvText) {
+          this.assessments = this.parseAssessmentsCSV(csvText);
+        } else {
+          // File doesn't exist yet - start with an empty list and create it
+          // (if we have a folder to write it into) so future saves/loads
+          // have a real file to work with.
+          this.assessments = [];
+
+          if (this.fileManager && this.fileManager.folderHandle) {
+            try {
+              const headerOnlyCsv = 'assessment_id,title,grade,min_score,max_score';
+              const blob = new Blob([headerOnlyCsv], { type: 'text/csv' });
+              await this.fileManager.saveFileToFolder('assessments.csv', blob);
+              console.log('Created assessments.csv with header row');
+            } catch (createError) {
+              console.warn('Could not auto-create assessments.csv:', createError.message);
+            }
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load assessments.csv, starting with an empty list:', error.message);
+        this.assessments = [];
       }
       this.assessmentsLoaded = true;
     }

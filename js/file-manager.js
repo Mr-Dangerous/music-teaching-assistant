@@ -608,6 +608,29 @@ class FileManager {
   }
 
   /**
+   * Read a file's content from the currently selected folder (the same
+   * folder saveFileToFolder() writes to). Returns null if no folder is
+   * selected, or if the file doesn't exist yet in that folder.
+   * @param {string} fileName - Name of the file to read
+   * @returns {Promise<string|null>}
+   */
+  async loadFileFromFolder(fileName) {
+    if (!this.folderHandle) {
+      return null;
+    }
+
+    try {
+      const fileHandle = await this.folderHandle.getFileHandle(fileName, { create: false });
+      return await this.readFileFromHandle(fileHandle);
+    } catch (error) {
+      if (error.name === 'NotFoundError') {
+        return null; // File doesn't exist yet in this folder
+      }
+      throw new Error(`Failed to read ${fileName}: ${error.message}`);
+    }
+  }
+
+  /**
    * Create a subfolder in the data folder
    * @param {string} folderName - Name of subfolder to create
    * @returns {Promise<FileSystemDirectoryHandle>}
