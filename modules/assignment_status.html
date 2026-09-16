@@ -86,6 +86,17 @@
       overflow-y: auto;
     }
     .student-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .class-section-heading {
+      margin: 0 0 8px 0;
+      font-size: 15px;
+      font-weight: 700;
+      color: #4b5563;
+    }
+    .class-section-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
       gap: 10px;
@@ -400,12 +411,22 @@
       return allAssessments.find(a => a.assessment_id === id) || null;
     }
 
+    // All grades actually present among the currently loaded students - when
+    // multiple classes of different grades are combined, an assessment from
+    // ANY of those grades is relevant, not just the clicked student's own
+    // grade. Assessment titles are unique, so listing multiple grades'
+    // assessments together in one dropdown is unambiguous.
+    function getPresentGrades() {
+      if (!moduleContext || !moduleContext.classStudents) return new Set();
+      return new Set(moduleContext.classStudents.map(s => s.grade));
+    }
+
     function renderGrid() {
       const statusEl = document.getElementById('status-message');
       const gridEl = document.getElementById('student-grid');
 
       if (allAssessments.length === 0) {
-        statusEl.textContent = 'No written assessments yet for this grade. Create one in Written Assessment Scorer first.';
+        statusEl.textContent = 'No written assessments yet for this grade level. Create one in Written Assessment Scorer first.';
         statusEl.style.display = 'block';
         gridEl.style.display = 'none';
         return;
@@ -421,14 +442,49 @@
       // Cancel any in-flight long-press before the pressed card is torn down.
       cancelActivePress();
 
+      // Only show students who are actually eligible for the selected
+      // assessment's grade - relevant when combined classes span more than
+      // one grade (an assessment only applies to its own grade).
+      const selectedAssessment = getAssessmentById(selectedAssessmentId);
+      const eligibleStudents = selectedAssessment
+        ? moduleContext.classStudents.filter(s => s.grade === selectedAssessment.grade)
+        : moduleContext.classStudents;
+
+      if (eligibleStudents.length === 0) {
+        statusEl.textContent = 'No students in the selected grade for this assessment.';
+        statusEl.style.display = 'block';
+        gridEl.style.display = 'none';
+        return;
+      }
+
       statusEl.style.display = 'none';
-      gridEl.style.display = 'grid';
+      gridEl.style.display = 'flex';
       gridEl.innerHTML = '';
 
-      const sortedStudents = [...moduleContext.classStudents].sort((a, b) => a.name.localeCompare(b.name));
+      // Group by class - when multiple classes are combined (eligibleStudents
+      // spans more than one), show each as its own labeled section so the grid
+      // stays scannable rather than one long mixed list of names.
+      const classNames = [...new Set(eligibleStudents.map(s => s.class))].sort();
+      const showHeadings = classNames.length > 1;
 
-      sortedStudents.forEach(student => {
-        gridEl.appendChild(buildStudentCard(student));
+      classNames.forEach(className => {
+        const studentsInClass = eligibleStudents
+          .filter(s => s.class === className)
+          .sort((a, b) => a.name.localeCompare(b.name));
+
+        if (showHeadings) {
+          const heading = document.createElement('h3');
+          heading.className = 'class-section-heading';
+          heading.textContent = className;
+          gridEl.appendChild(heading);
+        }
+
+        const sectionGrid = document.createElement('div');
+        sectionGrid.className = 'class-section-grid';
+        studentsInClass.forEach(student => {
+          sectionGrid.appendChild(buildStudentCard(student));
+        });
+        gridEl.appendChild(sectionGrid);
       });
     }
 
@@ -659,11 +715,11 @@
         window.TaskModule.init(data.context);
       } else if (data.type === 'assessmentdef:data') {
         clearTimeout(definitionsRequestTimeout);
-        allAssessments = (data.assessments || []).filter(a => a.grade === (moduleContext ? moduleContext.grade : null));
+        allAssessments = (data.assessments || []).filter(a => getPresentGrades().has(a.grade));
         populateAssessmentSelect();
         renderGrid();
       } else if (data.type === 'assessmentdef:saved') {
-        allAssessments = (data.assessments || allAssessments).filter(a => a.grade === (moduleContext ? moduleContext.grade : null));
+        allAssessments = (data.assessments || allAssessments).filter(a => getPresentGrades().has(a.grade));
         populateAssessmentSelect();
         renderGrid();
       } else if (data.type === 'assignmentstatus:updated') {

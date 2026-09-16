@@ -1604,9 +1604,10 @@ class TeachingAssistantApp {
     // Get most recent result to restore previous response (if any)
     const existingResult = this.getMostRecentResult(student.student_id, taskData.task_id);
 
-    // Get all students from the same class (for modules that need full roster)
+    // Get all students from the same class (for modules that need full roster) -
+    // respect combined-class mode, same as showStudentScreen()/practice mode.
     const classStudents = this.students
-      .filter(s => s.class === student.class)
+      .filter(s => this.selectedClasses.size > 0 ? this.selectedClasses.has(s.class) : s.class === student.class)
       .map(s => ({
         id: s.student_id,
         name: s.name,
