@@ -1,5 +1,5 @@
 {
-  "version": "3.59.1",
+  "version": "3.60.1",
   "lastUpdated": "2026-09-25",
-  "description": "Chord Builder: piano keyboard visualizer lights up keys with note names as chords play"
+  "description": "Chord Builder: preset root patterns (Scale 1–8, I–IV–vi–V ×2, I–IV–V–IV–I–IV–V–I) that work in every key"
 }
