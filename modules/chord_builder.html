@@ -124,12 +124,15 @@
 
   .bin-row {
     flex-shrink: 0;
-    display: flex;
-    align-items: center;
-    gap: 14px;
-    min-height: calc(78px * var(--module-scale));
+    position: relative;
+    height: calc(78px * var(--module-scale));
   }
   .bin {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    transition: left 0.35s ease;
     display: flex;
     gap: 10px;
     align-items: center;
@@ -155,7 +158,12 @@
   }
   .note-chip svg { width: 70%; height: 70%; pointer-events: none; }
   .status-text {
-    flex: 1;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    max-height: 100%;
+    overflow: hidden;
+    line-height: 1.25;
     font-size: calc(18px * var(--module-scale));
     font-weight: bold;
     color: #2c3e50;
@@ -514,7 +522,11 @@
   }
 
   // ── Evaluation ───────────────────────────────────────────────────────────
-  function evaluateChord() {
+  function evaluateChord(c = chord) {
+    const isCurrent = c === chord;
+    const slotLabel = isCurrent ? '' : `Chord ${slots.indexOf(c) + 1}: `;
+    const chord_ = chord;
+    chord = c; // evaluate against this slot (restored below for edited older chords)
     const key = currentKey();
     const notes = [chord.root, ...chord.placed].sort((a, b) => a - b);
     const placed = [...chord.placed].sort((a, b) => a - b);
@@ -530,14 +542,24 @@
       } else if (!chord.entry) {
         chord.entry = { key: key.id, name: target, firstCorrect: correct, retries: 0, fixed: false };
         session.push(chord.entry);
-      } else if (correct) {
-        chord.entry.fixed = true;
+      } else {
+        chord.entry.fixed = correct;
       }
       updateScore();
       sendProgress(false);
     }
 
     playNotes(notes, true);
+
+    if (!isCurrent) {
+      // An older chord was edited: show feedback only, don't advance
+      const target2 = chordName(c.root % 7, key);
+      chord = chord_;
+      drawStaff();
+      if (correct) setStatus(`${slotLabel}✓ ${target2} — ${ROMAN[degreeOf(c.root % 7, key)]}`, 'correct');
+      else setStatus(`${slotLabel}✗ ${analysis.isTriad ? 'That\'s ' + analysis.name + ' ' + inversionText(analysis.inversion) : 'Not a triad'} — long-press a note to fix it`, 'wrong');
+      return;
+    }
     drawStaff();
 
     if (correct) {
@@ -801,7 +823,37 @@
 
   const COLORS = { given: '#1f2d3d', placed: '#5b3fc4', correct: '#1e9e57', wrong: '#d63031', ghost: '#5b3fc4', invalid: '#9aa0b5' };
 
+  // The note bin slides under the slot being built; the status text takes
+  // whichever side of the row the bin isn't on.
+  let binSlotIndex = 0;
+  function positionBin() {
+    const row = document.querySelector('.bin-row');
+    const bin = document.getElementById('note-bin');
+    const status = document.getElementById('status-text');
+    if (!L) return;
+    const i = slots.indexOf(chord);
+    if (i >= 0 && chord && !chord.status) binSlotIndex = i;
+    const rowRect = row.getBoundingClientRect();
+    const staffRect = document.getElementById('staff-zone').getBoundingClientRect();
+    const rowW = rowRect.width;
+    const binW = bin.offsetWidth || 200;
+    const centerX = staffRect.left - rowRect.left + slotX(binSlotIndex);
+    const left = Math.max(0, Math.min(centerX - binW / 2, rowW - binW));
+    bin.style.left = left + 'px';
+    const gap = 16;
+    if (left + binW / 2 < rowW / 2) {
+      status.style.left = (left + binW + gap) + 'px';
+      status.style.right = '0px';
+      status.style.textAlign = 'left';
+    } else {
+      status.style.left = '0px';
+      status.style.right = (rowW - left + gap) + 'px';
+      status.style.textAlign = 'right';
+    }
+  }
+
   function drawStaff() {
+    positionBin();
     const canvas = document.getElementById('staff-canvas');
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, logicalW, logicalH);
@@ -811,7 +863,7 @@
     // Slot highlights (behind everything): playing = yellow, being built = lilac
     slots.forEach((slot, i) => {
       const isPlaying = i === playingIndex;
-      const isActive = slot === chord && !chord.status;
+      const isActive = !slot.status;
       if (!isPlaying && !isActive) return;
       ctx.fillStyle = isPlaying ? 'rgba(255, 210, 0, 0.35)' : 'rgba(143, 148, 251, 0.14)';
       const x = L.slotsLeft + i * L.slotW + 3, y = L.btnY - ls * 1.1;
@@ -852,10 +904,10 @@
     chordNoteHits = [];
     slots.forEach((slot, i) => {
       const x = slotX(i);
-      const isActive = slot === chord && !chord.status;
+      const isActive = !!(drag && drag.slot === slot);
 
       // Guided mode: show target spots while dragging
-      if (isActive && drag && settings.mode === 'guided') {
+      if (isActive && settings.mode === 'guided') {
         [slot.root + 2, slot.root + 4].forEach(d => {
           if (!slot.placed.includes(d)) drawTargetRing(ctx, x, yForDia(d));
         });
@@ -864,10 +916,10 @@
       const statusColor = slot.status === 'correct' ? COLORS.correct : slot.status === 'wrong' ? COLORS.wrong : null;
       const notes = [{ dia: slot.root, color: statusColor || COLORS.given }]
         .concat(slot.placed.map(d => ({ dia: d, color: statusColor || COLORS.placed })));
-      if (isActive && drag && drag.overDia !== null) {
+      if (isActive && drag.overDia !== null) {
         notes.push({ dia: drag.overDia, color: drag.valid ? COLORS.ghost : COLORS.invalid, alpha: 0.45 });
       }
-      drawChordNotes(ctx, notes, x, isActive);
+      drawChordNotes(ctx, notes, x, slot);
 
       if (slot.status) drawAnalysis(ctx, slot, x, statusColor);
     });
@@ -896,7 +948,7 @@
   }
 
   // Notes a 2nd apart are offset to the right, like real engraving
-  function drawChordNotes(ctx, notes, baseX, isActive) {
+  function drawChordNotes(ctx, notes, baseX, slot) {
     const sorted = [...notes].sort((a, b) => a.dia - b.dia);
     let prevDia = null, prevShifted = false;
     sorted.forEach(n => {
@@ -923,7 +975,9 @@
     for (let d = BOTTOM_LINE_DIA + 10; d <= maxDia; d += 2) ledger(d);
 
     sorted.forEach(n => drawWholeNote(ctx, n.x, yForDia(n.dia), n.color, n.alpha));
-    if (isActive) chordNoteHits = sorted.filter(n => n.alpha === undefined).map(n => ({ dia: n.dia, x: n.x, y: yForDia(n.dia) }));
+    sorted.filter(n => n.alpha === undefined).forEach(n => {
+      chordNoteHits.push({ slot, dia: n.dia, isRoot: n.dia === slot.root, x: n.x, y: yForDia(n.dia) });
+    });
   }
 
   function drawWholeNote(ctx, x, y, color, alpha) {
@@ -1056,18 +1110,60 @@
   // is proven on the smartboard). The element that started the drag is never
   // removed from the DOM mid-drag — touch events keep targeting it, and a
   // detached target stops them from reaching the document listeners.
-  // onStart(x, y) returns true if a drag actually started.
+  // onStart(x, y) returns true if a drag started right away, false to ignore,
+  // or { begin(x, y) } to start the drag only after a long-press (hold still).
+  const LONG_PRESS_MS = 450;
+  const LONG_PRESS_SLOP = 12; // px of movement allowed while holding
+
+  function makeGesture(res, x0, y0) {
+    let started = res === true;
+    let lastX = x0, lastY = y0;
+    let holdTimer = null;
+    let done = false;
+    const g = {
+      move(x, y) {
+        lastX = x; lastY = y;
+        if (started) { onDragMove(x, y); return true; }
+        if (Math.hypot(x - x0, y - y0) > LONG_PRESS_SLOP) { g.abort(); return false; }
+        return true;
+      },
+      end(x, y) {
+        clearTimeout(holdTimer);
+        done = true;
+        if (started) onDragEnd(x, y);
+      },
+      cancel() {
+        clearTimeout(holdTimer);
+        done = true;
+        if (started) onDragCancel();
+      },
+      abort() { clearTimeout(holdTimer); done = true; g.onAbort && g.onAbort(); }
+    };
+    if (!started) {
+      holdTimer = setTimeout(() => {
+        if (done || drag) return;
+        started = res.begin(lastX, lastY);
+        if (!started) g.abort();
+        else if (navigator.vibrate) { try { navigator.vibrate(30); } catch (e) { /* ignore */ } }
+      }, LONG_PRESS_MS);
+    }
+    return g;
+  }
+
   function bindDragStart(el, onStart) {
     el.addEventListener('mousedown', e => {
       if (e.button !== 0 || drag) return;
-      if (!onStart(e.clientX, e.clientY)) return;
+      const res = onStart(e.clientX, e.clientY);
+      if (!res) return;
       e.preventDefault();
-      const onMove = e => onDragMove(e.clientX, e.clientY);
-      const onUp = e => {
+      const g = makeGesture(res, e.clientX, e.clientY);
+      const cleanup = () => {
         document.removeEventListener('mousemove', onMove);
         document.removeEventListener('mouseup', onUp);
-        onDragEnd(e.clientX, e.clientY);
       };
+      const onMove = e => g.move(e.clientX, e.clientY);
+      const onUp = e => { cleanup(); g.end(e.clientX, e.clientY); };
+      g.onAbort = cleanup;
       document.addEventListener('mousemove', onMove);
       document.addEventListener('mouseup', onUp);
     });
@@ -1075,59 +1171,97 @@
     el.addEventListener('touchstart', e => {
       if (drag) { e.preventDefault(); return; }
       const t = e.changedTouches[0];
-      if (!onStart(t.clientX, t.clientY)) return;
+      const res = onStart(t.clientX, t.clientY);
+      if (!res) return;
       e.preventDefault();
+      const g = makeGesture(res, t.clientX, t.clientY);
       const id = t.identifier;
       const find = list => Array.from(list).find(tt => tt.identifier === id);
+      const cleanup = () => {
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onEnd);
+        document.removeEventListener('touchcancel', onEnd);
+      };
       const onMove = e => {
         const tt = find(e.changedTouches);
         if (!tt) return;
         e.preventDefault();
-        onDragMove(tt.clientX, tt.clientY);
+        g.move(tt.clientX, tt.clientY);
       };
       const onEnd = e => {
         const tt = find(e.changedTouches);
         if (!tt) return;
-        document.removeEventListener('touchmove', onMove);
-        document.removeEventListener('touchend', onEnd);
-        document.removeEventListener('touchcancel', onEnd);
-        if (e.type === 'touchcancel') onDragCancel();
-        else onDragEnd(tt.clientX, tt.clientY);
+        cleanup();
+        if (e.type === 'touchcancel') g.cancel();
+        else g.end(tt.clientX, tt.clientY);
       };
+      g.onAbort = cleanup;
       document.addEventListener('touchmove', onMove, { passive: false });
       document.addEventListener('touchend', onEnd);
       document.addEventListener('touchcancel', onEnd);
     }, { passive: false });
   }
 
-  let drag = null; // { source: 'bin'|'placed', fromDia, overDia, valid, clone, chip }
+  // source: 'bin' | 'placed' (current chord) | 'edit' (long-pressed note in a finished chord)
+  let drag = null; // { source, slot, fromDia, overDia, valid, clone, chip, backup }
 
   function isAllowed(dia) {
-    if (!chord || chord.status) return false;
+    const c = drag ? drag.slot : chord;
+    if (!c || c.status) return false;
     if (dia < MIN_DIA || dia > MAX_DIA) return false;
-    if (dia === chord.root || chord.placed.includes(dia)) return false;
-    if (settings.mode === 'guided') return dia === chord.root + 2 || dia === chord.root + 4;
-    if (settings.mode === 'rootpos') return dia > chord.root;
+    if (dia === c.root || c.placed.includes(dia)) return false;
+    if (settings.mode === 'guided') return dia === c.root + 2 || dia === c.root + 4;
+    if (settings.mode === 'rootpos') return dia > c.root;
     return true;
   }
   function disallowReason(dia) {
-    if (dia === chord.root || chord.placed.includes(dia)) return 'There is already a note there';
+    const c = drag ? drag.slot : chord;
+    if (dia === c.root || c.placed.includes(dia)) return 'There is already a note there';
     if (settings.mode === 'guided') return 'Drop on the 3rd or the 5th above the root';
     if (settings.mode === 'rootpos') return 'Notes go above the root in root position';
     return null;
   }
 
-  function startDrag(source, fromDia, x, y, chip) {
-    if (!chord || chord.status || drag) return false;
+  function startDrag(source, fromDia, x, y, chip, slot) {
+    if (drag) return false;
+    slot = slot || chord;
+    if (!slot) return false;
+    if (source === 'edit' ? !slot.status : slot.status) return false;
     const clone = document.createElement('div');
     clone.className = 'drag-clone';
     clone.innerHTML = WHOLE_NOTE_SVG;
     document.body.appendChild(clone);
-    drag = { source, fromDia, overDia: null, valid: false, clone, chip: chip || null };
+    drag = { source, slot, fromDia, overDia: null, valid: false, clone, chip: chip || null, backup: null };
     if (chip) chip.style.visibility = 'hidden';
-    if (source === 'placed') chord.placed = chord.placed.filter(d => d !== fromDia);
+    if (source === 'edit') {
+      // Unlock the finished chord: remember it so a bad drop can put it back
+      drag.backup = { placed: [...slot.placed], status: slot.status, analysis: slot.analysis };
+      if (slot === chord) { clearTimeout(advanceTimer); hideResultActions(); }
+      slot.status = null;
+      slot.analysis = null;
+    }
+    if (source === 'placed' || source === 'edit') slot.placed = slot.placed.filter(d => d !== fromDia);
     onDragMove(x, y);
     return true;
+  }
+
+  function restoreEditedSlot(d) {
+    const slot = d.slot;
+    slot.placed = d.backup.placed;
+    slot.status = d.backup.status;
+    slot.analysis = d.backup.analysis;
+    if (slot === chord) {
+      if (slot.status === 'wrong') showResultActions();
+      else if (slot.status === 'correct') advanceTimer = setTimeout(newChord, 1500);
+    }
+  }
+
+  function finishEdit(slot) {
+    if (settings.mode === 'test' && slot.entry && !slot.savedAway) {
+      slot.entry.retries++;
+      updateScore();
+    }
+    evaluateChord(slot);
   }
 
   function staffPoint(x, y) {
@@ -1162,6 +1296,21 @@
     endDragCleanup();
     drag = null;
 
+    if (d.source === 'edit') {
+      if (d.overDia !== null && d.valid && d.overDia !== d.fromDia) {
+        d.slot.placed.push(d.overDia);
+        finishEdit(d.slot);
+      } else {
+        if (d.overDia !== null && d.overDia !== d.fromDia && !d.valid) {
+          const reason = disallowReason(d.overDia);
+          if (reason) showToast(reason, '#e67e22');
+        }
+        restoreEditedSlot(d);
+        drawStaff();
+      }
+      return;
+    }
+
     if (d.overDia !== null && d.valid) {
       chord.placed.push(d.overDia);
       playNotes([d.overDia]);
@@ -1180,21 +1329,27 @@
 
   function onDragCancel() {
     if (!drag) return;
-    if (drag.source === 'placed') chord.placed.push(drag.fromDia);
+    const d = drag;
+    if (d.source === 'placed') d.slot.placed.push(d.fromDia);
     endDragCleanup();
     drag = null;
+    if (d.source === 'edit') restoreEditedSlot(d);
     renderBin();
     drawStaff();
   }
 
-  // Pick up a placed note from the staff to move or remove it
+  // Pick up a placed note: the chord being built → drag right away;
+  // a finished chord → long-press to unlock the note, then drag it.
   bindDragStart(document.getElementById('staff-canvas'), (x, y) => {
-    if (!chord || chord.status || drag) return false;
+    if (drag || !L) return false;
     const p = staffPoint(x, y);
-    const hit = chordNoteHits.find(n => n.dia !== chord.root &&
+    const hit = chordNoteHits.find(n => !n.isRoot &&
       Math.abs(p.x - n.x) <= L.rx * 1.5 && Math.abs(p.y - n.y) <= L.ry * 1.8);
     if (!hit) return false;
-    return startDrag('placed', hit.dia, x, y);
+    if (!hit.slot.status) {
+      return hit.slot === chord ? startDrag('placed', hit.dia, x, y) : false;
+    }
+    return { begin: (bx, by) => startDrag('edit', hit.dia, bx, by, null, hit.slot) };
   });
 
   // ── UI helpers ───────────────────────────────────────────────────────────
