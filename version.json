@@ -1,5 +1,5 @@
 {
-  "version": "3.55.2",
-  "lastUpdated": "2026-09-16",
-  "description": "Fix assessments.csv read path so newly created assessments persist across sessions instead of being lost"
+  "version": "3.56.1",
+  "lastUpdated": "2026-09-25",
+  "description": "Add Chord Builder module: drag-and-drop triad building on a treble staff with key signatures, three modes (guided, root position only, test with scoring/retry), custom root patterns, and Tone.js piano playback"
 }

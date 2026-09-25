@@ -631,6 +631,7 @@ class TeachingAssistantApp {
       'assignment_status.html',
       'audio-player.html',
       'boomwhacker_assigner.html',
+      'chord_builder.html',
       'class_seating_chart.html',
       'dance_viewer.html',
       'edit_student_list.html',
