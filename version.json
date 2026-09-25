@@ -1,5 +1,5 @@
 {
-  "version": "3.58.1",
+  "version": "3.59.1",
   "lastUpdated": "2026-09-25",
-  "description": "Chord Builder: long-press a note in a finished chord to unlock and move it; note bin follows the chord being built"
+  "description": "Chord Builder: piano keyboard visualizer lights up keys with note names as chords play"
 }

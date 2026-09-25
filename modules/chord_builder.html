@@ -122,6 +122,15 @@
   .btn-retry { background: linear-gradient(135deg,#ff5f6d,#ffc371); color: #333; font-size: calc(18px * var(--module-scale)); }
   .btn-next { background: linear-gradient(135deg,#4e54c8,#8f94fb); }
 
+  .piano-row {
+    flex-shrink: 0;
+    height: calc(80px * var(--module-scale));
+    display: flex;
+    justify-content: center;
+  }
+  .piano-row.hidden { display: none; }
+  #piano-canvas { display: block; }
+
   .bin-row {
     flex-shrink: 0;
     position: relative;
@@ -310,6 +319,8 @@
     </div>
   </div>
 
+  <div class="piano-row" id="piano-row"><canvas id="piano-canvas"></canvas></div>
+
   <div class="bin-row">
     <div class="bin" id="note-bin"><span class="bin-label">Notes</span></div>
     <div class="status-text" id="status-text"></div>
@@ -331,6 +342,10 @@
         <span>Lock to root position only<small>Given note is the root. Nothing can be placed below it, but mistakes are possible.</small></span></label>
       <label class="mode-opt"><input type="radio" name="mode" value="test">
         <span>Test for root position triad<small>No limits. Each chord is scored right (green) or wrong (red).</small></span></label>
+    </div>
+    <div class="section">
+      <label class="mode-opt"><input type="checkbox" id="show-piano">
+        <span>Show piano keyboard<small>Keys light up with their note names as chords play.</small></span></label>
     </div>
     <div class="section">
       <div class="section-title">Custom roots (optional)</div>
@@ -443,7 +458,7 @@
   }
 
   // ── Settings & session state ─────────────────────────────────────────────
-  function defaultSettings() { return { keyId: 'C', mode: 'guided', customRoots: '', playStyle: 'block' }; }
+  function defaultSettings() { return { keyId: 'C', mode: 'guided', customRoots: '', playStyle: 'block', showPiano: true }; }
   let settings = defaultSettings();
   let customLetters = [];
   let customIndex = 0;
@@ -667,34 +682,161 @@
     initSynth();
   }
   // asChord: arpeggiate low → high, then play as a block chord
+  function canSound() {
+    return typeof Tone !== 'undefined' && synth && synthLoaded && Tone.context.state === 'running';
+  }
   function playNotes(dias, asChord) {
-    if (!synth || !synthLoaded) return;
-    if (Tone.context.state !== 'running') {
-      if (audioStarting) audioStarting.then(() => { if (Tone.context.state === 'running') playNotes(dias, asChord); });
+    // Audio is being unlocked by this very tap — wait for it so sound and keys line up
+    if (typeof Tone !== 'undefined' && Tone.context.state !== 'running' && audioStarting) {
+      audioStarting.then(() => playNotes(dias, asChord));
       return;
     }
-    const key = currentKey();
-    const freqs = dias.map(d => Tone.Frequency(diaToMidi(d, key), 'midi').toFrequency());
-    const now = Tone.now();
+    const notes = dias.map(keyNote);
+    const sound = canSound();
+    const freqs = sound ? notes.map(n => Tone.Frequency(n.midi, 'midi').toFrequency()) : [];
+    const now = sound ? Tone.now() : 0;
     if (!asChord) {
-      freqs.forEach(f => synth.triggerAttackRelease(f, 1.2, now));
+      lightKeys(notes, 0, 900);
+      if (sound) freqs.forEach(f => synth.triggerAttackRelease(f, 1.2, now));
       return;
     }
+    notes.forEach((n, i) => lightKeys([n], i * 320, 420));
+    lightKeys(notes, notes.length * 320 + 150, 1500);
+    if (!sound) return;
     freqs.forEach((f, i) => synth.triggerAttackRelease(f, 0.5, now + i * 0.32));
     synth.triggerAttackRelease(freqs, 1.6, now + freqs.length * 0.32 + 0.15);
   }
   // Play one chord in the chosen style; returns how long it lasts (ms)
   function playChordStyled(dias) {
-    if (!synth || !synthLoaded || Tone.context.state !== 'running') return 1200;
-    const key = currentKey();
-    const freqs = dias.map(d => Tone.Frequency(diaToMidi(d, key), 'midi').toFrequency());
-    const now = Tone.now();
+    const notes = dias.map(keyNote);
+    const sound = canSound();
+    const freqs = sound ? notes.map(n => Tone.Frequency(n.midi, 'midi').toFrequency()) : [];
+    const now = sound ? Tone.now() : 0;
     if (settings.playStyle === 'arpeggio') {
-      freqs.forEach((f, i) => synth.triggerAttackRelease(f, 1.0, now + i * 0.3));
-      return freqs.length * 300 + 700;
+      const total = notes.length * 300 + 700;
+      // Keys stay lit as the arpeggio builds up the chord
+      notes.forEach((n, i) => lightKeys([n], i * 300, total - i * 300 - 150));
+      if (sound) freqs.forEach((f, i) => synth.triggerAttackRelease(f, 1.0, now + i * 0.3));
+      return total;
     }
-    synth.triggerAttackRelease(freqs, 1.3, now);
+    lightKeys(notes, 0, 1250);
+    if (sound) synth.triggerAttackRelease(freqs, 1.3, now);
     return 1400;
+  }
+
+  // ── Piano visualizer ─────────────────────────────────────────────────────
+  // G3…B5 covers every note the module can produce (A♭3 … A♯5).
+  const PIANO_LOW = 55, PIANO_HIGH = 83;
+  const BLACK_PCS = [1, 3, 6, 8, 10];
+  const litKeys = new Map();  // midi → { count, name }
+  let lightTimers = [];
+  let pianoW = 0, pianoH = 0;
+
+  function keyNote(dia) {
+    const key = currentKey();
+    return { midi: diaToMidi(dia, key), name: LETTERS[dia % 7] + accSymbol(keyAccidentals(key)[dia % 7]) };
+  }
+
+  function lightKeys(notes, delayMs, durMs) {
+    const t = setTimeout(() => {
+      notes.forEach(n => {
+        const e = litKeys.get(n.midi) || { count: 0 };
+        e.count++;
+        e.name = n.name;
+        litKeys.set(n.midi, e);
+      });
+      drawPiano();
+      const t2 = setTimeout(() => {
+        notes.forEach(n => {
+          const e = litKeys.get(n.midi);
+          if (e && --e.count <= 0) litKeys.delete(n.midi);
+        });
+        drawPiano();
+        lightTimers = lightTimers.filter(x => x !== t2);
+      }, durMs);
+      lightTimers = lightTimers.filter(x => x !== t);
+      lightTimers.push(t2);
+    }, delayMs);
+    lightTimers.push(t);
+  }
+
+  function clearKeys() {
+    lightTimers.forEach(clearTimeout);
+    lightTimers = [];
+    litKeys.clear();
+    drawPiano();
+  }
+
+  function resizePiano() {
+    const row = document.getElementById('piano-row');
+    row.classList.toggle('hidden', !settings.showPiano);
+    if (!settings.showPiano) { pianoW = 0; return; }
+    const canvas = document.getElementById('piano-canvas');
+    const whiteCount = pianoMidis().filter(m => !BLACK_PCS.includes(m % 12)).length;
+    pianoH = row.clientHeight;
+    pianoW = Math.min(row.clientWidth, whiteCount * pianoH * 0.55);
+    canvas.style.width = pianoW + 'px';
+    canvas.style.height = pianoH + 'px';
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.round(pianoW * dpr));
+    canvas.height = Math.max(1, Math.round(pianoH * dpr));
+    canvas.getContext('2d').setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawPiano();
+  }
+
+  function pianoMidis() {
+    const out = [];
+    for (let m = PIANO_LOW; m <= PIANO_HIGH; m++) out.push(m);
+    return out;
+  }
+
+  function drawPiano() {
+    if (!settings.showPiano || !pianoW) return;
+    const ctx = document.getElementById('piano-canvas').getContext('2d');
+    const W = pianoW, H = pianoH;
+    ctx.clearRect(0, 0, W, H);
+    const whites = pianoMidis().filter(m => !BLACK_PCS.includes(m % 12));
+    const ww = W / whites.length;
+    const bw = ww * 0.6, bh = H * 0.6;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
+
+    whites.forEach((m, i) => {
+      const x = i * ww;
+      const lit = litKeys.get(m);
+      ctx.fillStyle = lit ? '#ffd200' : '#fff';
+      ctx.strokeStyle = '#555';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x + 0.75, 0.75, ww - 1.5, H - 1.5, [0, 0, 6, 6]); else ctx.rect(x + 0.75, 0.75, ww - 1.5, H - 1.5);
+      ctx.fill();
+      ctx.stroke();
+      if (lit) {
+        ctx.fillStyle = '#2c3e50';
+        ctx.font = `bold ${Math.min(ww * 0.42, H * 0.24)}px Arial, "Segoe UI Symbol", sans-serif`;
+        ctx.fillText(lit.name, x + ww / 2, H - H * 0.08);
+      } else if (m === 60) {
+        ctx.fillStyle = '#9aa0b5';
+        ctx.font = `${Math.min(ww * 0.3, H * 0.16)}px Arial, sans-serif`;
+        ctx.fillText('C4', x + ww / 2, H - H * 0.08);
+      }
+    });
+
+    pianoMidis().filter(m => BLACK_PCS.includes(m % 12)).forEach(m => {
+      const leftWhite = whites.indexOf(m - 1);
+      if (leftWhite < 0) return;
+      const x = (leftWhite + 1) * ww - bw / 2;
+      const lit = litKeys.get(m);
+      ctx.fillStyle = lit ? '#f7971e' : '#222';
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, 0, bw, bh, [0, 0, 4, 4]); else ctx.rect(x, 0, bw, bh);
+      ctx.fill();
+      if (lit) {
+        ctx.fillStyle = '#fff';
+        ctx.font = `bold ${Math.min(bw * 0.48, H * 0.18)}px Arial, "Segoe UI Symbol", sans-serif`;
+        ctx.fillText(lit.name, x + bw / 2, bh - bh * 0.1);
+      }
+    });
   }
 
   let playingIndex = -1;   // slot highlighted during playback
@@ -730,6 +872,7 @@
     playingIndex = -1;
     sequencePlaying = false;
     if (synth && synth.releaseAll) synth.releaseAll();
+    clearKeys();
     updatePlayAllButton();
     drawStaff();
   }
@@ -1395,6 +1538,7 @@
   function syncSetupUI() {
     document.querySelectorAll('.key-btn').forEach(b => b.classList.toggle('selected', b.dataset.key === draft.keyId));
     document.querySelectorAll('input[name="mode"]').forEach(r => { r.checked = r.value === draft.mode; });
+    document.getElementById('show-piano').checked = draft.showPiano !== false;
     validateCustomInput();
   }
 
@@ -1438,6 +1582,7 @@
     refreshCustomLetters();
     updateSummary();
     updateScore();
+    resizePiano();
     resizeCanvas();
     clearLine(); // a new key/mode starts a fresh line of 8
   }
@@ -1445,6 +1590,7 @@
   document.querySelectorAll('input[name="mode"]').forEach(r => {
     r.addEventListener('change', () => { if (r.checked) draft.mode = r.value; });
   });
+  document.getElementById('show-piano').addEventListener('change', e => { draft.showPiano = e.target.checked; });
   document.getElementById('custom-roots').addEventListener('input', validateCustomInput);
   document.getElementById('custom-roots').addEventListener('keydown', e => { if (e.key === 'Enter') applySetup(); });
   document.getElementById('start-btn').addEventListener('click', applySetup);
@@ -1479,7 +1625,7 @@
   document.getElementById('next-btn').addEventListener('click', () => newChord());
   document.getElementById('save-btn').addEventListener('click', saveScore);
 
-  window.addEventListener('resize', () => { resizeCanvas(); drawStaff(); });
+  window.addEventListener('resize', () => { resizePiano(); resizeCanvas(); drawStaff(); });
 
   // ── TaskModule interface ─────────────────────────────────────────────────
   window.TaskModule = {
@@ -1500,6 +1646,7 @@
       buildSlotButtons();
 
       setTimeout(() => {
+        resizePiano();
         resizeCanvas();
         if (!stored) {
           drawStaff();
