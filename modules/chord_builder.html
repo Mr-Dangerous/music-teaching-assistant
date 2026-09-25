@@ -61,6 +61,28 @@
   .btn-setup { background: linear-gradient(135deg,#4e54c8,#8f94fb); }
   .btn-replay { background: linear-gradient(135deg,#00b09b,#96c93d); }
   .btn-skip { background: linear-gradient(135deg,#f7971e,#ffd200); color: #333; }
+  .btn-style { background: linear-gradient(135deg,#8e2de2,#c471ed); }
+  .btn-clear { background: linear-gradient(135deg,#bdc3c7,#8e9eab); color: #2c3e50; }
+  .btn-replay.playing { background: linear-gradient(135deg,#e74c3c,#ff7675); }
+
+  .slot-play {
+    position: absolute;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    transform: translate(-50%, -50%);
+    border: none;
+    border-radius: 50%;
+    background: linear-gradient(135deg,#00b09b,#96c93d);
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.2);
+    z-index: 10;
+    touch-action: manipulation;
+  }
+  .slot-play.show { display: flex; }
+  .slot-play.playing { background: linear-gradient(135deg,#f7971e,#ffd200); color: #333; transform: translate(-50%, -50%) scale(1.15); }
   .btn-save { background: linear-gradient(135deg,#11998e,#38ef7d); }
 
   .score-pill {
@@ -92,9 +114,8 @@
   .result-actions {
     position: absolute;
     display: none;
-    flex-direction: column;
-    gap: 8px;
-    transform: translateY(-50%);
+    flex-direction: row;
+    gap: 6px;
     z-index: 20;
   }
   .result-actions.show { display: flex; }
@@ -259,8 +280,10 @@
   <div class="header">
     <div class="toolbar-btns">
       <button class="toolbar-btn btn-setup" id="setup-btn">&#9881; Setup</button>
-      <button class="toolbar-btn btn-replay" id="replay-btn">&#128266; Replay</button>
+      <button class="toolbar-btn btn-replay" id="play-all-btn">&#9654; Play All</button>
+      <button class="toolbar-btn btn-style" id="style-btn">&#127925; Whole notes</button>
       <button class="toolbar-btn btn-skip" id="skip-btn">&#9197; New Note</button>
+      <button class="toolbar-btn btn-clear" id="clear-btn">&#129529; Clear</button>
       <span class="score-pill" id="score-pill">Score: 0/0</span>
       <button class="toolbar-btn btn-save" id="save-btn" style="display:none" disabled>&#128190; Save Score</button>
     </div>
@@ -272,6 +295,7 @@
 
   <div class="staff-wrap" id="staff-zone">
     <canvas id="staff-canvas"></canvas>
+    <div id="slot-btns"></div>
     <div class="result-actions" id="result-actions">
       <button class="toolbar-btn btn-retry" id="retry-btn">&#8635; Retry</button>
       <button class="toolbar-btn btn-next" id="next-btn">Next &#9654;</button>
@@ -411,13 +435,15 @@
   }
 
   // ── Settings & session state ─────────────────────────────────────────────
-  function defaultSettings() { return { keyId: 'C', mode: 'guided', customRoots: '' }; }
+  function defaultSettings() { return { keyId: 'C', mode: 'guided', customRoots: '', playStyle: 'block' }; }
   let settings = defaultSettings();
   let customLetters = [];
   let customIndex = 0;
   let lastRootLetter = null;
 
-  let chord = null;       // { root, placed: [], status: null|'correct'|'wrong', analysis, entry }
+  const SLOT_COUNT = 8;
+  let slots = [];         // up to 8 chords, left → right across the staff
+  let chord = null;       // the slot being built: { root, placed: [], status: null|'correct'|'wrong', analysis, entry }
   let advanceTimer = null;
   let session = [];       // test-mode entries: { key, name, firstCorrect, retries, fixed }
   let lastResponse = null;
@@ -454,14 +480,37 @@
 
   function newChord() {
     clearTimeout(advanceTimer);
+    // All 8 slots are finished → wait for Clear
+    if (chord && chord.status && slots.length >= SLOT_COUNT) { showLineFull(); return; }
     const letter = nextRootLetter();
     lastRootLetter = letter;
-    chord = { root: ROOT_OCTAVE_BASE + letter, placed: [], status: null, analysis: null, entry: null };
+    const fresh = { root: ROOT_OCTAVE_BASE + letter, placed: [], status: null, analysis: null, entry: null };
+    // "New Note" on an unfinished chord replaces it in the same slot
+    if (chord && !chord.status && slots[slots.length - 1] === chord) slots[slots.length - 1] = fresh;
+    else slots.push(fresh);
+    chord = fresh;
     hideResultActions();
     renderBin();
     setStatus(`Build a triad on ${letterName(letter, currentKey())}`);
     drawStaff();
     playNotes([chord.root]);
+  }
+
+  function showLineFull() {
+    hideResultActions();
+    renderBin();
+    setStatus('All 8 chords built! ▶ Play All to hear them, or 🧹 Clear for a new line.', 'correct');
+    drawStaff();
+  }
+
+  function clearLine() {
+    stopPlayback();
+    clearTimeout(advanceTimer);
+    slots = [];
+    chord = null;
+    customIndex = 0;
+    lastRootLetter = null;
+    newChord();
   }
 
   // ── Evaluation ───────────────────────────────────────────────────────────
@@ -494,7 +543,7 @@
     if (correct) {
       setStatus(`✓ ${target} — ${ROMAN[degreeOf(chord.root % 7, key)]}`, 'correct');
       hideResultActions();
-      advanceTimer = setTimeout(newChord, 3000);
+      advanceTimer = setTimeout(newChord, 2200);
     } else {
       let msg;
       if (!analysis.isTriad) msg = `✗ That's not a triad. Stack the notes in thirds above ${letterName(chord.root % 7, key)}.`;
@@ -612,6 +661,67 @@
     freqs.forEach((f, i) => synth.triggerAttackRelease(f, 0.5, now + i * 0.32));
     synth.triggerAttackRelease(freqs, 1.6, now + freqs.length * 0.32 + 0.15);
   }
+  // Play one chord in the chosen style; returns how long it lasts (ms)
+  function playChordStyled(dias) {
+    if (!synth || !synthLoaded || Tone.context.state !== 'running') return 1200;
+    const key = currentKey();
+    const freqs = dias.map(d => Tone.Frequency(diaToMidi(d, key), 'midi').toFrequency());
+    const now = Tone.now();
+    if (settings.playStyle === 'arpeggio') {
+      freqs.forEach((f, i) => synth.triggerAttackRelease(f, 1.0, now + i * 0.3));
+      return freqs.length * 300 + 700;
+    }
+    synth.triggerAttackRelease(freqs, 1.3, now);
+    return 1400;
+  }
+
+  let playingIndex = -1;   // slot highlighted during playback
+  let playToken = 0;       // bumps to cancel a running sequence
+  let sequencePlaying = false;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  function slotDias(slot) { return [slot.root, ...slot.placed].sort((a, b) => a - b); }
+
+  async function playSequence(indices, isPlayAll) {
+    const token = ++playToken;
+    unlockAudio();
+    if (audioStarting) await audioStarting;
+    if (!synthLoaded) { showToast('Piano is still loading — try again in a moment', '#e67e22'); return; }
+    if (synth.releaseAll) synth.releaseAll();
+    sequencePlaying = !!isPlayAll;
+    updatePlayAllButton();
+    for (const i of indices) {
+      if (token !== playToken) return;
+      if (!slots[i]) continue;
+      playingIndex = i;
+      drawStaff();
+      await sleep(playChordStyled(slotDias(slots[i])));
+    }
+    if (token !== playToken) return;
+    playingIndex = -1;
+    sequencePlaying = false;
+    updatePlayAllButton();
+    drawStaff();
+  }
+
+  function stopPlayback() {
+    playToken++;
+    playingIndex = -1;
+    sequencePlaying = false;
+    if (synth && synth.releaseAll) synth.releaseAll();
+    updatePlayAllButton();
+    drawStaff();
+  }
+
+  function updatePlayAllButton() {
+    const btn = document.getElementById('play-all-btn');
+    btn.classList.toggle('playing', sequencePlaying);
+    btn.innerHTML = sequencePlaying ? '&#9209; Stop' : '&#9654; Play All';
+  }
+  function updateStyleButton() {
+    document.getElementById('style-btn').innerHTML =
+      settings.playStyle === 'arpeggio' ? '&#127926; Arpeggio' : '&#127925; Whole notes';
+  }
+
   // Long-press: ignore completely — no context menu, text selection, or
   // native image/SVG drag (the custom module input stays enabled for typing).
   document.addEventListener('contextmenu', e => e.preventDefault(), true);
@@ -651,11 +761,11 @@
   }
 
   function computeLayout() {
-    // Vertical budget in line-spaces: chord name above (≈3), A5…A3 range (7),
-    // Roman numeral below (≈3).
-    const ls = Math.min(logicalH / 13.5, logicalW / 24);
+    // Vertical budget in line-spaces (≈13.6): play buttons + chord names above
+    // the A5…A3 note range, Roman numerals below.
+    const ls = Math.min(logicalH / 13.9, logicalW / 50);
     const half = ls / 2;
-    const bottom = (logicalH - 12.8 * ls) / 2 + 8 * ls;
+    const bottom = (logicalH - 13.6 * ls) / 2 + 9.3 * ls;
     const staffLeft = 20;
     const staffRight = logicalW - 20;
 
@@ -670,12 +780,18 @@
     const sigCount = key.sharps || key.flats;
     const sigStep = key.sharps ? ls * 1.2 : ls * 1.0;
     const sigX = clefX + clefW + ls * 0.4;
-    const noteAreaLeft = sigX + sigCount * sigStep + ls * 1.2;
-    const chordX = noteAreaLeft + (staffRight - noteAreaLeft) * 0.38;
+    const slotsLeft = sigX + sigCount * sigStep + ls * 0.8;
+    const slotW = (staffRight - slotsLeft) / SLOT_COUNT;
 
-    L = { ls, half, bottom, staffLeft, staffRight, clefH, clefW, clefX, clefY, sigX, sigStep, chordX,
+    L = { ls, half, bottom, staffLeft, staffRight, clefH, clefW, clefX, clefY, sigX, sigStep,
+          slotsLeft, slotW,
+          btnY: bottom - 8.2 * ls,
+          labelY: bottom - 5.9 * ls,
+          romanY: bottom + 3.5 * ls,
           rx: ls * 0.9, ry: ls * 0.55 };
   }
+
+  function slotX(i) { return L.slotsLeft + (i + 0.5) * L.slotW; }
 
   function yForDia(dia) { return L.bottom - (dia - BOTTOM_LINE_DIA) * L.half; }
   function diaForY(y) {
@@ -689,40 +805,74 @@
     const canvas = document.getElementById('staff-canvas');
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, logicalW, logicalH);
-    if (!L || logicalW < 10 || logicalH < 10) return;
+    if (!L || logicalW < 10 || logicalH < 10) { positionSlotButtons(); return; }
+    const ls = L.ls;
+
+    // Slot highlights (behind everything): playing = yellow, being built = lilac
+    slots.forEach((slot, i) => {
+      const isPlaying = i === playingIndex;
+      const isActive = slot === chord && !chord.status;
+      if (!isPlaying && !isActive) return;
+      ctx.fillStyle = isPlaying ? 'rgba(255, 210, 0, 0.35)' : 'rgba(143, 148, 251, 0.14)';
+      const x = L.slotsLeft + i * L.slotW + 3, y = L.btnY - ls * 1.1;
+      const w = L.slotW - 6, h = L.romanY + ls * 0.8 - y;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(x, y, w, h, 12); else ctx.rect(x, y, w, h);
+      ctx.fill();
+    });
 
     // Staff lines
     ctx.strokeStyle = '#2c3e50';
-    ctx.lineWidth = Math.max(2, L.ls * 0.08);
+    ctx.lineWidth = Math.max(2, ls * 0.08);
     for (let i = 0; i < 5; i++) {
-      const y = L.bottom - i * L.ls;
+      const y = L.bottom - i * ls;
       ctx.beginPath();
       ctx.moveTo(L.staffLeft, y);
       ctx.lineTo(L.staffRight, y);
       ctx.stroke();
     }
 
+    // Barlines between chord slots, final double bar at the end
+    const top = L.bottom - 4 * ls;
+    ctx.strokeStyle = '#9aa0b5';
+    ctx.lineWidth = Math.max(1.5, ls * 0.05);
+    for (let i = 1; i < SLOT_COUNT; i++) {
+      const x = L.slotsLeft + i * L.slotW;
+      ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, L.bottom); ctx.stroke();
+    }
+    ctx.strokeStyle = '#2c3e50';
+    ctx.lineWidth = Math.max(2, ls * 0.08);
+    ctx.beginPath(); ctx.moveTo(L.staffRight - ls * 0.45, top); ctx.lineTo(L.staffRight - ls * 0.45, L.bottom); ctx.stroke();
+    ctx.lineWidth = ls * 0.25;
+    ctx.beginPath(); ctx.moveTo(L.staffRight - ls * 0.12, top); ctx.lineTo(L.staffRight - ls * 0.12, L.bottom); ctx.stroke();
+
     if (clefImg.complete && clefImg.naturalWidth) ctx.drawImage(clefImg, L.clefX, L.clefY, L.clefW, L.clefH);
     drawKeySignature(ctx);
 
-    if (!chord) return;
+    chordNoteHits = [];
+    slots.forEach((slot, i) => {
+      const x = slotX(i);
+      const isActive = slot === chord && !chord.status;
 
-    // Guided mode: show target spots while dragging
-    if (drag && settings.mode === 'guided') {
-      [chord.root + 2, chord.root + 4].forEach(d => {
-        if (!chord.placed.includes(d)) drawTargetRing(ctx, L.chordX, yForDia(d));
-      });
-    }
+      // Guided mode: show target spots while dragging
+      if (isActive && drag && settings.mode === 'guided') {
+        [slot.root + 2, slot.root + 4].forEach(d => {
+          if (!slot.placed.includes(d)) drawTargetRing(ctx, x, yForDia(d));
+        });
+      }
 
-    const statusColor = chord.status === 'correct' ? COLORS.correct : chord.status === 'wrong' ? COLORS.wrong : null;
-    const notes = [{ dia: chord.root, color: statusColor || COLORS.given }]
-      .concat(chord.placed.map(d => ({ dia: d, color: statusColor || COLORS.placed })));
-    if (drag && drag.overDia !== null) {
-      notes.push({ dia: drag.overDia, color: drag.valid ? COLORS.ghost : COLORS.invalid, alpha: 0.45 });
-    }
-    drawChordNotes(ctx, notes);
+      const statusColor = slot.status === 'correct' ? COLORS.correct : slot.status === 'wrong' ? COLORS.wrong : null;
+      const notes = [{ dia: slot.root, color: statusColor || COLORS.given }]
+        .concat(slot.placed.map(d => ({ dia: d, color: statusColor || COLORS.placed })));
+      if (isActive && drag && drag.overDia !== null) {
+        notes.push({ dia: drag.overDia, color: drag.valid ? COLORS.ghost : COLORS.invalid, alpha: 0.45 });
+      }
+      drawChordNotes(ctx, notes, x, isActive);
 
-    if (chord.status) drawAnalysis(ctx, statusColor);
+      if (slot.status) drawAnalysis(ctx, slot, x, statusColor);
+    });
+
+    positionSlotButtons();
     positionResultActions();
   }
 
@@ -746,12 +896,12 @@
   }
 
   // Notes a 2nd apart are offset to the right, like real engraving
-  function drawChordNotes(ctx, notes) {
+  function drawChordNotes(ctx, notes, baseX, isActive) {
     const sorted = [...notes].sort((a, b) => a.dia - b.dia);
     let prevDia = null, prevShifted = false;
     sorted.forEach(n => {
       const shift = prevDia !== null && n.dia - prevDia === 1 && !prevShifted;
-      n.x = L.chordX + (shift ? L.rx * 1.9 : 0);
+      n.x = baseX + (shift ? L.rx * 1.9 : 0);
       prevShifted = shift;
       prevDia = n.dia;
     });
@@ -765,7 +915,7 @@
     const ledger = d => {
       const y = yForDia(d);
       ctx.beginPath();
-      ctx.moveTo(L.chordX - L.rx * 1.5, y);
+      ctx.moveTo(baseX - L.rx * 1.5, y);
       ctx.lineTo(maxX + L.rx * 1.5, y);
       ctx.stroke();
     };
@@ -773,7 +923,7 @@
     for (let d = BOTTOM_LINE_DIA + 10; d <= maxDia; d += 2) ledger(d);
 
     sorted.forEach(n => drawWholeNote(ctx, n.x, yForDia(n.dia), n.color, n.alpha));
-    chordNoteHits = sorted.filter(n => n.alpha === undefined).map(n => ({ dia: n.dia, x: n.x, y: yForDia(n.dia) }));
+    if (isActive) chordNoteHits = sorted.filter(n => n.alpha === undefined).map(n => ({ dia: n.dia, x: n.x, y: yForDia(n.dia) }));
   }
 
   function drawWholeNote(ctx, x, y, color, alpha) {
@@ -798,47 +948,90 @@
     ctx.restore();
   }
 
-  function drawAnalysis(ctx, color) {
-    const a = chord.analysis;
+  function drawAnalysis(ctx, slot, x, color) {
+    const a = slot.analysis;
     const ls = L.ls;
-    const topNoteY = yForDia(Math.max(chord.root, ...chord.placed, BOTTOM_LINE_DIA + 10));
-    const labelY = Math.min(topNoteY, L.bottom - 4 * ls) - ls * 1.6;
     ctx.fillStyle = color;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
-    ctx.font = `bold ${ls * 1.5}px Arial, "Segoe UI Symbol", sans-serif`;
-    ctx.fillText(a.isTriad ? a.name : '?', L.chordX, labelY);
+    const nameSize = Math.min(ls * 1.3, L.slotW / 2.6);
+    ctx.font = `bold ${nameSize}px Arial, "Segoe UI Symbol", sans-serif`;
+    ctx.fillText(a.isTriad ? a.name : '?', x, L.labelY);
 
     if (!a.isTriad) return;
-    const bottomNoteY = yForDia(Math.min(chord.root, ...chord.placed, BOTTOM_LINE_DIA - 2));
-    const romanY = Math.max(bottomNoteY, L.bottom) + ls * 2.6;
-    ctx.font = `${ls * 1.6}px "Times New Roman", Georgia, serif`;
+    const romanSize = Math.min(ls * 1.4, L.slotW / 2.4);
+    ctx.font = `${romanSize}px "Times New Roman", Georgia, serif`;
     const w = ctx.measureText(a.roman).width;
-    const figW = a.inversion ? ls * 0.7 : 0;
-    const startX = L.chordX - (w + figW) / 2;
+    const figW = a.inversion ? romanSize * 0.45 : 0;
+    const startX = x - (w + figW) / 2;
     ctx.textAlign = 'left';
-    ctx.fillText(a.roman, startX, romanY);
+    ctx.fillText(a.roman, startX, L.romanY);
     if (a.inversion) {
-      ctx.font = `${ls * 0.85}px "Times New Roman", Georgia, serif`;
-      const fx = startX + w + ls * 0.1;
+      ctx.font = `${romanSize * 0.55}px "Times New Roman", Georgia, serif`;
+      const fx = startX + w + romanSize * 0.06;
       if (a.inversion === 1) {
-        ctx.fillText('6', fx, romanY - ls * 0.7);
+        ctx.fillText('6', fx, L.romanY - romanSize * 0.45);
       } else {
-        ctx.fillText('6', fx, romanY - ls * 0.8);
-        ctx.fillText('4', fx, romanY + ls * 0.05);
+        ctx.fillText('6', fx, L.romanY - romanSize * 0.5);
+        ctx.fillText('4', fx, L.romanY + romanSize * 0.03);
       }
     }
   }
 
+  // ▶ button above each finished chord's name
+  function buildSlotButtons() {
+    const layer = document.getElementById('slot-btns');
+    layer.innerHTML = '';
+    for (let i = 0; i < SLOT_COUNT; i++) {
+      const b = document.createElement('button');
+      b.className = 'slot-play';
+      b.innerHTML = '&#9654;';
+      b.addEventListener('click', () => { if (slots[i] && slots[i].status) playSequence([i], false); });
+      layer.appendChild(b);
+    }
+  }
+
+  function resultActionsShowing() { return document.getElementById('result-actions').classList.contains('show'); }
+
+  function positionSlotButtons() {
+    const btns = document.querySelectorAll('#slot-btns .slot-play');
+    btns.forEach((b, i) => {
+      const slot = slots[i];
+      // A wrong chord waiting on Retry/Next shows those buttons in this spot instead
+      const hiddenByRetry = slot === chord && chord && chord.status === 'wrong' && resultActionsShowing();
+      const show = !!(L && slot && slot.status && !hiddenByRetry);
+      b.classList.toggle('show', show);
+      b.classList.toggle('playing', i === playingIndex);
+      if (!show) return;
+      const size = Math.max(40, Math.min(L.ls * 1.8, L.slotW * 0.8));
+      b.style.width = size + 'px';
+      b.style.height = size + 'px';
+      b.style.fontSize = (size * 0.42) + 'px';
+      b.style.left = slotX(i) + 'px';
+      b.style.top = L.btnY + 'px';
+    });
+  }
+
+  // Retry / Next sit over the wrong chord, in place of its ▶ button
   function positionResultActions() {
     const el = document.getElementById('result-actions');
-    if (!chord || !L) return;
-    el.style.left = (L.chordX + L.rx * 4.5) + 'px';
-    const dias = [chord.root, ...chord.placed];
-    el.style.top = ((yForDia(Math.max(...dias)) + yForDia(Math.min(...dias))) / 2) + 'px';
+    if (!chord || !L || !resultActionsShowing()) return;
+    const i = slots.indexOf(chord);
+    if (i < 0) return;
+    const w = el.offsetWidth, h = el.offsetHeight;
+    const left = Math.max(4, Math.min(slotX(i) - w / 2, logicalW - w - 4));
+    el.style.left = left + 'px';
+    el.style.top = (L.btnY - h / 2) + 'px';
   }
-  function showResultActions() { document.getElementById('result-actions').classList.add('show'); positionResultActions(); }
-  function hideResultActions() { document.getElementById('result-actions').classList.remove('show'); }
+  function showResultActions() {
+    document.getElementById('result-actions').classList.add('show');
+    positionResultActions();
+    positionSlotButtons();
+  }
+  function hideResultActions() {
+    document.getElementById('result-actions').classList.remove('show');
+    positionSlotButtons();
+  }
 
   // ── Note bin & drag/drop ─────────────────────────────────────────────────
   const WHOLE_NOTE_SVG =
@@ -1088,11 +1281,10 @@
     saveAndBroadcastSettings();
     document.getElementById('setup-overlay').classList.remove('show');
     refreshCustomLetters();
-    lastRootLetter = null;
     updateSummary();
     updateScore();
     resizeCanvas();
-    newChord();
+    clearLine(); // a new key/mode starts a fresh line of 8
   }
 
   document.querySelectorAll('input[name="mode"]').forEach(r => {
@@ -1105,14 +1297,24 @@
     document.getElementById('setup-overlay').classList.remove('show');
     if (!chord) newChord();
     else if (chord.status === 'correct') advanceTimer = setTimeout(newChord, 1500);
+    else drawStaff();
   });
   document.getElementById('setup-btn').addEventListener('click', openSetup);
 
-  document.getElementById('replay-btn').addEventListener('click', () => {
-    if (!chord) return;
-    unlockAudio();
-    const notes = [chord.root, ...chord.placed].sort((a, b) => a - b);
-    playNotes(notes, notes.length > 1);
+  document.getElementById('play-all-btn').addEventListener('click', () => {
+    if (sequencePlaying) { stopPlayback(); return; }
+    const done = slots.map((s, i) => s.status ? i : -1).filter(i => i >= 0);
+    if (!done.length) { showToast('Build a chord first', '#e67e22'); return; }
+    playSequence(done, true);
+  });
+  document.getElementById('style-btn').addEventListener('click', () => {
+    settings.playStyle = settings.playStyle === 'arpeggio' ? 'block' : 'arpeggio';
+    updateStyleButton();
+    saveAndBroadcastSettings();
+  });
+  document.getElementById('clear-btn').addEventListener('click', () => {
+    if (drag) return;
+    clearLine();
   });
   document.getElementById('skip-btn').addEventListener('click', () => {
     if (drag) return;
@@ -1132,15 +1334,19 @@
       settings = { ...defaultSettings(), ...(stored || {}) };
       session = [];
       lastResponse = null;
+      slots = [];
+      chord = null;
+      stopPlayback();
       refreshCustomLetters();
       updateSummary();
       updateScore();
+      updateStyleButton();
       buildKeyGrid();
+      buildSlotButtons();
 
       setTimeout(() => {
         resizeCanvas();
         if (!stored) {
-          chord = null;
           drawStaff();
           setStatus('Choose a key and mode to begin');
           openSetup();
@@ -1154,6 +1360,7 @@
     isComplete() { return session.length > 0; },
     reset() {
       clearTimeout(advanceTimer);
+      stopPlayback();
       if (drag) { endDragCleanup(); drag = null; }
     }
   };
