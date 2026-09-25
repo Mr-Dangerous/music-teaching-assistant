@@ -1,5 +1,5 @@
 {
-  "version": "3.61.1",
+  "version": "3.62.1",
   "lastUpdated": "2026-09-25",
-  "description": "Chord Builder: piano keeps the current problem's notes highlighted until the next problem starts"
+  "description": "Chord Builder: tap piano keys to play them, with a ghost note shown briefly on the staff"
 }

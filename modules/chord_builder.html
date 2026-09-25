@@ -129,7 +129,7 @@
     justify-content: center;
   }
   .piano-row.hidden { display: none; }
-  #piano-canvas { display: block; }
+  #piano-canvas { display: block; cursor: pointer; touch-action: none; }
 
   .bin-row {
     flex-shrink: 0;
@@ -793,6 +793,147 @@
     lightTimers.push(t);
   }
 
+  // ── Tap a piano key: play it + show a ghost note on the staff ────────────
+  // Spell a MIDI note for the current key: in-key notes use the key signature;
+  // others get a written ♮, ♯ (sharp keys / C) or ♭ (flat keys).
+  function spellMidi(midi) {
+    const key = currentKey();
+    const keyAcc = keyAccidentals(key);
+    const pc = ((midi % 12) + 12) % 12;
+    const build = (letter, alter, shown) => {
+      const octave = Math.round((midi - LETTER_SEMIS[letter] - alter) / 12) - 1;
+      return { dia: octave * 7 + letter, acc: shown, name: LETTERS[letter] + accSymbol(alter) };
+    };
+    for (let l = 0; l < 7; l++) {
+      if ((LETTER_SEMIS[l] + keyAcc[l] + 12) % 12 === pc) return build(l, keyAcc[l], null);
+    }
+    for (let l = 0; l < 7; l++) {
+      if (LETTER_SEMIS[l] === pc) return build(l, 0, 'natural');
+    }
+    const useFlat = key.flats > 0;
+    for (let l = 0; l < 7; l++) {
+      if (useFlat && (LETTER_SEMIS[l] + 11) % 12 === pc) return build(l, -1, 'flat');
+      if (!useFlat && (LETTER_SEMIS[l] + 1) % 12 === pc) return build(l, 1, 'sharp');
+    }
+    return build(0, 0, null);
+  }
+
+  let ghostNote = null;   // { dia, acc } shown briefly on the staff
+  let ghostTimer = null;
+
+  function pianoKeyAt(x, y) {
+    if (!pianoW) return null;
+    const whites = pianoMidis().filter(m => !BLACK_PCS.includes(m % 12));
+    const ww = pianoW / whites.length, bw = ww * 0.6, bh = pianoH * 0.6;
+    if (y <= bh) {
+      for (const m of pianoMidis().filter(m => BLACK_PCS.includes(m % 12))) {
+        const lw = whites.indexOf(m - 1);
+        if (lw < 0) continue;
+        const bx = (lw + 1) * ww - bw / 2;
+        if (x >= bx && x <= bx + bw) return m;
+      }
+    }
+    const i = Math.floor(x / ww);
+    return whites[Math.max(0, Math.min(whites.length - 1, i))];
+  }
+
+  function pressPianoKey(midi) {
+    const sp = spellMidi(midi);
+    lightKeys([{ midi, name: sp.name }], 0, 700);
+    ghostNote = { dia: sp.dia, acc: sp.acc };
+    clearTimeout(ghostTimer);
+    ghostTimer = setTimeout(() => { ghostNote = null; drawStaff(); }, 1100);
+    drawStaff();
+    const sound = () => {
+      if (canSound()) synth.triggerAttackRelease(Tone.Frequency(midi, 'midi').toFrequency(), 1.0, Tone.now());
+    };
+    if (canSound()) sound();
+    else if (audioStarting) audioStarting.then(sound);
+    else return sound; // first touch: audio unlocks on touchend
+    return null;
+  }
+
+  function onPianoPress(clientX, clientY) {
+    if (drag) return null;
+    const rect = document.getElementById('piano-canvas').getBoundingClientRect();
+    const midi = pianoKeyAt(clientX - rect.left, clientY - rect.top);
+    return midi === null ? null : pressPianoKey(midi);
+  }
+
+  (function bindPiano() {
+    const canvas = document.getElementById('piano-canvas');
+    canvas.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      onPianoPress(e.clientX, e.clientY);
+    });
+    canvas.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const deferred = [];
+      Array.from(e.changedTouches).forEach(t => {
+        const later = onPianoPress(t.clientX, t.clientY);
+        if (later) deferred.push(later);
+      });
+      if (deferred.length) {
+        // Audio can only start on touchend — play these once it's unlocked
+        canvas.addEventListener('touchend', () => {
+          unlockAudio();
+          if (audioStarting) audioStarting.then(() => deferred.forEach(f => f()));
+        }, { once: true });
+      }
+    }, { passive: false });
+  })();
+
+  function drawGhostNote(ctx) {
+    if (!ghostNote || !L) return;
+    let i = slots.indexOf(chord);
+    if (i < 0) i = 0;
+    const x = slotX(i);
+    const y = yForDia(ghostNote.dia);
+    ctx.save();
+    ctx.globalAlpha = 0.55;
+    ctx.strokeStyle = '#2c3e50';
+    ctx.lineWidth = Math.max(2, L.ls * 0.08);
+    const ledger = d => {
+      const ly = yForDia(d);
+      ctx.beginPath(); ctx.moveTo(x - L.rx * 1.5, ly); ctx.lineTo(x + L.rx * 1.5, ly); ctx.stroke();
+    };
+    for (let d = BOTTOM_LINE_DIA - 2; d >= ghostNote.dia; d -= 2) ledger(d);
+    for (let d = BOTTOM_LINE_DIA + 10; d <= ghostNote.dia; d += 2) ledger(d);
+    ctx.restore();
+    drawWholeNote(ctx, x, y, '#0984e3', 0.55);
+
+    // Accidental to the left of the ghost
+    if (!ghostNote.acc) return;
+    const ls = L.ls;
+    const ax = x - L.rx - ls * 1.4;
+    ctx.save();
+    ctx.globalAlpha = 0.65;
+    if (ghostNote.acc === 'sharp' && sharpImg.complete && sharpImg.naturalWidth) {
+      const h = ls * 2.4, w = h * (304 / 608);
+      ctx.drawImage(sharpImg, ax, y - h / 2, w, h);
+    } else if (ghostNote.acc === 'flat' && flatImg.complete && flatImg.naturalWidth) {
+      const h = ls * 2.3, w = h * (227 / 584);
+      ctx.drawImage(flatImg, ax, y - h * 0.73, w, h);
+    } else if (ghostNote.acc === 'natural') {
+      // Natural sign: two stems joined by two slanted bars
+      ctx.strokeStyle = '#1f2d3d';
+      ctx.lineCap = 'butt';
+      const w = ls * 0.55;
+      ctx.lineWidth = ls * 0.1;
+      ctx.beginPath();
+      ctx.moveTo(ax, y - ls * 1.3); ctx.lineTo(ax, y + ls * 0.55);
+      ctx.moveTo(ax + w, y - ls * 0.55); ctx.lineTo(ax + w, y + ls * 1.3);
+      ctx.stroke();
+      ctx.lineWidth = ls * 0.28;
+      ctx.beginPath();
+      ctx.moveTo(ax, y - ls * 0.35); ctx.lineTo(ax + w, y - ls * 0.55);
+      ctx.moveTo(ax, y + ls * 0.55); ctx.lineTo(ax + w, y + ls * 0.35);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
   function clearKeys() {
     lightTimers.forEach(clearTimeout);
     lightTimers = [];
@@ -1114,6 +1255,7 @@
       if (slot.status) drawAnalysis(ctx, slot, x, statusColor);
     });
 
+    drawGhostNote(ctx);
     positionSlotButtons();
     positionResultActions();
     drawPiano();
