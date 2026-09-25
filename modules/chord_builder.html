@@ -19,6 +19,8 @@
     display: flex;
     flex-direction: column;
     user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
     touch-action: none;
   }
 
@@ -610,7 +612,18 @@
     freqs.forEach((f, i) => synth.triggerAttackRelease(f, 0.5, now + i * 0.32));
     synth.triggerAttackRelease(freqs, 1.6, now + freqs.length * 0.32 + 0.15);
   }
-  document.addEventListener('pointerdown', unlockAudio, true);
+  // Long-press: ignore completely — no context menu, text selection, or
+  // native image/SVG drag (the custom module input stays enabled for typing).
+  document.addEventListener('contextmenu', e => e.preventDefault(), true);
+  document.addEventListener('selectstart', e => {
+    if (!(e.target.closest && e.target.closest('input'))) e.preventDefault();
+  }, true);
+  document.addEventListener('dragstart', e => e.preventDefault(), true);
+
+  // Browsers only allow audio to start from a real user gesture. On touch
+  // screens touchstart/pointerdown don't count — touchend/pointerup do.
+  ['touchend', 'pointerup', 'mousedown', 'click', 'keydown'].forEach(evt =>
+    document.addEventListener(evt, unlockAudio, true));
 
   // ── Layout & drawing ─────────────────────────────────────────────────────
   const clefImg = new Image();
@@ -836,21 +849,65 @@
     const bin = document.getElementById('note-bin');
     bin.querySelectorAll('.note-chip').forEach(c => c.remove());
     if (!chord || chord.status) return;
-    const remaining = 2 - chord.placed.length - (drag && drag.source === 'bin' ? 1 : 0);
+    const remaining = 2 - chord.placed.length;
     for (let i = 0; i < remaining; i++) {
       const chip = document.createElement('div');
       chip.className = 'note-chip';
       chip.innerHTML = WHOLE_NOTE_SVG;
-      chip.addEventListener('pointerdown', e => {
-        if (e.button !== 0 && e.pointerType === 'mouse') return;
-        e.preventDefault();
-        startDrag('bin', null, e);
-      });
+      bindDragStart(chip, (x, y) => startDrag('bin', null, x, y, chip));
       bin.appendChild(chip);
     }
   }
 
-  let drag = null; // { source: 'bin'|'placed', fromDia, overDia, valid, clone, pointerId }
+  // Touch + mouse drag wiring (same approach as treble_clef_note_quiz, which
+  // is proven on the smartboard). The element that started the drag is never
+  // removed from the DOM mid-drag — touch events keep targeting it, and a
+  // detached target stops them from reaching the document listeners.
+  // onStart(x, y) returns true if a drag actually started.
+  function bindDragStart(el, onStart) {
+    el.addEventListener('mousedown', e => {
+      if (e.button !== 0 || drag) return;
+      if (!onStart(e.clientX, e.clientY)) return;
+      e.preventDefault();
+      const onMove = e => onDragMove(e.clientX, e.clientY);
+      const onUp = e => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        onDragEnd(e.clientX, e.clientY);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    el.addEventListener('touchstart', e => {
+      if (drag) { e.preventDefault(); return; }
+      const t = e.changedTouches[0];
+      if (!onStart(t.clientX, t.clientY)) return;
+      e.preventDefault();
+      const id = t.identifier;
+      const find = list => Array.from(list).find(tt => tt.identifier === id);
+      const onMove = e => {
+        const tt = find(e.changedTouches);
+        if (!tt) return;
+        e.preventDefault();
+        onDragMove(tt.clientX, tt.clientY);
+      };
+      const onEnd = e => {
+        const tt = find(e.changedTouches);
+        if (!tt) return;
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onEnd);
+        document.removeEventListener('touchcancel', onEnd);
+        if (e.type === 'touchcancel') onDragCancel();
+        else onDragEnd(tt.clientX, tt.clientY);
+      };
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend', onEnd);
+      document.addEventListener('touchcancel', onEnd);
+    }, { passive: false });
+  }
+
+  let drag = null; // { source: 'bin'|'placed', fromDia, overDia, valid, clone, chip }
 
   function isAllowed(dia) {
     if (!chord || chord.status) return false;
@@ -867,34 +924,31 @@
     return null;
   }
 
-  function startDrag(source, fromDia, e) {
-    if (!chord || chord.status || drag) return;
-    unlockAudio();
+  function startDrag(source, fromDia, x, y, chip) {
+    if (!chord || chord.status || drag) return false;
     const clone = document.createElement('div');
     clone.className = 'drag-clone';
     clone.innerHTML = WHOLE_NOTE_SVG;
     document.body.appendChild(clone);
-    drag = { source, fromDia, overDia: null, valid: false, clone, pointerId: e.pointerId };
+    drag = { source, fromDia, overDia: null, valid: false, clone, chip: chip || null };
+    if (chip) chip.style.visibility = 'hidden';
     if (source === 'placed') chord.placed = chord.placed.filter(d => d !== fromDia);
-    renderBin();
-    window.addEventListener('pointermove', onDragMove);
-    window.addEventListener('pointerup', onDragEnd);
-    window.addEventListener('pointercancel', onDragCancel);
-    onDragMove(e);
+    onDragMove(x, y);
+    return true;
   }
 
-  function staffPoint(e) {
+  function staffPoint(x, y) {
     const rect = document.getElementById('staff-zone').getBoundingClientRect();
-    const inside = e.clientX >= rect.left && e.clientX <= rect.right && e.clientY >= rect.top && e.clientY <= rect.bottom;
-    return { inside, x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const inside = x >= rect.left && x <= rect.right && y >= rect.top && y <= rect.bottom;
+    return { inside, x: x - rect.left, y: y - rect.top };
   }
 
-  function onDragMove(e) {
-    if (!drag || e.pointerId !== drag.pointerId) return;
-    const p = staffPoint(e);
+  function onDragMove(x, y) {
+    if (!drag) return;
+    const p = staffPoint(x, y);
     const c = drag.clone;
-    c.style.left = (e.clientX - c.offsetWidth / 2) + 'px';
-    c.style.top = (e.clientY - c.offsetHeight / 2) + 'px';
+    c.style.left = (x - (c.offsetWidth || 70) / 2) + 'px';
+    c.style.top = (y - (c.offsetHeight || 52) / 2) + 'px';
     c.style.display = p.inside ? 'none' : '';
     document.getElementById('staff-zone').classList.toggle('drop-target', p.inside);
     drag.overDia = p.inside ? diaForY(p.y) : null;
@@ -903,16 +957,14 @@
   }
 
   function endDragCleanup() {
-    window.removeEventListener('pointermove', onDragMove);
-    window.removeEventListener('pointerup', onDragEnd);
-    window.removeEventListener('pointercancel', onDragCancel);
     document.getElementById('staff-zone').classList.remove('drop-target');
     if (drag && drag.clone) drag.clone.remove();
+    if (drag && drag.chip) drag.chip.style.visibility = '';
   }
 
-  function onDragEnd(e) {
-    if (!drag || e.pointerId !== drag.pointerId) return;
-    onDragMove(e);
+  function onDragEnd(x, y) {
+    if (!drag) return;
+    onDragMove(x, y);
     const d = drag;
     endDragCleanup();
     drag = null;
@@ -933,8 +985,8 @@
     if (chord.placed.length === 2) evaluateChord();
   }
 
-  function onDragCancel(e) {
-    if (!drag || e.pointerId !== drag.pointerId) return;
+  function onDragCancel() {
+    if (!drag) return;
     if (drag.source === 'placed') chord.placed.push(drag.fromDia);
     endDragCleanup();
     drag = null;
@@ -943,14 +995,13 @@
   }
 
   // Pick up a placed note from the staff to move or remove it
-  document.getElementById('staff-canvas').addEventListener('pointerdown', e => {
-    if (!chord || chord.status || drag) return;
-    const p = staffPoint(e);
+  bindDragStart(document.getElementById('staff-canvas'), (x, y) => {
+    if (!chord || chord.status || drag) return false;
+    const p = staffPoint(x, y);
     const hit = chordNoteHits.find(n => n.dia !== chord.root &&
-      Math.abs(p.x - n.x) <= L.rx * 1.3 && Math.abs(p.y - n.y) <= L.ry * 1.4);
-    if (!hit) return;
-    e.preventDefault();
-    startDrag('placed', hit.dia, e);
+      Math.abs(p.x - n.x) <= L.rx * 1.5 && Math.abs(p.y - n.y) <= L.ry * 1.8);
+    if (!hit) return false;
+    return startDrag('placed', hit.dia, x, y);
   });
 
   // ── UI helpers ───────────────────────────────────────────────────────────

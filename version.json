@@ -1,5 +1,5 @@
 {
-  "version": "3.56.1",
+  "version": "3.56.2",
   "lastUpdated": "2026-09-25",
-  "description": "Add Chord Builder module: drag-and-drop triad building on a treble staff with key signatures, three modes (guided, root position only, test with scoring/retry), custom root patterns, and Tone.js piano playback"
+  "description": "Fix Chord Builder drag-and-drop on touch screens and ignore long-presses (no context menu)"
 }
