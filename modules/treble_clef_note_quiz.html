@@ -82,6 +82,45 @@
   }
   .hint-banner.show { display: block; }
 
+  .btn-hand { background: linear-gradient(135deg,#8e2de2,#c471ed); }
+
+  .hand-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.55);
+    align-items: center;
+    justify-content: center;
+    z-index: 600;
+  }
+  .hand-overlay.show { display: flex; }
+  .hand-frame {
+    position: relative;
+    background: #fff;
+    border-radius: 16px;
+    padding: 14px;
+    max-width: 90%;
+    max-height: 90%;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+  .hand-frame img { display: block; max-width: 100%; max-height: calc(90vh - 28px); }
+  .hand-close {
+    position: absolute;
+    top: -14px;
+    left: -14px;
+    width: 46px;
+    height: 46px;
+    border: none;
+    border-radius: 50%;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 26px;
+    font-weight: bold;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+  }
+
   .staff-wrap {
     flex: 1;
     min-height: 0;
@@ -218,6 +257,7 @@
   </div>
 
   <div class="hint-toolbar">
+    <button class="toolbar-btn btn-hand" id="hand-btn">&#9995; Hand Staff</button>
     <button class="toolbar-btn btn-hint" id="hint-btn">&#128161; Reveal Hint</button>
     <button class="toolbar-btn btn-reveal" id="reveal-g-btn">&#10132; Reveal G</button>
     <button class="toolbar-btn btn-reveal" id="reveal-lines-btn">&#128207; Reveal All Lines</button>
@@ -263,6 +303,13 @@
     <div class="panel-actions">
       <button class="btn-start" id="settings-close-btn">Done</button>
     </div>
+  </div>
+</div>
+
+<div id="hand-overlay" class="hand-overlay">
+  <div class="hand-frame">
+    <button class="hand-close" id="hand-close-btn" title="Close">&times;</button>
+    <img src="../assets/hands/hand_staff_treble_notes.png" alt="Hand staff showing treble clef notes on the fingers">
   </div>
 </div>
 
@@ -650,6 +697,13 @@
   document.getElementById('col-ext-all').addEventListener('change', e => { toggleColumn(EXT_IDS, e.target.checked); handleSettingsChange(); });
 
   document.getElementById('settings-btn').addEventListener('click', openSettingsOverlay);
+
+  document.getElementById('hand-btn').addEventListener('click', () => {
+    document.getElementById('hand-overlay').classList.add('show');
+  });
+  document.getElementById('hand-close-btn').addEventListener('click', () => {
+    document.getElementById('hand-overlay').classList.remove('show');
+  });
 
   document.getElementById('hint-btn').addEventListener('click', () => {
     const showHint = !document.getElementById('hint-banner').classList.contains('show');

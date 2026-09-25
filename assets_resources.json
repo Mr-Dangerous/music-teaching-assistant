@@ -497,9 +497,14 @@
           "type": "file",
           "name": "solfege_hand_sign_ti_labeled.png",
           "path": "hands/solfege_hand_sign_ti_labeled.png"
+        },
+        {
+          "type": "file",
+          "name": "hand_staff_treble_notes.png",
+          "path": "hands/hand_staff_treble_notes.png"
         }
       ],
-      "count": 14
+      "count": 15
     },
     {
       "type": "folder",
