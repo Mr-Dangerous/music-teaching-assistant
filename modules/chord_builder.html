@@ -823,8 +823,22 @@
     return out;
   }
 
+  // Notes of the current problem stay lit until the next problem starts
+  // (hidden during chord playback so only the sounding chord is lit).
+  function heldKeys() {
+    const held = new Map();
+    if (!chord || playingIndex >= 0 || sequencePlaying) return held;
+    [chord.root, ...chord.placed].forEach(d => {
+      const n = keyNote(d);
+      held.set(n.midi, { name: n.name });
+    });
+    return held;
+  }
+
   function drawPiano() {
     if (!settings.showPiano || !pianoW) return;
+    const held = heldKeys();
+    const litFor = m => litKeys.get(m) || held.get(m);
     const ctx = document.getElementById('piano-canvas').getContext('2d');
     const W = pianoW, H = pianoH;
     ctx.clearRect(0, 0, W, H);
@@ -836,7 +850,7 @@
 
     whites.forEach((m, i) => {
       const x = i * ww;
-      const lit = litKeys.get(m);
+      const lit = litFor(m);
       ctx.fillStyle = lit ? '#ffd200' : '#fff';
       ctx.strokeStyle = '#555';
       ctx.lineWidth = 1.5;
@@ -859,7 +873,7 @@
       const leftWhite = whites.indexOf(m - 1);
       if (leftWhite < 0) return;
       const x = (leftWhite + 1) * ww - bw / 2;
-      const lit = litKeys.get(m);
+      const lit = litFor(m);
       ctx.fillStyle = lit ? '#f7971e' : '#222';
       ctx.beginPath();
       if (ctx.roundRect) ctx.roundRect(x, 0, bw, bh, [0, 0, 4, 4]); else ctx.rect(x, 0, bw, bh);
@@ -1102,6 +1116,7 @@
 
     positionSlotButtons();
     positionResultActions();
+    drawPiano();
   }
 
   function drawKeySignature(ctx) {
