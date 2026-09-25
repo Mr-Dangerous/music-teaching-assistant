@@ -82,6 +82,17 @@
     touch-action: manipulation;
   }
   .slot-play.show { display: flex; }
+  .slot-play.check {
+    border-radius: 24px;
+    padding: 0 16px;
+    white-space: nowrap;
+    background: linear-gradient(135deg,#11998e,#38ef7d);
+    animation: check-pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes check-pulse {
+    0%, 100% { box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+    50% { box-shadow: 0 0 0 6px rgba(56,239,125,0.35); }
+  }
   .slot-play.playing { background: linear-gradient(135deg,#f7971e,#ffd200); color: #333; transform: translate(-50%, -50%) scale(1.15); }
   .btn-save { background: linear-gradient(135deg,#11998e,#38ef7d); }
 
@@ -353,7 +364,7 @@
       <label class="mode-opt"><input type="radio" name="mode" value="rootpos">
         <span>Lock to root position only<small>Given note is the root. Nothing can be placed below it, but mistakes are possible.</small></span></label>
       <label class="mode-opt"><input type="radio" name="mode" value="test">
-        <span>Test for root position triad<small>No limits. Each chord is scored right (green) or wrong (red).</small></span></label>
+        <span>Test for root position triad<small>No limits. Adjust freely, then press &#10003; Check to score each chord.</small></span></label>
     </div>
     <div class="section">
       <label class="mode-opt"><input type="checkbox" id="show-piano">
@@ -1373,7 +1384,12 @@
       const b = document.createElement('button');
       b.className = 'slot-play';
       b.innerHTML = '&#9654;';
-      b.addEventListener('click', () => { if (slots[i] && slots[i].status) playSequence([i], false); });
+      b.addEventListener('click', () => {
+        const slot = slots[i];
+        if (!slot) return;
+        if (awaitingCheck(slot)) checkSlot(slot);
+        else if (slot.status) playSequence([i], false);
+      });
       layer.appendChild(b);
     }
   }
@@ -1386,14 +1402,24 @@
       const slot = slots[i];
       // A wrong chord waiting on Retry/Next shows those buttons in this spot instead
       const hiddenByRetry = slot === chord && chord && chord.status === 'wrong' && resultActionsShowing();
-      const show = !!(L && slot && slot.status && !hiddenByRetry);
+      const check = !!(L && slot && awaitingCheck(slot));
+      const show = !!(L && slot && (slot.status || check) && !hiddenByRetry);
       b.classList.toggle('show', show);
+      b.classList.toggle('check', check);
       b.classList.toggle('playing', i === playingIndex);
       if (!show) return;
       const size = Math.max(40, Math.min(L.ls * 1.8, L.slotW * 0.8));
-      b.style.width = size + 'px';
-      b.style.height = size + 'px';
-      b.style.fontSize = (size * 0.42) + 'px';
+      if (check) {
+        b.innerHTML = '&#10003; Check';
+        b.style.width = 'auto';
+        b.style.height = Math.max(44, size) + 'px';
+        b.style.fontSize = Math.max(16, size * 0.38) + 'px';
+      } else {
+        b.innerHTML = '&#9654;';
+        b.style.width = size + 'px';
+        b.style.height = size + 'px';
+        b.style.fontSize = (size * 0.42) + 'px';
+      }
       b.style.left = slotX(i) + 'px';
       b.style.top = L.btnY + 'px';
     });
@@ -1589,6 +1615,21 @@
     }
   }
 
+  // Test mode: a built chord waits for the ✓ Check button instead of auto-grading
+  function awaitingCheck(slot) {
+    return settings.mode === 'test' && slot && !slot.status && slot.placed.length === 2 &&
+      !(drag && drag.slot === slot);
+  }
+  function checkSlot(slot) {
+    if (!awaitingCheck(slot)) return;
+    if (slot.pendingEdit) { slot.pendingEdit = false; finishEdit(slot); }
+    else evaluateChord(slot);
+  }
+  function promptCheck(slot) {
+    const n = slots.indexOf(slot) + 1;
+    setStatus(`${slot === chord ? '' : `Chord ${n}: `}Move a note if you need to, then press ✓ Check.`);
+  }
+
   function finishEdit(slot) {
     if (settings.mode === 'test' && slot.entry && !slot.savedAway) {
       slot.entry.retries++;
@@ -1632,7 +1673,14 @@
     if (d.source === 'edit') {
       if (d.overDia !== null && d.valid && d.overDia !== d.fromDia) {
         d.slot.placed.push(d.overDia);
-        finishEdit(d.slot);
+        if (settings.mode === 'test') {
+          d.slot.pendingEdit = true;
+          playNotes([d.overDia]);
+          promptCheck(d.slot);
+          drawStaff();
+        } else {
+          finishEdit(d.slot);
+        }
       } else {
         if (d.overDia !== null && d.overDia !== d.fromDia && !d.valid) {
           const reason = disallowReason(d.overDia);
@@ -1644,20 +1692,29 @@
       return;
     }
 
+    const slot = d.slot;
     if (d.overDia !== null && d.valid) {
-      chord.placed.push(d.overDia);
+      slot.placed.push(d.overDia);
       playNotes([d.overDia]);
     } else if (d.overDia !== null) {
       // Dropped on the staff in a disallowed spot → put a moved note back
-      if (d.source === 'placed') chord.placed.push(d.fromDia);
+      if (d.source === 'placed') slot.placed.push(d.fromDia);
       const reason = disallowReason(d.overDia);
       if (reason) showToast(reason, '#e67e22');
+    } else if (d.source === 'placed' && slot !== chord) {
+      // An older chord waiting for Check has no bin — keep its note
+      slot.placed.push(d.fromDia);
     }
     // Dropped off the staff: a moved note is removed, a bin note returns to the bin
 
     renderBin();
     drawStaff();
-    if (chord.placed.length === 2) evaluateChord();
+    if (slot.placed.length === 2) {
+      if (settings.mode === 'test') promptCheck(slot);
+      else evaluateChord(slot);
+    } else if (slot === chord && settings.mode === 'test') {
+      setStatus(`Build a triad on ${letterName(chord.root % 7, currentKey())}`);
+    }
   }
 
   function onDragCancel() {
@@ -1680,7 +1737,8 @@
       Math.abs(p.x - n.x) <= L.rx * 1.5 && Math.abs(p.y - n.y) <= L.ry * 1.8);
     if (!hit) return false;
     if (!hit.slot.status) {
-      return hit.slot === chord ? startDrag('placed', hit.dia, x, y) : false;
+      if (hit.slot === chord) return startDrag('placed', hit.dia, x, y);
+      return awaitingCheck(hit.slot) ? startDrag('placed', hit.dia, x, y, null, hit.slot) : false;
     }
     return { begin: (bx, by) => startDrag('edit', hit.dia, bx, by, null, hit.slot) };
   });

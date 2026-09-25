@@ -1,5 +1,5 @@
 {
-  "version": "3.62.1",
+  "version": "3.63.1",
   "lastUpdated": "2026-09-25",
-  "description": "Chord Builder: tap piano keys to play them, with a ghost note shown briefly on the staff"
+  "description": "Chord Builder: Test mode uses a Check button instead of auto-grading, so students can adjust notes first"
 }
