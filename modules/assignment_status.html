@@ -63,7 +63,10 @@
     .legend-dot.red { background: #ef4444; }
     .legend-dot.yellow { background: #f59e0b; }
     .legend-dot.green { background: #10b981; }
-    .legend-dot.blue { background: #3b82f6; }
+    /* Group colors are set inline per-dot from GROUP_COLORS in JS (legend
+       and card dots alike), so their shades stay in one place - notably the
+       group red/green use distinct dark tones from the status light's
+       red/green above so the two systems are never color-identical. */
 
     .status-message {
       padding: 16px;
@@ -138,9 +141,15 @@
     }
     .status-light.yellow { background: #f59e0b; }
     .status-light.green { background: #10b981; }
-    .blue-group-dot {
-      width: 18px;
-      height: 18px;
+    .group-dots-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      max-width: 92px;
+    }
+    .group-dot {
+      width: 14px;
+      height: 14px;
       border-radius: 50%;
       background: transparent;
       border: none;
@@ -148,8 +157,7 @@
       cursor: pointer;
       touch-action: manipulation;
     }
-    .blue-group-dot.active {
-      background: #3b82f6;
+    .group-dot.active {
       box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     }
     .student-name {
@@ -289,28 +297,31 @@
       text-decoration: underline;
       padding: 10px 4px;
     }
-    .blue-group-checkbox-row {
+    .group-checkbox-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 16px;
+      margin-bottom: 14px;
+    }
+    .group-checkbox-item {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 14px;
+      gap: 6px;
       font-size: 15px;
       font-weight: 600;
-      color: #1e3a8a;
+      color: #374151;
       cursor: pointer;
       width: fit-content;
     }
-    .blue-group-checkbox-row input[type="checkbox"] {
+    .group-checkbox-item input[type="checkbox"] {
       width: 20px;
       height: 20px;
       cursor: pointer;
-      accent-color: #3b82f6;
     }
-    .blue-group-checkbox-dot {
+    .group-checkbox-item-dot {
       width: 14px;
       height: 14px;
       border-radius: 50%;
-      background: #3b82f6;
     }
     .error-text {
       color: #ef4444;
@@ -328,7 +339,7 @@
       <span class="legend-item"><span class="legend-dot red"></span>Not turned in</span>
       <span class="legend-item"><span class="legend-dot yellow"></span>Turned in</span>
       <span class="legend-item"><span class="legend-dot green"></span>Done</span>
-      <span class="legend-item"><span class="legend-dot blue"></span>Blue Group</span>
+      <span id="group-legend-items"></span>
     </div>
   </div>
 
@@ -361,11 +372,7 @@
         <label for="note-input">Note</label>
         <textarea id="note-input" placeholder="Optional note..."></textarea>
       </div>
-      <label class="blue-group-checkbox-row">
-        <input type="checkbox" id="blue-group-checkbox">
-        <span class="blue-group-checkbox-dot"></span>
-        Blue Group
-      </label>
+      <div class="group-checkbox-list" id="group-checkbox-list"></div>
       <p class="error-text" id="score-error-text"></p>
       <div class="overlay-buttons">
         <button class="btn-save" id="score-save-btn">Save</button>
@@ -548,25 +555,35 @@
       return deriveStatus(response).status;
     }
 
-    // The "Blue Group" flag is a separate, independent marker for the same
-    // (student, assessment) pair - stored as its own row using a derived
-    // task_id (the assessment's id with a "_blue" suffix) rather than folded
-    // into the turned-in/scored response, so it can be on or off regardless
-    // of the main status and still shows up as its own glanceable row in
-    // results.csv.
-    function blueTaskId(assessmentId) {
-      return assessmentId + '_blue';
+    // Independent "group" color flags for the same (student, assessment)
+    // pair - each stored as its own row using a derived task_id (the
+    // assessment's id with a "_<color>" suffix) rather than folded into the
+    // turned-in/scored response, so any combination can be on or off
+    // regardless of the main status, and each still shows up as its own
+    // glanceable row in results.csv. Group red/green use distinct dark
+    // tones from the status light's red/green so the two systems are never
+    // color-identical.
+    const GROUP_COLORS = [
+      { key: 'blue',   label: 'Blue Group',   color: '#3b82f6' },
+      { key: 'purple', label: 'Purple Group', color: '#a855f7' },
+      { key: 'orange', label: 'Orange Group', color: '#f97316' },
+      { key: 'red',    label: 'Red Group',    color: '#991b1b' },
+      { key: 'green',  label: 'Green Group',  color: '#65a30d' }
+    ];
+
+    function groupTaskId(assessmentId, colorKey) {
+      return assessmentId + '_' + colorKey;
     }
 
-    function isBlueGroup(studentId) {
+    function isInGroup(studentId, colorKey) {
       if (!selectedAssessmentId) return false;
-      return studentResponses[studentId + ':' + blueTaskId(selectedAssessmentId)] === 'blue';
+      return studentResponses[studentId + ':' + groupTaskId(selectedAssessmentId, colorKey)] === colorKey;
     }
 
-    function toggleBlueGroup(student) {
+    function toggleGroup(student, colorKey) {
       if (!selectedAssessmentId) return;
-      const newResponse = isBlueGroup(student.id) ? '' : 'blue';
-      sendUpdate(student.id, blueTaskId(selectedAssessmentId), newResponse);
+      const newResponse = isInGroup(student.id, colorKey) ? '' : colorKey;
+      sendUpdate(student.id, groupTaskId(selectedAssessmentId, colorKey), newResponse);
     }
 
     function buildStudentCard(student) {
@@ -580,21 +597,29 @@
       const light = document.createElement('div');
       light.className = 'status-light ' + statusFor(student.id);
 
-      const blueDot = document.createElement('div');
-      blueDot.className = 'blue-group-dot' + (isBlueGroup(student.id) ? ' active' : '');
-      blueDot.title = 'Blue Group';
-      // Its own tap target, independent of the card's tap/long-press -
-      // stop the interaction from bubbling up so it doesn't also toggle
-      // turned-in or start the long-press timer.
-      blueDot.addEventListener('mousedown', (e) => e.stopPropagation());
-      blueDot.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
-      blueDot.addEventListener('click', (e) => {
-        e.stopPropagation();
-        toggleBlueGroup(student);
+      const groupDotsRow = document.createElement('div');
+      groupDotsRow.className = 'group-dots-row';
+
+      GROUP_COLORS.forEach(group => {
+        const dot = document.createElement('div');
+        dot.className = 'group-dot' + (isInGroup(student.id, group.key) ? ' active' : '');
+        dot.dataset.groupKey = group.key;
+        dot.style.background = isInGroup(student.id, group.key) ? group.color : 'transparent';
+        dot.title = group.label;
+        // Its own tap target, independent of the card's tap/long-press -
+        // stop the interaction from bubbling up so it doesn't also toggle
+        // turned-in or start the long-press timer.
+        dot.addEventListener('mousedown', (e) => e.stopPropagation());
+        dot.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+        dot.addEventListener('click', (e) => {
+          e.stopPropagation();
+          toggleGroup(student, group.key);
+        });
+        groupDotsRow.appendChild(dot);
       });
 
       lightRow.appendChild(light);
-      lightRow.appendChild(blueDot);
+      lightRow.appendChild(groupDotsRow);
 
       const name = document.createElement('div');
       name.className = 'student-name' + (student.present === false ? ' absent-label' : '');
@@ -613,10 +638,14 @@
       if (!card) return;
       const light = card.querySelector('.status-light');
       light.className = 'status-light ' + statusFor(studentId);
-      const blueDot = card.querySelector('.blue-group-dot');
-      if (blueDot) {
-        blueDot.className = 'blue-group-dot' + (isBlueGroup(studentId) ? ' active' : '');
-      }
+
+      GROUP_COLORS.forEach(group => {
+        const dot = card.querySelector(`.group-dot[data-group-key="${group.key}"]`);
+        if (!dot) return;
+        const active = isInGroup(studentId, group.key);
+        dot.className = 'group-dot' + (active ? ' active' : '');
+        dot.style.background = active ? group.color : 'transparent';
+      });
     }
 
     // Module-level (not per-card) press state, so a re-render triggered by an
@@ -731,7 +760,11 @@
 
       document.getElementById('note-input').value = hasScore ? (existing.note || '') : '';
       document.getElementById('score-error-text').style.display = 'none';
-      document.getElementById('blue-group-checkbox').checked = isBlueGroup(student.id);
+
+      GROUP_COLORS.forEach(group => {
+        const checkbox = document.getElementById('group-checkbox-' + group.key);
+        if (checkbox) checkbox.checked = isInGroup(student.id, group.key);
+      });
 
       document.getElementById('score-overlay').classList.add('open');
     }
@@ -773,32 +806,37 @@
       });
 
       sendUpdate(studentId, assessmentId, response);
-      applyBlueGroupCheckbox(studentId, assessmentId);
+      applyGroupCheckboxes(studentId, assessmentId);
       closeScorePopup();
     }
 
-    // Syncs the Blue Group flag to match the popup's checkbox, only sending
-    // an update if it actually changed from what's currently stored.
-    function applyBlueGroupCheckbox(studentId, assessmentId) {
-      const checked = document.getElementById('blue-group-checkbox').checked;
-      const currentlyBlue = studentResponses[studentId + ':' + blueTaskId(assessmentId)] === 'blue';
-      if (checked !== currentlyBlue) {
-        sendUpdate(studentId, blueTaskId(assessmentId), checked ? 'blue' : '');
-      }
+    // Syncs each group color flag to match the popup's checkboxes, only
+    // sending an update for colors that actually changed from what's
+    // currently stored.
+    function applyGroupCheckboxes(studentId, assessmentId) {
+      GROUP_COLORS.forEach(group => {
+        const checkbox = document.getElementById('group-checkbox-' + group.key);
+        if (!checkbox) return;
+        const checked = checkbox.checked;
+        const currentlyActive = studentResponses[studentId + ':' + groupTaskId(assessmentId, group.key)] === group.key;
+        if (checked !== currentlyActive) {
+          sendUpdate(studentId, groupTaskId(assessmentId, group.key), checked ? group.key : '');
+        }
+      });
     }
 
     // Hand the assessment back to the student: clears any score, leaves it
     // as "turned in" (yellow) so it shows up to be re-graded once resubmitted.
     function returnToStudent() {
       sendUpdate(activeStudentId, activeAssessment.assessment_id, 'turned in');
-      applyBlueGroupCheckbox(activeStudentId, activeAssessment.assessment_id);
+      applyGroupCheckboxes(activeStudentId, activeAssessment.assessment_id);
       closeScorePopup();
     }
 
     // Fully clears the result - back to "not turned in" (red).
     function markNotTurnedIn() {
       sendUpdate(activeStudentId, activeAssessment.assessment_id, '');
-      applyBlueGroupCheckbox(activeStudentId, activeAssessment.assessment_id);
+      applyGroupCheckboxes(activeStudentId, activeAssessment.assessment_id);
       closeScorePopup();
     }
 
@@ -879,6 +917,31 @@
       e.preventDefault();
       return false;
     });
+
+    // Builds the group-color legend entries and the popup's checkbox list
+    // from GROUP_COLORS, so the color set only has to be defined once.
+    function buildGroupUI() {
+      const legendContainer = document.getElementById('group-legend-items');
+      const checkboxContainer = document.getElementById('group-checkbox-list');
+
+      GROUP_COLORS.forEach(group => {
+        const legendItem = document.createElement('span');
+        legendItem.className = 'legend-item';
+        legendItem.innerHTML = `<span class="legend-dot" style="background:${group.color}"></span>${group.label}`;
+        legendContainer.appendChild(legendItem);
+
+        const checkboxLabel = document.createElement('label');
+        checkboxLabel.className = 'group-checkbox-item';
+        checkboxLabel.innerHTML = `
+          <input type="checkbox" id="group-checkbox-${group.key}">
+          <span class="group-checkbox-item-dot" style="background:${group.color}"></span>
+          ${group.label}
+        `;
+        checkboxContainer.appendChild(checkboxLabel);
+      });
+    }
+
+    buildGroupUI();
   </script>
 </body>
 </html>

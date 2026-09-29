@@ -236,28 +236,31 @@
       text-decoration: underline;
       padding: 10px 4px;
     }
-    .blue-group-checkbox-row {
+    .group-checkbox-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 16px;
+      margin-bottom: 14px;
+    }
+    .group-checkbox-item {
       display: flex;
       align-items: center;
-      gap: 8px;
-      margin-bottom: 14px;
+      gap: 6px;
       font-size: 15px;
       font-weight: 600;
-      color: #1e3a8a;
+      color: #374151;
       cursor: pointer;
       width: fit-content;
     }
-    .blue-group-checkbox-row input[type="checkbox"] {
+    .group-checkbox-item input[type="checkbox"] {
       width: 20px;
       height: 20px;
       cursor: pointer;
-      accent-color: #3b82f6;
     }
-    .blue-group-checkbox-dot {
+    .group-checkbox-item-dot {
       width: 14px;
       height: 14px;
       border-radius: 50%;
-      background: #3b82f6;
     }
     .error-text {
       color: #ef4444;
@@ -299,11 +302,7 @@
         <label for="note-input">Note</label>
         <textarea id="note-input" placeholder="Optional note..."></textarea>
       </div>
-      <label class="blue-group-checkbox-row">
-        <input type="checkbox" id="blue-group-checkbox">
-        <span class="blue-group-checkbox-dot"></span>
-        Blue Group
-      </label>
+      <div class="group-checkbox-list" id="group-checkbox-list"></div>
       <p class="error-text" id="score-error-text"></p>
       <div class="overlay-buttons">
         <button class="btn-save" id="score-save-btn">Save</button>
@@ -490,26 +489,57 @@
 
     let currentScoreValue = 0;
 
-    // The "Blue Group" flag (shared with the Assignment Status module) is
-    // stored as its own row using a derived task_id (the assessment's id
-    // with a "_blue" suffix), independent of the turned-in/scored response.
-    function blueTaskId(assessmentId) {
-      return assessmentId + '_blue';
+    // Independent "group" color flags (shared with the Assignment Status
+    // module) are each stored as their own row using a derived task_id (the
+    // assessment's id with a "_<color>" suffix), independent of the
+    // turned-in/scored response. Group red/green use distinct dark tones
+    // from the status colors used elsewhere so the two systems never look
+    // color-identical.
+    const GROUP_COLORS = [
+      { key: 'blue',   label: 'Blue Group',   color: '#3b82f6' },
+      { key: 'purple', label: 'Purple Group', color: '#a855f7' },
+      { key: 'orange', label: 'Orange Group', color: '#f97316' },
+      { key: 'red',    label: 'Red Group',    color: '#991b1b' },
+      { key: 'green',  label: 'Green Group',  color: '#65a30d' }
+    ];
+
+    function groupTaskId(assessmentId, colorKey) {
+      return assessmentId + '_' + colorKey;
     }
 
-    function isBlueGroup(assessmentId) {
-      return studentResponses[blueTaskId(assessmentId)] === 'blue';
+    function isInGroup(assessmentId, colorKey) {
+      return studentResponses[groupTaskId(assessmentId, colorKey)] === colorKey;
     }
 
-    // Syncs the Blue Group flag to match the popup's checkbox, only sending
-    // an update if it actually changed from what's currently stored.
-    function applyBlueGroupCheckbox(assessmentId) {
-      const checked = document.getElementById('blue-group-checkbox').checked;
-      const currentlyBlue = isBlueGroup(assessmentId);
-      if (checked !== currentlyBlue) {
-        sendResult(blueTaskId(assessmentId), checked ? 'blue' : '');
-      }
+    // Syncs each group color flag to match the popup's checkboxes, only
+    // sending an update for colors that actually changed from what's
+    // currently stored.
+    function applyGroupCheckboxes(assessmentId) {
+      GROUP_COLORS.forEach(group => {
+        const checkbox = document.getElementById('group-checkbox-' + group.key);
+        if (!checkbox) return;
+        const checked = checkbox.checked;
+        if (checked !== isInGroup(assessmentId, group.key)) {
+          sendResult(groupTaskId(assessmentId, group.key), checked ? group.key : '');
+        }
+      });
     }
+
+    function buildGroupUI() {
+      const checkboxContainer = document.getElementById('group-checkbox-list');
+      GROUP_COLORS.forEach(group => {
+        const checkboxLabel = document.createElement('label');
+        checkboxLabel.className = 'group-checkbox-item';
+        checkboxLabel.innerHTML = `
+          <input type="checkbox" id="group-checkbox-${group.key}">
+          <span class="group-checkbox-item-dot" style="background:${group.color}"></span>
+          ${group.label}
+        `;
+        checkboxContainer.appendChild(checkboxLabel);
+      });
+    }
+
+    buildGroupUI();
 
     function openScorePopup(assessment) {
       activeAssessment = assessment;
@@ -528,7 +558,11 @@
 
       document.getElementById('note-input').value = hasScore ? (existing.note || '') : '';
       document.getElementById('score-error-text').style.display = 'none';
-      document.getElementById('blue-group-checkbox').checked = isBlueGroup(assessment.assessment_id);
+
+      GROUP_COLORS.forEach(group => {
+        const checkbox = document.getElementById('group-checkbox-' + group.key);
+        if (checkbox) checkbox.checked = isInGroup(assessment.assessment_id, group.key);
+      });
 
       document.getElementById('score-overlay').classList.add('open');
     }
@@ -568,7 +602,7 @@
       });
 
       sendResult(assessmentId, response);
-      applyBlueGroupCheckbox(assessmentId);
+      applyGroupCheckboxes(assessmentId);
       closeScorePopup();
     }
 
@@ -577,7 +611,7 @@
     function returnToStudent() {
       const assessmentId = activeAssessment.assessment_id;
       sendResult(assessmentId, 'turned in');
-      applyBlueGroupCheckbox(assessmentId);
+      applyGroupCheckboxes(assessmentId);
       closeScorePopup();
     }
 
@@ -585,7 +619,7 @@
     function markNotTurnedIn() {
       const assessmentId = activeAssessment.assessment_id;
       sendResult(assessmentId, '');
-      applyBlueGroupCheckbox(assessmentId);
+      applyGroupCheckboxes(assessmentId);
       closeScorePopup();
     }
 
