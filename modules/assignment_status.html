@@ -63,6 +63,7 @@
     .legend-dot.red { background: #ef4444; }
     .legend-dot.yellow { background: #f59e0b; }
     .legend-dot.green { background: #10b981; }
+    .legend-dot.blue { background: #3b82f6; }
 
     .status-message {
       padding: 16px;
@@ -98,17 +99,17 @@
     }
     .class-section-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 12px;
     }
     .student-card {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 8px;
-      padding: 12px 8px;
-      border-radius: 15px;
+      gap: 10px;
+      padding: 15px 10px;
+      border-radius: 18px;
       border: none;
       cursor: pointer;
       font-family: inherit;
@@ -123,17 +124,36 @@
     .student-card.absent {
       opacity: 0.4;
     }
+    .status-light-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
     .status-light {
-      width: 34px;
-      height: 34px;
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
       background: #ef4444;
       box-shadow: 0 2px 4px rgba(0,0,0,0.15);
     }
     .status-light.yellow { background: #f59e0b; }
     .status-light.green { background: #10b981; }
+    .blue-group-dot {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: transparent;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .blue-group-dot.active {
+      background: #3b82f6;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+    }
     .student-name {
-      font-size: 14px;
+      font-size: 18px;
       font-weight: 600;
       text-align: center;
       color: #1f2937;
@@ -238,6 +258,8 @@
     .overlay-buttons {
       display: flex;
       justify-content: flex-start;
+      align-items: center;
+      flex-wrap: wrap;
       gap: 10px;
       margin-top: 4px;
     }
@@ -257,6 +279,16 @@
       background: #e5e7eb;
       color: #374151;
     }
+    .btn-return {
+      background: linear-gradient(135deg, #fde68a 0%, #fbbf24 100%);
+      color: #78350f;
+    }
+    .btn-clear {
+      background: none;
+      color: #ef4444;
+      text-decoration: underline;
+      padding: 10px 4px;
+    }
     .error-text {
       color: #ef4444;
       font-size: 13px;
@@ -273,6 +305,7 @@
       <span class="legend-item"><span class="legend-dot red"></span>Not turned in</span>
       <span class="legend-item"><span class="legend-dot yellow"></span>Turned in</span>
       <span class="legend-item"><span class="legend-dot green"></span>Done</span>
+      <span class="legend-item"><span class="legend-dot blue"></span>Blue Group</span>
     </div>
   </div>
 
@@ -308,14 +341,16 @@
       <p class="error-text" id="score-error-text"></p>
       <div class="overlay-buttons">
         <button class="btn-save" id="score-save-btn">Save</button>
+        <button class="btn-return" id="score-return-btn">Return to Student</button>
         <button class="btn-cancel" id="score-cancel-btn">Cancel</button>
+        <button class="btn-clear" id="score-clear-btn">Mark not turned in</button>
       </div>
     </div>
   </div>
 
   <script>
     let moduleContext = null;
-    let allAssessments = [];          // grade-filtered assessment definitions
+    let allAssessments = [];          // all assessment definitions
     let selectedAssessmentId = null;
     let definitionsRequestTimeout = null;
 
@@ -405,7 +440,7 @@
       if (allAssessments.length === 0) {
         const opt = document.createElement('option');
         opt.value = '';
-        opt.textContent = 'No assessments yet for this grade';
+        opt.textContent = 'No assessments yet';
         select.appendChild(opt);
         return;
       }
@@ -427,22 +462,12 @@
       return allAssessments.find(a => a.assessment_id === id) || null;
     }
 
-    // All grades actually present among the currently loaded students - when
-    // multiple classes of different grades are combined, an assessment from
-    // ANY of those grades is relevant, not just the clicked student's own
-    // grade. Assessment titles are unique, so listing multiple grades'
-    // assessments together in one dropdown is unambiguous.
-    function getPresentGrades() {
-      if (!moduleContext || !moduleContext.classStudents) return new Set();
-      return new Set(moduleContext.classStudents.map(s => s.grade));
-    }
-
     function renderGrid() {
       const statusEl = document.getElementById('status-message');
       const gridEl = document.getElementById('student-grid');
 
       if (allAssessments.length === 0) {
-        statusEl.textContent = 'No written assessments yet for this grade level. Create one in Written Assessment Scorer first.';
+        statusEl.textContent = 'No written assessments yet. Create one in Written Assessment Scorer first.';
         statusEl.style.display = 'block';
         gridEl.style.display = 'none';
         return;
@@ -458,33 +483,18 @@
       // Cancel any in-flight long-press before the pressed card is torn down.
       cancelActivePress();
 
-      // Only show students who are actually eligible for the selected
-      // assessment's grade - relevant when combined classes span more than
-      // one grade (an assessment only applies to its own grade).
-      const selectedAssessment = getAssessmentById(selectedAssessmentId);
-      const eligibleStudents = selectedAssessment
-        ? moduleContext.classStudents.filter(s => s.grade === selectedAssessment.grade)
-        : moduleContext.classStudents;
-
-      if (eligibleStudents.length === 0) {
-        statusEl.textContent = 'No students in the selected grade for this assessment.';
-        statusEl.style.display = 'block';
-        gridEl.style.display = 'none';
-        return;
-      }
-
       statusEl.style.display = 'none';
       gridEl.style.display = 'flex';
       gridEl.innerHTML = '';
 
-      // Group by class - when multiple classes are combined (eligibleStudents
+      // Group by class - when multiple classes are combined (classStudents
       // spans more than one), show each as its own labeled section so the grid
       // stays scannable rather than one long mixed list of names.
-      const classNames = [...new Set(eligibleStudents.map(s => s.class))].sort();
+      const classNames = [...new Set(moduleContext.classStudents.map(s => s.class))].sort();
       const showHeadings = classNames.length > 1;
 
       classNames.forEach(className => {
-        const studentsInClass = eligibleStudents
+        const studentsInClass = moduleContext.classStudents
           .filter(s => s.class === className)
           .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -510,19 +520,59 @@
       return deriveStatus(response).status;
     }
 
+    // The "Blue Group" flag is a separate, independent marker for the same
+    // (student, assessment) pair - stored as its own row using a derived
+    // task_id (the assessment's id with a "_blue" suffix) rather than folded
+    // into the turned-in/scored response, so it can be on or off regardless
+    // of the main status and still shows up as its own glanceable row in
+    // results.csv.
+    function blueTaskId(assessmentId) {
+      return assessmentId + '_blue';
+    }
+
+    function isBlueGroup(studentId) {
+      if (!selectedAssessmentId) return false;
+      return studentResponses[studentId + ':' + blueTaskId(selectedAssessmentId)] === 'blue';
+    }
+
+    function toggleBlueGroup(student) {
+      if (!selectedAssessmentId) return;
+      const newResponse = isBlueGroup(student.id) ? '' : 'blue';
+      sendUpdate(student.id, blueTaskId(selectedAssessmentId), newResponse);
+    }
+
     function buildStudentCard(student) {
       const card = document.createElement('button');
       card.className = 'student-card' + (student.present === false ? ' absent' : '');
       card.dataset.studentId = student.id;
 
+      const lightRow = document.createElement('div');
+      lightRow.className = 'status-light-row';
+
       const light = document.createElement('div');
       light.className = 'status-light ' + statusFor(student.id);
+
+      const blueDot = document.createElement('div');
+      blueDot.className = 'blue-group-dot' + (isBlueGroup(student.id) ? ' active' : '');
+      blueDot.title = 'Blue Group';
+      // Its own tap target, independent of the card's tap/long-press -
+      // stop the interaction from bubbling up so it doesn't also toggle
+      // turned-in or start the long-press timer.
+      blueDot.addEventListener('mousedown', (e) => e.stopPropagation());
+      blueDot.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+      blueDot.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleBlueGroup(student);
+      });
+
+      lightRow.appendChild(light);
+      lightRow.appendChild(blueDot);
 
       const name = document.createElement('div');
       name.className = 'student-name' + (student.present === false ? ' absent-label' : '');
       name.textContent = student.name;
 
-      card.appendChild(light);
+      card.appendChild(lightRow);
       card.appendChild(name);
 
       attachPressHandlers(card, student);
@@ -535,6 +585,10 @@
       if (!card) return;
       const light = card.querySelector('.status-light');
       light.className = 'status-light ' + statusFor(studentId);
+      const blueDot = card.querySelector('.blue-group-dot');
+      if (blueDot) {
+        blueDot.className = 'blue-group-dot' + (isBlueGroup(studentId) ? ' active' : '');
+      }
     }
 
     // Module-level (not per-card) press state, so a re-render triggered by an
@@ -691,6 +745,19 @@
       closeScorePopup();
     }
 
+    // Hand the assessment back to the student: clears any score, leaves it
+    // as "turned in" (yellow) so it shows up to be re-graded once resubmitted.
+    function returnToStudent() {
+      sendUpdate(activeStudentId, activeAssessment.assessment_id, 'turned in');
+      closeScorePopup();
+    }
+
+    // Fully clears the result - back to "not turned in" (red).
+    function markNotTurnedIn() {
+      sendUpdate(activeStudentId, activeAssessment.assessment_id, '');
+      closeScorePopup();
+    }
+
     window.TaskModule = {
       init: function(context) {
         moduleContext = context;
@@ -715,11 +782,11 @@
         window.TaskModule.init(data.context);
       } else if (data.type === 'assessmentdef:data') {
         clearTimeout(definitionsRequestTimeout);
-        allAssessments = (data.assessments || []).filter(a => getPresentGrades().has(a.grade));
+        allAssessments = data.assessments || [];
         populateAssessmentSelect();
         renderGrid();
       } else if (data.type === 'assessmentdef:saved') {
-        allAssessments = (data.assessments || allAssessments).filter(a => getPresentGrades().has(a.grade));
+        allAssessments = data.assessments || allAssessments;
         populateAssessmentSelect();
         renderGrid();
       } else if (data.type === 'assessmentresult:saved') {
@@ -753,7 +820,9 @@
     });
 
     document.getElementById('score-save-btn').addEventListener('click', saveScore);
+    document.getElementById('score-return-btn').addEventListener('click', returnToStudent);
     document.getElementById('score-cancel-btn').addEventListener('click', closeScorePopup);
+    document.getElementById('score-clear-btn').addEventListener('click', markNotTurnedIn);
     document.getElementById('score-minus-5').addEventListener('click', () => adjustScore(-5));
     document.getElementById('score-minus-1').addEventListener('click', () => adjustScore(-1));
     document.getElementById('score-plus-1').addEventListener('click', () => adjustScore(1));

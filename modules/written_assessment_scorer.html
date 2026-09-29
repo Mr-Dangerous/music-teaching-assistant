@@ -205,6 +205,8 @@
     .overlay-buttons {
       display: flex;
       justify-content: flex-start;
+      align-items: center;
+      flex-wrap: wrap;
       gap: 10px;
       margin-top: 4px;
     }
@@ -223,6 +225,16 @@
     .btn-cancel {
       background: #e5e7eb;
       color: #374151;
+    }
+    .btn-return {
+      background: linear-gradient(135deg, #fde68a 0%, #fbbf24 100%);
+      color: #78350f;
+    }
+    .btn-clear {
+      background: none;
+      color: #ef4444;
+      text-decoration: underline;
+      padding: 10px 4px;
     }
     .error-text {
       color: #ef4444;
@@ -267,7 +279,9 @@
       <p class="error-text" id="score-error-text"></p>
       <div class="overlay-buttons">
         <button class="btn-save" id="score-save-btn">Save</button>
+        <button class="btn-return" id="score-return-btn">Return to Student</button>
         <button class="btn-cancel" id="score-cancel-btn">Cancel</button>
+        <button class="btn-clear" id="score-clear-btn">Mark not turned in</button>
       </div>
     </div>
   </div>
@@ -276,7 +290,6 @@
   <div id="new-assessment-overlay" class="overlay-backdrop">
     <div class="overlay-box">
       <h3>New Assessment</h3>
-      <p class="overlay-hint" id="new-assessment-grade-hint"></p>
       <div class="form-row">
         <label for="new-title-input">Title</label>
         <input type="text" id="new-title-input" placeholder="e.g. Rhythm Quiz #1">
@@ -398,22 +411,17 @@
       }, 4000);
     }
 
-    function gradeAssessments() {
-      if (!moduleContext) return [];
-      return allAssessments.filter(a => a.grade === moduleContext.grade);
-    }
-
     function renderList() {
       const statusEl = document.getElementById('status-message');
       const listEl = document.getElementById('assessment-list');
       const newBtn = document.getElementById('new-assessment-btn');
 
-      const gradeItems = gradeAssessments();
+      const gradeItems = allAssessments;
 
       newBtn.style.display = 'inline-block';
 
       if (gradeItems.length === 0) {
-        statusEl.textContent = 'No written assessments yet for this grade. Create one to get started.';
+        statusEl.textContent = 'No written assessments yet. Create one to get started.';
         statusEl.style.display = 'block';
         listEl.style.display = 'none';
         return;
@@ -512,13 +520,24 @@
       closeScorePopup();
     }
 
+    // Hand the assessment back to the student: clears any score, leaves it
+    // as "turned in" so it shows up to be re-graded once resubmitted.
+    function returnToStudent() {
+      sendResult(activeAssessment.assessment_id, 'turned in');
+      closeScorePopup();
+    }
+
+    // Fully clears the result - back to "not turned in".
+    function markNotTurnedIn() {
+      sendResult(activeAssessment.assessment_id, '');
+      closeScorePopup();
+    }
+
     function openNewAssessmentPopup() {
       document.getElementById('new-title-input').value = '';
       document.getElementById('new-min-input').value = '0';
       document.getElementById('new-max-input').value = '10';
       document.getElementById('new-assessment-error-text').style.display = 'none';
-      document.getElementById('new-assessment-grade-hint').textContent =
-        moduleContext ? `This assessment will be created for grade ${moduleContext.grade}.` : '';
       document.getElementById('new-assessment-overlay').classList.add('open');
     }
 
@@ -546,7 +565,7 @@
       window.parent.postMessage({
         type: 'assessmentdef:save',
         title: title,
-        grade: moduleContext ? moduleContext.grade : '',
+        grade: '', // Assessments are no longer grade-scoped; kept for CSV compatibility.
         min_score: min,
         max_score: max
       }, '*');
@@ -626,7 +645,9 @@
 
     document.getElementById('new-assessment-btn').addEventListener('click', openNewAssessmentPopup);
     document.getElementById('score-save-btn').addEventListener('click', saveScore);
+    document.getElementById('score-return-btn').addEventListener('click', returnToStudent);
     document.getElementById('score-cancel-btn').addEventListener('click', closeScorePopup);
+    document.getElementById('score-clear-btn').addEventListener('click', markNotTurnedIn);
     document.getElementById('score-minus-5').addEventListener('click', () => adjustScore(-5));
     document.getElementById('score-minus-1').addEventListener('click', () => adjustScore(-1));
     document.getElementById('score-plus-1').addEventListener('click', () => adjustScore(1));
