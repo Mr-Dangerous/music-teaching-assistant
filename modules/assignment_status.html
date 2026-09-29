@@ -289,6 +289,29 @@
       text-decoration: underline;
       padding: 10px 4px;
     }
+    .blue-group-checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 14px;
+      font-size: 15px;
+      font-weight: 600;
+      color: #1e3a8a;
+      cursor: pointer;
+      width: fit-content;
+    }
+    .blue-group-checkbox-row input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+      accent-color: #3b82f6;
+    }
+    .blue-group-checkbox-dot {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #3b82f6;
+    }
     .error-text {
       color: #ef4444;
       font-size: 13px;
@@ -338,6 +361,11 @@
         <label for="note-input">Note</label>
         <textarea id="note-input" placeholder="Optional note..."></textarea>
       </div>
+      <label class="blue-group-checkbox-row">
+        <input type="checkbox" id="blue-group-checkbox">
+        <span class="blue-group-checkbox-dot"></span>
+        Blue Group
+      </label>
       <p class="error-text" id="score-error-text"></p>
       <div class="overlay-buttons">
         <button class="btn-save" id="score-save-btn">Save</button>
@@ -703,6 +731,7 @@
 
       document.getElementById('note-input').value = hasScore ? (existing.note || '') : '';
       document.getElementById('score-error-text').style.display = 'none';
+      document.getElementById('blue-group-checkbox').checked = isBlueGroup(student.id);
 
       document.getElementById('score-overlay').classList.add('open');
     }
@@ -735,26 +764,41 @@
 
     function saveScore() {
       const noteInput = document.getElementById('note-input');
+      const studentId = activeStudentId;
+      const assessmentId = activeAssessment.assessment_id;
 
       const response = JSON.stringify({
         score: currentScoreValue,
         note: noteInput.value
       });
 
-      sendUpdate(activeStudentId, activeAssessment.assessment_id, response);
+      sendUpdate(studentId, assessmentId, response);
+      applyBlueGroupCheckbox(studentId, assessmentId);
       closeScorePopup();
+    }
+
+    // Syncs the Blue Group flag to match the popup's checkbox, only sending
+    // an update if it actually changed from what's currently stored.
+    function applyBlueGroupCheckbox(studentId, assessmentId) {
+      const checked = document.getElementById('blue-group-checkbox').checked;
+      const currentlyBlue = studentResponses[studentId + ':' + blueTaskId(assessmentId)] === 'blue';
+      if (checked !== currentlyBlue) {
+        sendUpdate(studentId, blueTaskId(assessmentId), checked ? 'blue' : '');
+      }
     }
 
     // Hand the assessment back to the student: clears any score, leaves it
     // as "turned in" (yellow) so it shows up to be re-graded once resubmitted.
     function returnToStudent() {
       sendUpdate(activeStudentId, activeAssessment.assessment_id, 'turned in');
+      applyBlueGroupCheckbox(activeStudentId, activeAssessment.assessment_id);
       closeScorePopup();
     }
 
     // Fully clears the result - back to "not turned in" (red).
     function markNotTurnedIn() {
       sendUpdate(activeStudentId, activeAssessment.assessment_id, '');
+      applyBlueGroupCheckbox(activeStudentId, activeAssessment.assessment_id);
       closeScorePopup();
     }
 
