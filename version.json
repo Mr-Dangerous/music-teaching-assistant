@@ -1,5 +1,5 @@
 {
-  "version": "3.68.1",
+  "version": "3.69.1",
   "lastUpdated": "2026-10-01",
-  "description": "Treble Clef Note Quiz: add multi-note rounds (1-8 notes) and a draggable/resizable floating Hand Staff reference window"
+  "description": "Treble Clef Note Quiz: allow correcting any note in a multi-note round (before or after completion) by dropping a new letter onto it"
 }

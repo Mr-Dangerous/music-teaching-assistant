@@ -506,7 +506,10 @@
   let dragLetter = null, dragClone = null, dragChip = null;
 
   function startDrag(chip, x, y) {
-    if (answered || roundTargets.length === 0) return;
+    if (roundTargets.length === 0) return;
+    // Single-note mode locks in immediately (by design); multi-note rounds
+    // stay open for correction even after every note has been answered.
+    if (roundTargets.length === 1 && answered) return;
     dragLetter = chip.dataset.letter;
     dragChip = chip;
     dragClone = chip.cloneNode(true);
@@ -536,7 +539,7 @@
 
     const under = document.elementFromPoint(x, y);
     const overStaff = under && under.closest('[data-zone="staff"]');
-    if (overStaff && !answered && roundTargets.length) {
+    if (overStaff && roundTargets.length) {
       const rect = document.getElementById('staff-zone').getBoundingClientRect();
       submitAnswer(dragLetter, x - rect.left, y - rect.top);
     }
@@ -601,10 +604,12 @@
   }
 
   function submitAnswer(letter, dropX, dropY) {
-    const unanswered = roundTargets.filter(t => !t.answered);
-    if (!unanswered.length) return;
+    if (!roundTargets.length) return;
 
-    const target = nearestTarget(unanswered, dropX, dropY);
+    // Nearest target by drop position — among ALL targets, not just
+    // unanswered ones, so dropping onto an already-answered note (in a
+    // multi-note round) corrects it instead of being ignored.
+    const target = nearestTarget(roundTargets, dropX, dropY);
     target.answered = true;
     target.letter = letter;
     target.correct = letter === target.position.letter;
@@ -614,17 +619,19 @@
   }
 
   function finishRound() {
+    const isCorrection = answered; // already true means this is a re-finish after a correction
     answered = true;
     const correctCount = roundTargets.filter(t => t.correct).length;
     const allCorrect = correctCount === roundTargets.length;
     lastResponse = roundTargets.map(t => `${t.position.id}|${t.letter}`).join(',');
 
-    showToast(
-      roundTargets.length === 1
+    const label = isCorrection
+      ? `Updated: ${correctCount}/${roundTargets.length} correct`
+      : roundTargets.length === 1
         ? (allCorrect ? `Correct! It's ${roundTargets[0].position.letter}` : `Not quite — that was ${roundTargets[0].position.letter}`)
-        : `Round complete: ${correctCount}/${roundTargets.length} correct`,
-      allCorrect ? '#2ecc71' : (correctCount === 0 ? '#e74c3c' : '#e67e22')
-    );
+        : `Round complete: ${correctCount}/${roundTargets.length} correct`;
+
+    showToast(label, allCorrect ? '#2ecc71' : (correctCount === 0 ? '#e74c3c' : '#e67e22'));
 
     window.parent.postMessage({
       type: 'taskmodule:response',
