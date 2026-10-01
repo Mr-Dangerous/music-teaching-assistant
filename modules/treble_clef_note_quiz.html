@@ -84,41 +84,73 @@
 
   .btn-hand { background: linear-gradient(135deg,#8e2de2,#c471ed); }
 
-  .hand-overlay {
+  /* Floating, draggable, resizable hand-staff reference window */
+  .hand-frame {
     display: none;
     position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.55);
+    z-index: 600;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+    min-width: 160px;
+    min-height: 120px;
+  }
+  .hand-frame.show { display: block; }
+  .hand-titlebar {
+    display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 600;
+    height: 26px;
+    background: linear-gradient(135deg,#8e2de2,#c471ed);
+    border-radius: 14px 14px 0 0;
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
   }
-  .hand-overlay.show { display: flex; }
-  .hand-frame {
-    position: relative;
-    background: #fff;
-    border-radius: 16px;
-    padding: 14px;
-    max-width: 90%;
-    max-height: 90%;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  .hand-titlebar:active { cursor: grabbing; }
+  .hand-body {
+    width: 100%;
+    height: calc(100% - 26px);
+    padding: 8px;
+    box-sizing: border-box;
   }
-  .hand-frame img { display: block; max-width: 100%; max-height: calc(90vh - 28px); }
+  .hand-body img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+  }
   .hand-close {
     position: absolute;
     top: -14px;
     left: -14px;
-    width: 46px;
-    height: 46px;
+    width: 32px;
+    height: 32px;
     border: none;
     border-radius: 50%;
     background: #e74c3c;
     color: #fff;
-    font-size: 26px;
+    font-size: 20px;
     font-weight: bold;
     line-height: 1;
     cursor: pointer;
     box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    z-index: 2;
+  }
+  .hand-resize-handle {
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    width: 22px;
+    height: 22px;
+    cursor: nwse-resize;
+    touch-action: none;
+    background: linear-gradient(135deg, transparent 0%, transparent 42%, #8e2de2 42%, #8e2de2 58%, transparent 58%, transparent 100%);
+    opacity: 0.65;
   }
 
   .staff-wrap {
@@ -182,6 +214,23 @@
     overflow-y: auto;
   }
   .panel h2 { color: #2c3e50; font-size: 20px; margin-bottom: 14px; }
+
+  .count-row { margin-bottom: 16px; }
+  .count-row-label { font-weight: bold; color: #3949ab; margin-bottom: 8px; font-size: 15px; }
+  .count-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+  .count-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 2px solid #c5cae9;
+    background: #fff;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    color: #333;
+  }
+  .count-btn.active { background: linear-gradient(135deg,#4e54c8,#8f94fb); color: #fff; border-color: #4e54c8; }
+
   .columns {
     display: flex;
     gap: 18px;
@@ -247,7 +296,7 @@
 <div class="app">
   <div class="header">
     <div class="toolbar-btns">
-      <button class="toolbar-btn btn-new-note" id="new-note-btn" title="Give this student a new note to identify">&#128260; New Note</button>
+      <button class="toolbar-btn btn-new-note" id="new-note-btn" title="Give this student new note(s) to identify">&#128260; New Note(s)</button>
       <button class="toolbar-btn btn-select-notes" id="settings-btn" title="Choose which notes to practice">&#9881; Select Notes</button>
     </div>
     <div class="title-block">
@@ -278,6 +327,21 @@
 <div id="settings-overlay" class="overlay">
   <div class="panel">
     <h2>Choose Notes to Practice</h2>
+
+    <div class="count-row">
+      <div class="count-row-label">Notes per Round</div>
+      <div class="count-buttons" id="count-buttons">
+        <button class="count-btn" data-count="1">1</button>
+        <button class="count-btn" data-count="2">2</button>
+        <button class="count-btn" data-count="3">3</button>
+        <button class="count-btn" data-count="4">4</button>
+        <button class="count-btn" data-count="5">5</button>
+        <button class="count-btn" data-count="6">6</button>
+        <button class="count-btn" data-count="7">7</button>
+        <button class="count-btn" data-count="8">8</button>
+      </div>
+    </div>
+
     <div class="columns">
       <div class="col">
         <label class="col-header"><input type="checkbox" id="col-line-all"> Line Notes</label>
@@ -306,11 +370,13 @@
   </div>
 </div>
 
-<div id="hand-overlay" class="hand-overlay">
-  <div class="hand-frame">
-    <button class="hand-close" id="hand-close-btn" title="Close">&times;</button>
+<div id="hand-frame" class="hand-frame">
+  <button class="hand-close" id="hand-close-btn" title="Close">&times;</button>
+  <div class="hand-titlebar" id="hand-titlebar">&#9995; Hand Staff &mdash; drag to move</div>
+  <div class="hand-body">
     <img src="../assets/hands/hand_staff_treble_notes.png" alt="Hand staff showing treble clef notes on the fingers">
   </div>
+  <div class="hand-resize-handle" id="hand-resize-handle" title="Drag to resize"></div>
 </div>
 
 <div id="toast"></div>
@@ -338,6 +404,7 @@
   const LS_KEY = 'trebleClefNoteQuiz_settings_v1';
   const CONFIGURED_KEY = 'trebleClefNoteQuizConfigured';
   const MODULE_FILE = 'treble_clef_note_quiz.html';
+  const MAX_NOTE_COUNT = 8;
 
   const LINE_POSITIONS = NOTE_POSITIONS.filter(n => LINE_IDS.includes(n.id));
   const SPACE_POSITIONS = NOTE_POSITIONS.filter(n => SPACE_IDS.includes(n.id));
@@ -345,13 +412,13 @@
   function defaultSettings() {
     const enabled = {};
     NOTE_POSITIONS.forEach(n => { enabled[n.id] = LINE_IDS.includes(n.id) || SPACE_IDS.includes(n.id); });
-    return { enabled };
+    return { enabled, noteCount: 1 };
   }
 
   // ── State ────────────────────────────────────────────────────────────────
   let settings = defaultSettings();
-  let currentTarget = null;
-  let answered = false;
+  let roundTargets = []; // [{position, answered, letter, correct, x, y}]
+  let answered = false;  // true once every target in roundTargets has been answered
   let lastResponse = null;
   let logicalW = 0, logicalH = 0;
   let showG = false, showLines = false, showSpaces = false;
@@ -381,9 +448,22 @@
     try { return localStorage.getItem(CONFIGURED_KEY) === '1'; } catch (e) { return false; }
   }
 
-  function pickNewTarget() {
+  // Pick `count` note positions from pool: without replacement when the pool
+  // is large enough to avoid repeats, otherwise fills with repeats.
+  function sampleNotes(pool, count) {
+    if (!pool.length || count <= 0) return [];
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    if (pool.length >= count) return shuffled.slice(0, count);
+    const result = [];
+    while (result.length < count) result.push(pool[Math.floor(Math.random() * pool.length)]);
+    return result;
+  }
+
+  function pickNewRound() {
     const pool = enabledPositions();
-    currentTarget = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
+    const count = Math.max(1, Math.min(MAX_NOTE_COUNT, settings.noteCount || 1));
+    const picked = sampleNotes(pool, pool.length ? count : 0);
+    roundTargets = picked.map(position => ({ position, answered: false, letter: null, correct: null, x: 0, y: 0 }));
     answered = false;
     lastResponse = null;
   }
@@ -397,11 +477,18 @@
       cb.checked = !!settings.enabled[cb.dataset.id];
     });
     updateColumnHeaders();
+    updateCountButtons();
   }
   function updateColumnHeaders() {
     document.getElementById('col-line-all').checked = LINE_IDS.every(id => settings.enabled[id]);
     document.getElementById('col-space-all').checked = SPACE_IDS.every(id => settings.enabled[id]);
     document.getElementById('col-ext-all').checked = EXT_IDS.every(id => settings.enabled[id]);
+  }
+  function updateCountButtons() {
+    const count = settings.noteCount || 1;
+    document.querySelectorAll('.count-btn').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.count, 10) === count);
+    });
   }
   function toggleColumn(ids, checked) {
     ids.forEach(id => { settings.enabled[id] = checked; });
@@ -410,14 +497,16 @@
   function updateFilterSummary() {
     const el = document.getElementById('filter-summary');
     const letters = enabledLetters();
-    el.textContent = letters.length ? `Practicing: ${letters.join(' ')}` : 'No notes selected';
+    if (!letters.length) { el.textContent = 'No notes selected'; return; }
+    const count = settings.noteCount || 1;
+    el.textContent = `Practicing: ${letters.join(' ')} · ${count} note${count > 1 ? 's' : ''}/round`;
   }
 
   // ── Letter bank & drag/drop ──────────────────────────────────────────────
   let dragLetter = null, dragClone = null, dragChip = null;
 
   function startDrag(chip, x, y) {
-    if (answered || !currentTarget) return;
+    if (answered || roundTargets.length === 0) return;
     dragLetter = chip.dataset.letter;
     dragChip = chip;
     dragClone = chip.cloneNode(true);
@@ -447,7 +536,10 @@
 
     const under = document.elementFromPoint(x, y);
     const overStaff = under && under.closest('[data-zone="staff"]');
-    if (overStaff && !answered && currentTarget) submitAnswer(dragLetter);
+    if (overStaff && !answered && roundTargets.length) {
+      const rect = document.getElementById('staff-zone').getBoundingClientRect();
+      submitAnswer(dragLetter, x - rect.left, y - rect.top);
+    }
     dragLetter = null;
   }
 
@@ -498,13 +590,41 @@
   }
 
   // ── Answer handling ──────────────────────────────────────────────────────
-  function submitAnswer(letter) {
+  function nearestTarget(candidates, x, y) {
+    let best = candidates[0], bestDist = Infinity;
+    candidates.forEach(t => {
+      const dx = t.x - x, dy = t.y - y;
+      const d = dx * dx + dy * dy;
+      if (d < bestDist) { bestDist = d; best = t; }
+    });
+    return best;
+  }
+
+  function submitAnswer(letter, dropX, dropY) {
+    const unanswered = roundTargets.filter(t => !t.answered);
+    if (!unanswered.length) return;
+
+    const target = nearestTarget(unanswered, dropX, dropY);
+    target.answered = true;
+    target.letter = letter;
+    target.correct = letter === target.position.letter;
+    drawStaff();
+
+    if (roundTargets.every(t => t.answered)) finishRound();
+  }
+
+  function finishRound() {
     answered = true;
-    const correct = letter === currentTarget.letter;
-    lastResponse = `${currentTarget.id}|${letter}`;
-    drawStaff(correct ? 'correct' : 'wrong');
-    showToast(correct ? `Correct! It's ${currentTarget.letter}` : `Not quite — that was ${currentTarget.letter}`,
-      correct ? '#2ecc71' : '#e74c3c');
+    const correctCount = roundTargets.filter(t => t.correct).length;
+    const allCorrect = correctCount === roundTargets.length;
+    lastResponse = roundTargets.map(t => `${t.position.id}|${t.letter}`).join(',');
+
+    showToast(
+      roundTargets.length === 1
+        ? (allCorrect ? `Correct! It's ${roundTargets[0].position.letter}` : `Not quite — that was ${roundTargets[0].position.letter}`)
+        : `Round complete: ${correctCount}/${roundTargets.length} correct`,
+      allCorrect ? '#2ecc71' : (correctCount === 0 ? '#e74c3c' : '#e67e22')
+    );
 
     window.parent.postMessage({
       type: 'taskmodule:response',
@@ -529,7 +649,7 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  function drawStaff(status) {
+  function drawStaff() {
     const canvas = document.getElementById('staff-canvas');
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, logicalW, logicalH);
@@ -580,19 +700,32 @@
     if (showSpaces) drawLetterLabels(ctx, SPACE_POSITIONS, staffLineLeft, staffBottomY, halfStep, scale);
     if (showG) drawArrowToLine(ctx, staffBottomY - G_STEP * halfStep, staffRight, scale);
 
-    if (currentTarget) {
-      const y = staffBottomY - currentTarget.step * halfStep;
-      const noteX = noteAreaLeft + (staffRight - noteAreaLeft) * 0.5;
+    if (roundTargets.length) {
+      const n = roundTargets.length;
+      const padding = NOTE_RADIUS * 2.2;
+      const usableLeft = noteAreaLeft + padding;
+      const usableRight = staffRight - padding;
+      const span = Math.max(usableRight - usableLeft, 0);
 
-      if (currentTarget.ledger) {
-        const ledgerHalfWidth = NOTE_RADIUS * 1.7;
-        ctx.beginPath();
-        ctx.moveTo(noteX - ledgerHalfWidth, y);
-        ctx.lineTo(noteX + ledgerHalfWidth, y);
-        ctx.stroke();
-      }
+      roundTargets.forEach((t, i) => {
+        const x = n === 1
+          ? noteAreaLeft + (staffRight - noteAreaLeft) * 0.5
+          : usableLeft + span * (i / (n - 1));
+        const y = staffBottomY - t.position.step * halfStep;
+        t.x = x;
+        t.y = y;
 
-      drawNotehead(ctx, noteX, y, status);
+        if (t.position.ledger) {
+          const ledgerHalfWidth = NOTE_RADIUS * 1.7;
+          ctx.beginPath();
+          ctx.moveTo(x - ledgerHalfWidth, y);
+          ctx.lineTo(x + ledgerHalfWidth, y);
+          ctx.stroke();
+        }
+
+        const status = t.answered ? (t.correct ? 'correct' : 'wrong') : undefined;
+        drawNotehead(ctx, x, y, status);
+      });
     } else {
       ctx.fillStyle = '#888';
       ctx.font = '16px Arial';
@@ -696,14 +829,16 @@
   document.getElementById('col-space-all').addEventListener('change', e => { toggleColumn(SPACE_IDS, e.target.checked); handleSettingsChange(); });
   document.getElementById('col-ext-all').addEventListener('change', e => { toggleColumn(EXT_IDS, e.target.checked); handleSettingsChange(); });
 
-  document.getElementById('settings-btn').addEventListener('click', openSettingsOverlay);
+  document.querySelectorAll('.count-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      settings.noteCount = parseInt(btn.dataset.count, 10);
+      updateCountButtons();
+      updateFilterSummary();
+      saveAndBroadcastSettings();
+    });
+  });
 
-  document.getElementById('hand-btn').addEventListener('click', () => {
-    document.getElementById('hand-overlay').classList.add('show');
-  });
-  document.getElementById('hand-close-btn').addEventListener('click', () => {
-    document.getElementById('hand-overlay').classList.remove('show');
-  });
+  document.getElementById('settings-btn').addEventListener('click', openSettingsOverlay);
 
   document.getElementById('hint-btn').addEventListener('click', () => {
     const showHint = !document.getElementById('hint-banner').classList.contains('show');
@@ -732,7 +867,7 @@
       openSettingsOverlay();
       return;
     }
-    pickNewTarget();
+    pickNewRound();
     resizeCanvas();
     drawStaff();
   });
@@ -741,19 +876,144 @@
     saveAndBroadcastSettings();
     if (enabledPositions().length === 0) {
       showToast('No notes selected — pick at least one to start quizzing', '#e67e22');
-    } else if (!currentTarget) {
-      pickNewTarget();
+    } else if (!roundTargets.length) {
+      pickNewRound();
     }
     closeSettingsOverlay();
     resizeCanvas();
     drawStaff();
   });
 
+  // ── Hand-staff floating reference window (draggable + resizable) ────────
+  let handPositioned = false;
+  function ensureHandPosition() {
+    if (handPositioned) return;
+    const frame = document.getElementById('hand-frame');
+    const w = 300, h = 232;
+    const x = Math.max(10, window.innerWidth - w - 20);
+    const y = 84;
+    frame.style.width = w + 'px';
+    frame.style.height = h + 'px';
+    frame.style.left = x + 'px';
+    frame.style.top = y + 'px';
+    handPositioned = true;
+  }
+
+  document.getElementById('hand-btn').addEventListener('click', () => {
+    ensureHandPosition();
+    document.getElementById('hand-frame').classList.add('show');
+  });
+  document.getElementById('hand-close-btn').addEventListener('click', () => {
+    document.getElementById('hand-frame').classList.remove('show');
+  });
+
+  (function setupHandDrag() {
+    const frame = document.getElementById('hand-frame');
+    const titlebar = document.getElementById('hand-titlebar');
+    let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+    function onDown(x, y) {
+      dragging = true;
+      const rect = frame.getBoundingClientRect();
+      startX = x; startY = y;
+      startLeft = rect.left; startTop = rect.top;
+    }
+    function onMove(x, y) {
+      if (!dragging) return;
+      let newLeft = startLeft + (x - startX);
+      let newTop = startTop + (y - startY);
+      newLeft = Math.max(-frame.offsetWidth + 60, Math.min(newLeft, window.innerWidth - 60));
+      newTop = Math.max(0, Math.min(newTop, window.innerHeight - 40));
+      frame.style.left = newLeft + 'px';
+      frame.style.top = newTop + 'px';
+    }
+    function onUp() { dragging = false; }
+
+    titlebar.addEventListener('mousedown', e => {
+      e.preventDefault();
+      onDown(e.clientX, e.clientY);
+      const onMoveH = e => onMove(e.clientX, e.clientY);
+      const onUpH = () => {
+        onUp();
+        document.removeEventListener('mousemove', onMoveH);
+        document.removeEventListener('mouseup', onUpH);
+      };
+      document.addEventListener('mousemove', onMoveH);
+      document.addEventListener('mouseup', onUpH);
+    });
+    titlebar.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const t = e.touches[0];
+      onDown(t.clientX, t.clientY);
+      const onMoveH = e => { e.preventDefault(); const t = e.touches[0]; onMove(t.clientX, t.clientY); };
+      const onUpH = () => {
+        onUp();
+        document.removeEventListener('touchmove', onMoveH);
+        document.removeEventListener('touchend', onUpH);
+        document.removeEventListener('touchcancel', onUpH);
+      };
+      document.addEventListener('touchmove', onMoveH, { passive: false });
+      document.addEventListener('touchend', onUpH);
+      document.addEventListener('touchcancel', onUpH);
+    }, { passive: false });
+  })();
+
+  (function setupHandResize() {
+    const frame = document.getElementById('hand-frame');
+    const handle = document.getElementById('hand-resize-handle');
+    const MIN_W = 160, MIN_H = 120, MAX_W = 900, MAX_H = 700;
+    let resizing = false, startX = 0, startY = 0, startW = 0, startH = 0;
+
+    function onDown(x, y) {
+      resizing = true;
+      startX = x; startY = y;
+      startW = frame.offsetWidth; startH = frame.offsetHeight;
+    }
+    function onMove(x, y) {
+      if (!resizing) return;
+      const w = Math.max(MIN_W, Math.min(MAX_W, startW + (x - startX)));
+      const h = Math.max(MIN_H, Math.min(MAX_H, startH + (y - startY)));
+      frame.style.width = w + 'px';
+      frame.style.height = h + 'px';
+    }
+    function onUp() { resizing = false; }
+
+    handle.addEventListener('mousedown', e => {
+      e.preventDefault();
+      onDown(e.clientX, e.clientY);
+      const onMoveH = e => onMove(e.clientX, e.clientY);
+      const onUpH = () => {
+        onUp();
+        document.removeEventListener('mousemove', onMoveH);
+        document.removeEventListener('mouseup', onUpH);
+      };
+      document.addEventListener('mousemove', onMoveH);
+      document.addEventListener('mouseup', onUpH);
+    });
+    handle.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const t = e.touches[0];
+      onDown(t.clientX, t.clientY);
+      const onMoveH = e => { e.preventDefault(); const t = e.touches[0]; onMove(t.clientX, t.clientY); };
+      const onUpH = () => {
+        onUp();
+        document.removeEventListener('touchmove', onMoveH);
+        document.removeEventListener('touchend', onUpH);
+        document.removeEventListener('touchcancel', onUpH);
+      };
+      document.addEventListener('touchmove', onMoveH, { passive: false });
+      document.addEventListener('touchend', onUpH);
+      document.addEventListener('touchcancel', onUpH);
+    }, { passive: false });
+  })();
+
   // ── TaskModule interface ─────────────────────────────────────────────────
   window.TaskModule = {
     init(context) {
       const fromApp = context && context.savedSettings && context.savedSettings.enabled ? context.savedSettings : null;
       settings = fromApp || loadLocalSettings() || defaultSettings();
+      settings.noteCount = settings.noteCount || 1; // upgrade settings saved before multi-note mode existed
+
       applySettingsToUI();
       updateFilterSummary();
 
@@ -761,7 +1021,7 @@
         openSettingsOverlay();
       } else {
         closeSettingsOverlay();
-        pickNewTarget();
+        pickNewRound();
       }
 
       setTimeout(() => {
