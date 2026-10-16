@@ -178,15 +178,15 @@ function splitDuration(offset, len, isRest, beatLen) {
 
 function rhythmSyllable(len, offsetInBeat) {
   const r = (x) => Math.abs(len - x) < EPS;
-  if (r(4)) return 'ta-a-a-a';
-  if (r(3)) return 'ta-a-a';
-  if (r(2)) return 'ta-a';
+  if (r(4)) return 'to-e-e-e';
+  if (r(3)) return 'to-e-e';
+  if (r(2)) return 'to-e';
   if (r(1.5)) return 'tai';
   if (r(1)) return 'ta';
   if (r(0.75)) return 'tim';
   if (r(0.5)) return 'ti';
   if (r(0.25)) return isMultiple(offsetInBeat, 0.5) ? 'ti' : 'ka';
-  if (len > 1) return 'ta' + '-a'.repeat(Math.round(len) - 1);
+  if (len > 1) return 'to' + '-e'.repeat(Math.round(len) - 1);
   return 'ti';
 }
 

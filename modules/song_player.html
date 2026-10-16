@@ -298,6 +298,7 @@
     </div>
 
     <div class="spacer"></div>
+    <button id="fullscreen" class="toggle">⛶ Full Screen</button>
     <button id="open-file">Open a song file…</button>
     <input id="file-input" type="file" accept=".json,application/json" hidden>
   </div>
@@ -652,6 +653,21 @@
     }
 
     $('play').addEventListener('click', () => { player.playing ? stop() : play(); });
+
+    // Full screen: the app's iframe allows it, so the module can fill the whole display
+    const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement;
+    $('fullscreen').addEventListener('click', () => {
+      const root = document.documentElement;
+      if (fsElement()) (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      else (root.requestFullscreen || root.webkitRequestFullscreen).call(root);
+    });
+    const syncFullscreen = () => {
+      const on = !!fsElement();
+      $('fullscreen').classList.toggle('on', on);
+      $('fullscreen').textContent = on ? '✕ Exit Full Screen' : '⛶ Full Screen';
+    };
+    document.addEventListener('fullscreenchange', syncFullscreen);
+    document.addEventListener('webkitfullscreenchange', syncFullscreen);
     document.addEventListener('keydown', (e) => {
       if (e.code === 'Space' && state.pkg) { e.preventDefault(); player.playing ? stop() : play(); }
     });
