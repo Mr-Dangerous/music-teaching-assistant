@@ -645,6 +645,7 @@ class TeachingAssistantApp {
       'smlrd_composer.html',
       'so_la_mi_re_do_trainer.html',
       'so_la_mi_trainer.html',
+      'song_player.html',
       'string.html',
       'student_notes.html',
       'ukulele-tuner.html',

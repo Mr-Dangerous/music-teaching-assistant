@@ -16,6 +16,7 @@
   { "task_id": "pentatonic_trainer",        "question": "Pentatonic Trainer",            "module_path": "modules/pentatonic_trainer.html" },
   { "task_id": "so_la_mi_re_do_trainer",   "question": "So La Mi Re Do Trainer",        "module_path": "modules/so_la_mi_re_do_trainer.html" },
   { "task_id": "so_la_mi_trainer",          "question": "So La Mi Trainer",              "module_path": "modules/so_la_mi_trainer.html" },
+  { "task_id": "song_player",               "question": "Song Player",                   "module_path": "modules/song_player.html" },
   { "task_id": "string",                    "question": "String Task Module",            "module_path": "modules/string.html" },
   { "task_id": "student_notes",             "question": "Student Notes",                 "module_path": "modules/student_notes.html" },
   { "task_id": "ukulele-tuner",             "question": "Ukulele Tuner",                 "module_path": "modules/ukulele-tuner.html" },

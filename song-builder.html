@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Song Builder</title>
+  <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f2f2f8;
+      color: #23233a;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: linear-gradient(90deg, #4a6cf7, #764ba2, #d6428f);
+      color: white;
+      padding: 10px 18px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    header h1 { margin: 0; font-size: 20px; }
+    header .sub { opacity: 0.85; font-size: 13px; }
+
+    main { flex: 1; min-height: 0; display: flex; }
+
+    #settings {
+      width: 460px;
+      flex-shrink: 0;
+      overflow-y: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-right: 1px solid #ddd;
+      background: #fafafe;
+    }
+
+    .card {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      padding: 12px 14px;
+    }
+    .card h2 {
+      font-size: 14px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6a5acd;
+      margin: 0 0 10px;
+    }
+    .hint { font-size: 12px; color: #77778f; margin: 4px 0 0; line-height: 1.4; }
+
+    .field { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; }
+    .field > label:first-child { width: 110px; flex-shrink: 0; color: #55556d; font-weight: 600; }
+    input[type=text], input[type=number], select, textarea {
+      font: inherit;
+      font-size: 13px;
+      padding: 5px 7px;
+      border: 1px solid #c8c8da;
+      border-radius: 6px;
+      background: white;
+    }
+    input[type=text] { flex: 1; min-width: 0; }
+    input[type=number] { width: 80px; }
+    textarea { width: 100%; resize: vertical; min-height: 64px; }
+
+    button {
+      font: inherit;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 12px;
+      border-radius: 6px;
+      border: 1px solid #b9b9d6;
+      background: white;
+      color: #33335a;
+      cursor: pointer;
+    }
+    button:hover { background: #f0f0fb; }
+    button.primary { background: #5b5bd6; color: white; border-color: #5b5bd6; }
+    button.primary:hover { background: #4949c0; }
+    button:disabled { opacity: 0.45; cursor: default; }
+
+    #drop {
+      border: 2px dashed #b4b4d8;
+      border-radius: 10px;
+      padding: 14px;
+      text-align: center;
+      color: #6a6a8a;
+      font-size: 13px;
+    }
+    #drop.over { background: #ececff; border-color: #5b5bd6; }
+    #drop .buttons { display: flex; gap: 8px; justify-content: center; margin-bottom: 6px; }
+
+    #measures { display: flex; flex-wrap: wrap; gap: 4px; }
+    .m-chip {
+      min-width: 34px;
+      padding: 5px 0;
+      text-align: center;
+      font-size: 12px;
+      border-radius: 6px;
+      background: #ececf6;
+      border: 2px solid transparent;
+      cursor: pointer;
+    }
+    .m-chip.start { background: #ff9800; color: white; font-weight: 700; }
+    .m-chip.fixed { cursor: default; }
+    .row-buttons { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+
+    .part-card { border-left: 5px solid #667eea; }
+    .part-card.excluded { opacity: 0.5; border-left-color: #bbb; }
+    .part-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+    .part-head input[type=text] { font-weight: 700; font-size: 14px; }
+    .part-meta { font-size: 12px; color: #6a6a8a; margin-bottom: 8px; }
+    .warn { color: #c2410c; }
+    .lyric-count { font-size: 12px; color: #6a6a8a; margin-top: 3px; }
+
+    /* Preview */
+    #preview-pane { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+    #preview-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 14px;
+      background: white;
+      border-bottom: 1px solid #ddd;
+      font-size: 13px;
+      flex-wrap: wrap;
+    }
+    #preview-bar .grow { flex: 1; }
+    #preview {
+      flex: 1;
+      overflow-y: auto;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .p-row {
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+      height: 210px;
+      flex-shrink: 0;
+      position: relative;
+      cursor: pointer;
+    }
+    .p-row svg { display: block; width: 100%; height: 100%; }
+    .p-row .tag {
+      position: absolute; top: 6px; right: 10px;
+      font-size: 11px; font-weight: 700; color: #a0a0c0;
+    }
+    .ev .head { transition: fill 0.08s; }
+    .ev.sounding .head { fill: #e91e63; }
+    #empty { margin: auto; color: #8a8aa8; text-align: center; font-size: 15px; }
+
+    #status {
+      position: fixed; bottom: 14px; right: 14px;
+      background: #23233a; color: white; padding: 10px 14px;
+      border-radius: 8px; font-size: 13px; display: none; max-width: 420px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎼 Song Builder</h1>
+    <span class="sub">MIDI → solfege staff song package for the Song Player module</span>
+  </header>
+
+  <main>
+    <div id="settings">
+      <div class="card">
+        <div id="drop">
+          <div class="buttons">
+            <button class="primary" id="btn-midi">Load MIDI…</button>
+            <button id="btn-open">Open package…</button>
+          </div>
+          or drop a .mid / .json file here
+        </div>
+        <input type="file" id="in-midi" accept=".mid,.midi,audio/midi" hidden>
+        <input type="file" id="in-pkg" accept=".json,application/json" hidden>
+      </div>
+
+      <div id="editor" hidden>
+        <div class="card">
+          <h2>Song</h2>
+          <div class="field"><label>Title</label><input type="text" id="f-title"></div>
+          <div class="field"><label>Tempo (♩ bpm)</label><input type="number" id="f-tempo" min="20" max="300" step="1"></div>
+          <div class="field"><label>Time signature</label>
+            <input type="number" id="f-num" min="1" max="16" style="width:60px"> /
+            <select id="f-den"><option>2</option><option>4</option><option>8</option></select>
+          </div>
+          <div class="field"><label>Pickup (beats)</label><input type="number" id="f-pickup" min="0" step="0.5"><span class="hint">0 = starts on beat 1</span></div>
+          <div class="field"><label>Do is</label><select id="f-do"></select></div>
+          <div class="field"><label>Rhythm grid</label>
+            <select id="f-quant">
+              <option value="0.5">Eighth notes</option>
+              <option value="0.25">Sixteenth notes</option>
+              <option value="0.125">32nd notes</option>
+            </select>
+          </div>
+          <p class="hint" id="quant-hint">Note times are snapped to this grid when a MIDI file is loaded.</p>
+        </div>
+
+        <div class="card">
+          <h2>Phrases (screens)</h2>
+          <div id="measures"></div>
+          <div class="row-buttons">
+            <span class="hint" style="margin:0">Phrase every</span>
+            <button data-every="2">2</button><button data-every="4">4</button><button data-every="8">8</button>
+            <span class="hint" style="margin:0">measures</span>
+          </div>
+          <p class="hint">Click a measure to start a new phrase there. Each phrase is one row on the board: the current phrase on top, the next phrase underneath.</p>
+        </div>
+
+        <div id="parts"></div>
+
+        <div class="card">
+          <h2>Show by default</h2>
+          <div class="row-buttons" style="margin:0">
+            <label><input type="checkbox" id="t-solfege"> Solfege</label>
+            <label><input type="checkbox" id="t-lyrics"> Lyrics</label>
+            <label><input type="checkbox" id="t-rhythm"> Rhythm syllables</label>
+          </div>
+          <p class="hint">Teachers can toggle these on the board too.</p>
+        </div>
+
+        <div class="card">
+          <h2>Save</h2>
+          <div class="field"><label>File name</label><input type="text" id="f-file"><span>.json</span></div>
+          <div class="row-buttons">
+            <button class="primary" id="btn-save-folder">Save to songs folder…</button>
+            <button id="btn-download">Download .json</button>
+          </div>
+          <p class="hint">“Save to songs folder” asks for the <b>songs</b> folder in this repo (or the repo folder itself) and adds the song to <code>songs/index.json</code> so it appears in the Song Player’s song picker. Chrome/Edge only — otherwise download the file and add it to <code>songs/index.json</code> by hand.</p>
+        </div>
+      </div>
+    </div>
+
+    <div id="preview-pane">
+      <div id="preview-bar">
+        <button class="primary" id="btn-play" disabled>▶ Play</button>
+        <label><input type="checkbox" id="p-countin" checked> Count-in</label>
+        <label>Show part <select id="p-part"></select></label>
+        <span class="grow"></span>
+        <span class="hint" style="margin:0">Click a row to play from that phrase · click a note to hear it</span>
+      </div>
+      <div id="preview"><div id="empty">Load a MIDI file to begin.</div></div>
+    </div>
+  </main>
+
+  <div id="status"></div>
+
+  <script type="module">
+    import { parseMidi } from './modules/shared/MidiFile.js';
+    import { packageFromMidi, quantizeNotes, computeTotalBeats, defaultPhraseStarts } from './modules/shared/SongImport.js';
+    import {
+      buildPartNotation, getMeasures, getPhrases, autoDoMidi, solfegeOf, midiName,
+      PITCH_NAMES, STAFF_LINES, lineName, lyricSlots, parseLyrics, slugify, validatePackage
+    } from './modules/shared/SongModel.js';
+    import { layoutSong, renderRow } from './modules/shared/SongRenderer.js';
+    import { instrumentGroups, getInstrument } from './modules/shared/SongInstruments.js';
+    import { SongPlayer } from './modules/shared/SongPlayer.js';
+
+    const $ = (id) => document.getElementById(id);
+    const player = new SongPlayer();
+
+    let pkg = null;          // package being edited
+    let midi = null;         // parsed MIDI (for re-quantizing), null when editing a saved package
+    let previewPart = null;
+    let rows = [];           // rendered preview rows
+    let notation = null;
+    let sounding = [];
+
+    // ---------------- Loading ----------------
+    $('btn-midi').onclick = () => $('in-midi').click();
+    $('btn-open').onclick = () => $('in-pkg').click();
+    $('in-midi').onchange = (e) => { if (e.target.files[0]) loadFile(e.target.files[0]); e.target.value = ''; };
+    $('in-pkg').onchange = (e) => { if (e.target.files[0]) loadFile(e.target.files[0]); e.target.value = ''; };
+
+    const drop = $('drop');
+    drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+    drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+    drop.addEventListener('drop', (e) => {
+      e.preventDefault();
+      drop.classList.remove('over');
+      if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+    });
+
+    async function loadFile(file) {
+      try {
+        if (/\.json$/i.test(file.name)) {
+          pkg = validatePackage(JSON.parse(await file.text()));
+          midi = null;
+          $('f-file').value = file.name.replace(/\.json$/i, '');
+        } else {
+          midi = parseMidi(await file.arrayBuffer());
+          pkg = packageFromMidi(midi, file.name, 0.25);
+          if (!pkg.parts.length) throw new Error('No notes found in this MIDI file');
+          $('f-file').value = slugify(pkg.title);
+        }
+        player.load(pkg);
+        previewPart = pkg.defaultPart || pkg.parts[0].id;
+        $('editor').hidden = false;
+        $('btn-play').disabled = false;
+        fillSongFields();
+        buildParts();
+        refresh();
+        status(`Loaded ${file.name}: ${pkg.parts.length} part(s), ${getMeasures(pkg).length} measures`);
+      } catch (err) {
+        status('Could not load ' + file.name + ': ' + err.message, true);
+      }
+    }
+
+    // ---------------- Song fields ----------------
+    PITCH_NAMES.forEach((n, i) => $('f-do').add(new Option(n, i)));
+
+    function fillSongFields() {
+      $('f-title').value = pkg.title;
+      $('f-tempo').value = pkg.tempo;
+      $('f-num').value = pkg.timeSig.num;
+      $('f-den').value = pkg.timeSig.den;
+      $('f-pickup').value = pkg.pickupBeats || 0;
+      $('f-do').value = pkg.doPitchClass ?? (pkg.parts.find(p => p.kind === 'pitched')?.doMidi % 12 || 0);
+      $('f-quant').value = String(pkg.quantize || 0.25);
+      $('f-quant').disabled = !midi;
+      $('quant-hint').textContent = midi
+        ? 'Note times are snapped to this grid. Use a coarser grid if a MIDI file was played in live.'
+        : 'Re-snapping needs the original MIDI file (load it again to change this).';
+      $('t-solfege').checked = !!pkg.textDefaults?.solfege;
+      $('t-lyrics').checked = !!pkg.textDefaults?.lyrics;
+      $('t-rhythm').checked = !!pkg.textDefaults?.rhythm;
+    }
+
+    $('f-title').oninput = (e) => { pkg.title = e.target.value; };
+    $('f-tempo').onchange = (e) => { pkg.tempo = Math.max(20, +e.target.value || 100); player.setTempoFactor(1); };
+    $('f-num').onchange = $('f-den').onchange = () => {
+      pkg.timeSig = { num: Math.max(1, +$('f-num').value || 4), den: +$('f-den').value };
+      regrid();
+    };
+    $('f-pickup').onchange = (e) => {
+      pkg.pickupBeats = Math.max(0, +e.target.value || 0);
+      regrid();
+    };
+    $('f-do').onchange = (e) => {
+      pkg.doPitchClass = +e.target.value;
+      for (const p of pkg.parts) if (p.kind === 'pitched') p.doMidi = autoDoMidi(p.notes, pkg.doPitchClass);
+      buildParts();
+      refresh();
+    };
+    $('f-quant').onchange = (e) => {
+      if (!midi) return;
+      pkg.quantize = +e.target.value;
+      for (const p of pkg.parts) {
+        const track = midi.tracks.find(t => t.index === p.sourceTrack);
+        if (track) p.notes = quantizeNotes(track.notes, pkg.quantize);
+      }
+      pkg.totalBeats = computeTotalBeats(pkg);
+      player.load(pkg);
+      buildParts();
+      refresh();
+    };
+    ['solfege', 'lyrics', 'rhythm'].forEach(k => {
+      $('t-' + k).onchange = (e) => { pkg.textDefaults = { ...pkg.textDefaults, [k]: e.target.checked }; refresh(); };
+    });
+
+    /** Time signature or pickup changed: measure grid and phrases change */
+    function regrid() {
+      pkg.totalBeats = computeTotalBeats(pkg);
+      pkg.phraseStarts = defaultPhraseStarts(pkg, guessEvery());
+      player.load(pkg);
+      refresh();
+    }
+
+    function guessEvery() {
+      const ph = getPhrases(pkg);
+      return ph.length > 1 ? (ph[1].firstMeasure - ph[0].firstMeasure) || 4 : 4;
+    }
+
+    // ---------------- Phrases ----------------
+    function buildMeasureChips() {
+      const box = $('measures');
+      box.innerHTML = '';
+      const starts = new Set(pkg.phraseStarts);
+      getMeasures(pkg).forEach((m, i) => {
+        const chip = document.createElement('div');
+        chip.className = 'm-chip' + (starts.has(i) || i === 0 ? ' start' : '') + (i === 0 ? ' fixed' : '');
+        chip.textContent = m.pickup ? 'pick' : m.number;
+        chip.title = i === 0 ? 'The first phrase always starts here' : 'Click to toggle a phrase start';
+        if (i > 0) chip.onclick = () => {
+          const set = new Set(pkg.phraseStarts);
+          set.has(i) ? set.delete(i) : set.add(i);
+          pkg.phraseStarts = [...set].sort((a, b) => a - b);
+          refresh();
+        };
+        box.appendChild(chip);
+      });
+    }
+    document.querySelectorAll('[data-every]').forEach(b => {
+      b.onclick = () => { pkg.phraseStarts = defaultPhraseStarts(pkg, +b.dataset.every); refresh(); };
+    });
+
+    // ---------------- Parts ----------------
+    const LINE_LABELS = {
+      2: '2 lines – so, mi',
+      3: '3 lines – so, mi, do',
+      4: '4 lines – ti, so, mi, do',
+      5: '5 lines – ti, so, mi, do, low la'
+    };
+
+    function instrumentSelect(value, pitchedFirst) {
+      const sel = document.createElement('select');
+      const groups = [...instrumentGroups().entries()];
+      if (pitchedFirst) groups.sort((a, b) => (a[1][0].pitched ? 0 : 1) - (b[1][0].pitched ? 0 : 1));
+      for (const [group, list] of groups) {
+        const og = document.createElement('optgroup');
+        og.label = group;
+        list.forEach(i => og.appendChild(new Option(i.label, i.id)));
+        sel.appendChild(og);
+      }
+      sel.value = value;
+      return sel;
+    }
+
+    function buildParts() {
+      const box = $('parts');
+      box.innerHTML = '';
+      pkg.parts.forEach(part => {
+        const card = document.createElement('div');
+        card.className = 'card part-card' + (part.exclude ? ' excluded' : '');
+
+        const head = document.createElement('div');
+        head.className = 'part-head';
+        const inc = document.createElement('input');
+        inc.type = 'checkbox';
+        inc.checked = !part.exclude;
+        inc.title = 'Include this part in the package';
+        inc.onchange = () => { part.exclude = !inc.checked; card.classList.toggle('excluded', part.exclude); refresh(); };
+        const name = document.createElement('input');
+        name.type = 'text';
+        name.value = part.name;
+        name.oninput = () => { part.name = name.value; fillPartSelect(); };
+        head.append(inc, name);
+        card.appendChild(head);
+
+        const meta = document.createElement('div');
+        meta.className = 'part-meta';
+        card.appendChild(meta);
+
+        const f = (label, ...els) => {
+          const row = document.createElement('div');
+          row.className = 'field';
+          const l = document.createElement('label');
+          l.textContent = label;
+          row.append(l, ...els);
+          card.appendChild(row);
+          return row;
+        };
+
+        const kind = document.createElement('select');
+        kind.add(new Option('Pitched (solfege staff)', 'pitched'));
+        kind.add(new Option('Unpitched (rhythm line)', 'unpitched'));
+        kind.value = part.kind;
+        kind.onchange = () => {
+          part.kind = kind.value;
+          if (part.kind === 'unpitched') part.lines = 1;
+          else { part.lines = 3; part.doMidi = autoDoMidi(part.notes, pkg.doPitchClass ?? 0); }
+          buildParts();
+          refresh();
+        };
+        f('Type', kind);
+
+        const inst = instrumentSelect(part.instrument, part.kind === 'pitched');
+        inst.onchange = () => { part.instrument = inst.value; player.refreshPart(part.id); };
+        const test = document.createElement('button');
+        test.textContent = '🔊';
+        test.title = 'Hear this instrument';
+        test.onclick = async () => {
+          const n = part.notes[0];
+          await player.ensureAudio();
+          if (n) player.previewNote(part.id, n[2], 1);
+        };
+        f('Instrument', inst, test);
+
+        const vol = document.createElement('input');
+        vol.type = 'range'; vol.min = -24; vol.max = 6; vol.step = 1;
+        vol.value = part.volume || 0;
+        const volLabel = document.createElement('span');
+        volLabel.textContent = (part.volume || 0) + ' dB';
+        vol.oninput = () => { part.volume = +vol.value; volLabel.textContent = vol.value + ' dB'; };
+        vol.onchange = () => player.refreshPart(part.id);
+        f('Volume', vol, volLabel);
+
+        if (part.kind === 'pitched') {
+          const lines = document.createElement('select');
+          [2, 3, 4, 5].forEach(n => lines.add(new Option(LINE_LABELS[n], n)));
+          lines.value = part.lines;
+          lines.onchange = () => { part.lines = +lines.value; updateMeta(); refresh(); };
+          f('Staff', lines);
+
+          const oct = document.createElement('select');
+          const pc = ((part.doMidi % 12) + 12) % 12;
+          for (let k = 1; k <= 7; k++) {
+            const m = pc + 12 * k;
+            oct.add(new Option('do = ' + midiName(m), m));
+          }
+          oct.value = part.doMidi;
+          oct.onchange = () => { part.doMidi = +oct.value; updateMeta(); refresh(); };
+          f('Do octave', oct);
+        }
+
+        const lyr = document.createElement('textarea');
+        lyr.placeholder = 'Rock- y moun- tain, rock- y moun- tain …';
+        lyr.value = part.lyrics || '';
+        const count = document.createElement('div');
+        count.className = 'lyric-count';
+        let timer = null;
+        lyr.oninput = () => {
+          part.lyrics = lyr.value;
+          updateLyricCount();
+          clearTimeout(timer);
+          timer = setTimeout(refresh, 300);
+        };
+        const lyrWrap = document.createElement('div');
+        lyrWrap.style.width = '100%';
+        lyrWrap.append(lyr, count);
+        f('Lyrics', lyrWrap).style.alignItems = 'flex-start';
+        const lh = document.createElement('p');
+        lh.className = 'hint';
+        lh.innerHTML = 'One syllable per note. End a syllable with <b>-</b> to join it to the next (<i>Rock- y</i>). Use <b>_</b> for a note with no syllable.';
+        card.appendChild(lh);
+
+        function updateLyricCount() {
+          const slots = lyricSlots(pkg, part).length;
+          const used = parseLyrics(part.lyrics).length;
+          count.textContent = `${used} of ${slots} notes`;
+          count.classList.toggle('warn', used > slots);
+        }
+
+        function updateMeta() {
+          const n = part.notes.length;
+          if (part.kind !== 'pitched' || !n) { meta.textContent = `${n} notes`; return; }
+          let lo = Infinity, hi = -Infinity, loM = 0, hiM = 0;
+          for (const [, , m] of part.notes) {
+            const d = solfegeOf(m, part.doMidi).degree;
+            if (d < lo) { lo = d; loM = m; }
+            if (d > hi) { hi = d; hiM = m; }
+          }
+          const staff = STAFF_LINES[part.lines];
+          const below = (staff[0] - lo) / 2, above = (hi - staff[staff.length - 1]) / 2;
+          const far = Math.max(below, above) >= 2.5;
+          meta.innerHTML = `${n} notes · range ${lineName(lo)} (${midiName(loM)}) to ${lineName(hi)} (${midiName(hiM)})` +
+            (far ? ' · <span class="warn">some notes sit far off the staff — try more lines or another do octave</span>' : '');
+        }
+
+        updateMeta();
+        updateLyricCount();
+        box.appendChild(card);
+      });
+      fillPartSelect();
+    }
+
+    function fillPartSelect() {
+      const sel = $('p-part');
+      sel.innerHTML = '';
+      for (const p of pkg.parts) {
+        if (p.exclude) continue;
+        const o = new Option(p.name + (p.id === pkg.defaultPart ? ' (default)' : ''), p.id);
+        sel.add(o);
+      }
+      if (!pkg.parts.some(p => p.id === previewPart && !p.exclude)) previewPart = sel.options[0]?.value;
+      sel.value = previewPart;
+      const btn = $('btn-default') || document.createElement('button');
+      btn.id = 'btn-default';
+      btn.textContent = 'Make default';
+      btn.title = 'Show this part first on the board';
+      btn.onclick = () => { pkg.defaultPart = previewPart; fillPartSelect(); };
+      sel.parentElement.after(btn);
+    }
+    $('p-part').onchange = (e) => { previewPart = e.target.value; refresh(); };
+
+    // ---------------- Preview ----------------
+    function activeParts() {
+      return pkg.parts.filter(p => !p.exclude);
+    }
+
+    function refresh() {
+      if (!pkg) return;
+      buildMeasureChips();
+      const part = pkg.parts.find(p => p.id === previewPart) || activeParts()[0];
+      if (!part) return;
+      notation = buildPartNotation(pkg, part);
+      const phrases = getPhrases(pkg);
+      const box = $('preview');
+      box.innerHTML = '';
+      const probe = document.createElement('div');
+      probe.className = 'p-row';
+      box.appendChild(probe);
+      const width = probe.clientWidth, height = probe.clientHeight;
+      box.innerHTML = '';
+      const layout = layoutSong(notation, phrases, { width, height, text: pkg.textDefaults || {} });
+      rows = phrases.map((ph, i) => {
+        const el = document.createElement('div');
+        el.className = 'p-row';
+        const r = renderRow(notation, layout, ph, { showTimeSig: i === 0, timeSig: pkg.timeSig, isSongEnd: i === phrases.length - 1 });
+        el.innerHTML = r.svg + `<div class="tag">Phrase ${i + 1}</div>`;
+        el.onclick = (e) => {
+          const g = e.target.closest('.ev');
+          if (g) {
+            const ev = notation.events[+g.dataset.ev];
+            if (ev && !ev.rest) ev.pitches.forEach(p => player.previewNote(part.id, p.midi, ev.soundD));
+            return;
+          }
+          startPlay(i);
+        };
+        box.appendChild(el);
+        r.el = el;
+        r.bar = el.querySelector('.beat-bar');
+        r.phrase = ph;
+        return r;
+      });
+    }
+
+    window.addEventListener('resize', () => { clearTimeout(window._rt); window._rt = setTimeout(refresh, 150); });
+
+    // ---------------- Playback ----------------
+    function playPackage() {
+      // Excluded parts are left out of playback, just as they will be in the saved file
+      return { ...pkg, parts: activeParts() };
+    }
+
+    async function startPlay(phraseIndex = 0) {
+      if (!pkg) return;
+      const phrases = getPhrases(pkg);
+      player.load(playPackage());
+      const marks = [...new Set(notation.events.filter(e => !e.rest && !e.tieFromPrev).map(e => e.soundT))];
+      $('btn-play').textContent = '■ Stop';
+      await player.play({
+        fromBeat: phrases[phraseIndex].start,
+        countIn: $('p-countin').checked,
+        marks,
+        onBeat: (t) => {
+          rows.forEach(r => r.bar && r.bar.setAttribute('visibility', 'hidden'));
+          const r = rows.find(r => t >= r.phrase.start - 1e-6 && t < r.phrase.end - 1e-6);
+          if (!r) return;
+          r.bar.setAttribute('x', r.beatX(t) - r.barWidth / 2);
+          r.bar.setAttribute('visibility', 'visible');
+          r.el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        },
+        onMark: (t) => {
+          sounding.forEach(el => el.classList.remove('sounding'));
+          sounding = [];
+          for (const e of notation.events) {
+            if (e.rest || Math.abs(e.soundT - t) > 1e-6) continue;
+            const el = $('preview').querySelector(`.ev[data-ev="${e.id}"]`);
+            if (el) { el.classList.add('sounding'); sounding.push(el); }
+          }
+        },
+        onEnd: endPlay
+      });
+    }
+
+    function endPlay() {
+      player.stop();
+      $('btn-play').textContent = '▶ Play';
+      rows.forEach(r => r.bar && r.bar.setAttribute('visibility', 'hidden'));
+      sounding.forEach(el => el.classList.remove('sounding'));
+    }
+
+    $('btn-play').onclick = () => player.playing ? endPlay() : startPlay(0);
+
+    // ---------------- Saving ----------------
+    function exportPackage() {
+      const out = JSON.parse(JSON.stringify(pkg));
+      out.parts = out.parts.filter(p => !p.exclude);
+      out.parts.forEach(p => { delete p.exclude; });
+      if (!out.parts.some(p => p.id === out.defaultPart)) out.defaultPart = out.parts[0]?.id;
+      out.totalBeats = computeTotalBeats(out);
+      out.phraseStarts = getPhrases(out).map(ph => ph.firstMeasure);
+      out.savedAt = new Date().toISOString();
+      return out;
+    }
+
+    function fileName() {
+      return slugify($('f-file').value || pkg.title) + '.json';
+    }
+
+    $('btn-download').onclick = () => {
+      if (!pkg) return;
+      const blob = new Blob([JSON.stringify(exportPackage(), null, 1)], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fileName();
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      status('Downloaded ' + fileName() + ' — put it in the songs folder and add it to songs/index.json');
+    };
+
+    $('btn-save-folder').onclick = async () => {
+      if (!pkg) return;
+      if (!window.showDirectoryPicker) {
+        status('This browser cannot write folders. Use “Download .json” instead.', true);
+        return;
+      }
+      try {
+        let dir = await window.showDirectoryPicker({ id: 'song-builder-songs', mode: 'readwrite' });
+        if (dir.name !== 'songs') {
+          try { dir = await dir.getDirectoryHandle('songs'); } catch (e) { /* use the folder as picked */ }
+        }
+        const name = fileName();
+        const out = exportPackage();
+        await writeText(dir, name, JSON.stringify(out, null, 1));
+
+        let index = [];
+        try {
+          const fh = await dir.getFileHandle('index.json');
+          index = JSON.parse(await (await fh.getFile()).text());
+          if (!Array.isArray(index)) index = [];
+        } catch (e) { /* no index yet */ }
+        index = index.filter(s => s.file !== name);
+        index.push({ file: name, title: out.title });
+        index.sort((a, b) => (a.title || '').localeCompare(b.title || ''));
+        await writeText(dir, 'index.json', JSON.stringify(index, null, 2) + '\n');
+        status(`Saved ${dir.name}/${name} and updated ${dir.name}/index.json`);
+      } catch (err) {
+        if (err.name !== 'AbortError') status('Save failed: ' + err.message, true);
+      }
+    };
+
+    async function writeText(dir, name, text) {
+      const fh = await dir.getFileHandle(name, { create: true });
+      const w = await fh.createWritable();
+      await w.write(text);
+      await w.close();
+    }
+
+    function status(msg, isError) {
+      const s = $('status');
+      s.textContent = msg;
+      s.style.background = isError ? '#b71c1c' : '#23233a';
+      s.style.display = 'block';
+      clearTimeout(s._t);
+      s._t = setTimeout(() => { s.style.display = 'none'; }, 5000);
+    }
+  </script>
+</body>
+</html>

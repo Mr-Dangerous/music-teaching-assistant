@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Song Player</title>
+  <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+  <style>
+    :root { --module-scale: 1; }
+    body.resolution-4k { --module-scale: 2; }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body { height: 100%; }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: manipulation;
+    }
+
+    /* ---------- Left control panel ---------- */
+    #panel {
+      width: calc(215px * var(--module-scale));
+      flex-shrink: 0;
+      display: flex;
+      flex-direction: column;
+      gap: calc(7px * var(--module-scale));
+      padding: calc(8px * var(--module-scale));
+      background: rgba(255, 255, 255, 0.95);
+      overflow: hidden;
+    }
+
+    .section-label {
+      font-size: calc(11px * var(--module-scale));
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6b6b8d;
+      margin-bottom: calc(-3px * var(--module-scale));
+    }
+
+    select#song {
+      width: 100%;
+      padding: calc(6px * var(--module-scale));
+      font-size: calc(14px * var(--module-scale));
+      border: 2px solid #667eea;
+      border-radius: calc(8px * var(--module-scale));
+      background: white;
+      color: #2c3e50;
+    }
+
+    button {
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      touch-action: manipulation;
+    }
+
+    #play {
+      width: 100%;
+      padding: calc(12px * var(--module-scale)) 0;
+      font-size: calc(22px * var(--module-scale));
+      font-weight: 800;
+      color: white;
+      border-radius: calc(14px * var(--module-scale));
+      background: linear-gradient(135deg, #43a047, #2e7d32);
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.2);
+    }
+    #play.playing { background: linear-gradient(135deg, #e53935, #b71c1c); }
+    #play:disabled { opacity: 0.4; cursor: default; }
+
+    .toggle {
+      padding: calc(6px * var(--module-scale)) calc(8px * var(--module-scale));
+      font-size: calc(13px * var(--module-scale));
+      font-weight: 600;
+      border-radius: calc(8px * var(--module-scale));
+      background: #ececf6;
+      color: #55557a;
+      border: 2px solid transparent;
+    }
+    .toggle.on {
+      background: #e8eaff;
+      color: #3f3fb0;
+      border-color: #667eea;
+    }
+
+    .tempo-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: calc(13px * var(--module-scale));
+      color: #44445f;
+      font-weight: 600;
+    }
+    #tempo {
+      width: 100%;
+      height: calc(28px * var(--module-scale));
+      accent-color: #764ba2;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: calc(4px * var(--module-scale));
+    }
+    .phrase-btn {
+      padding: calc(7px * var(--module-scale)) 0;
+      font-size: calc(15px * var(--module-scale));
+      font-weight: 700;
+      border-radius: calc(8px * var(--module-scale));
+      background: #ececf6;
+      color: #44445f;
+    }
+    .phrase-btn.current {
+      background: linear-gradient(135deg, #ff9800, #f57c00);
+      color: white;
+    }
+
+    #parts {
+      display: flex;
+      flex-direction: column;
+      gap: calc(4px * var(--module-scale));
+      min-height: 0;
+      overflow: hidden;
+    }
+    .part-row {
+      display: flex;
+      gap: calc(4px * var(--module-scale));
+    }
+    .part-name {
+      flex: 1;
+      min-width: 0;
+      text-align: left;
+      padding: calc(6px * var(--module-scale)) calc(8px * var(--module-scale));
+      font-size: calc(13px * var(--module-scale));
+      font-weight: 600;
+      border-radius: calc(8px * var(--module-scale));
+      background: #ececf6;
+      color: #44445f;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      border: 2px solid transparent;
+    }
+    .part-name.shown {
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+    }
+    .part-name small {
+      display: block;
+      font-size: calc(10px * var(--module-scale));
+      font-weight: 500;
+      opacity: 0.8;
+    }
+    .mute-btn {
+      width: calc(38px * var(--module-scale));
+      font-size: calc(17px * var(--module-scale));
+      border-radius: calc(8px * var(--module-scale));
+      background: #e3f6e5;
+    }
+    .mute-btn.muted { background: #f3d6d6; }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: calc(4px * var(--module-scale));
+    }
+    .chips .toggle { flex: 1; padding-left: 0; padding-right: 0; }
+
+    .spacer { flex: 1; min-height: 0; }
+
+    #open-file {
+      font-size: calc(11px * var(--module-scale));
+      padding: calc(5px * var(--module-scale));
+      border-radius: calc(6px * var(--module-scale));
+      background: transparent;
+      color: #8a8aa8;
+      text-decoration: underline;
+    }
+
+    /* ---------- Music stage ---------- */
+    #stage {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      padding: calc(8px * var(--module-scale));
+      gap: calc(8px * var(--module-scale));
+      position: relative;
+    }
+
+    #title-bar {
+      display: flex;
+      align-items: baseline;
+      gap: calc(12px * var(--module-scale));
+      color: white;
+      padding: 0 calc(6px * var(--module-scale));
+    }
+    #song-title {
+      font-size: calc(20px * var(--module-scale));
+      font-weight: 800;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    #song-info {
+      font-size: calc(13px * var(--module-scale));
+      opacity: 0.85;
+    }
+
+    .row {
+      flex: 1;
+      min-height: 0;
+      background: white;
+      border-radius: calc(14px * var(--module-scale));
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+      overflow: hidden;
+      position: relative;
+      transition: opacity 0.25s;
+    }
+    .row svg { display: block; width: 100%; height: 100%; }
+    #row-next { opacity: 0.55; cursor: pointer; }
+    #row-next.empty { background: rgba(255, 255, 255, 0.25); box-shadow: none; }
+
+    .row .phrase-tag {
+      position: absolute;
+      top: calc(6px * var(--module-scale));
+      right: calc(10px * var(--module-scale));
+      font-size: calc(12px * var(--module-scale));
+      font-weight: 700;
+      color: #a0a0c0;
+    }
+
+    /* Note highlight while playing / tapped */
+    .ev .head { transition: fill 0.08s; }
+    .ev.sounding .head { fill: #e91e63; }
+    .ev.tapped .head { fill: #ff9800; }
+    .ev { cursor: pointer; }
+
+    #count {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      font-size: calc(220px * var(--module-scale));
+      font-weight: 900;
+      color: rgba(255, 152, 0, 0.9);
+      text-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+      pointer-events: none;
+    }
+
+    #message {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 40px;
+      color: white;
+      font-size: calc(22px * var(--module-scale));
+      font-weight: 600;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="panel">
+    <select id="song" aria-label="Song"><option>Loading songs…</option></select>
+
+    <button id="play" disabled>▶ Play</button>
+
+    <div class="chips">
+      <button id="countin" class="toggle on">Count-in</button>
+    </div>
+
+    <div>
+      <div class="tempo-row"><span>Tempo</span><span id="tempo-label">100%</span></div>
+      <input id="tempo" type="range" min="40" max="150" step="5" value="100">
+    </div>
+
+    <div class="section-label">Start at phrase</div>
+    <div id="phrases" class="grid"></div>
+
+    <div class="section-label">Parts (tap to show)</div>
+    <div id="parts"></div>
+
+    <div class="section-label">Show</div>
+    <div class="chips">
+      <button class="toggle" data-text="solfege">Solfege</button>
+      <button class="toggle" data-text="lyrics">Lyrics</button>
+      <button class="toggle" data-text="rhythm">Rhythm</button>
+    </div>
+
+    <div class="spacer"></div>
+    <button id="open-file">Open a song file…</button>
+    <input id="file-input" type="file" accept=".json,application/json" hidden>
+  </div>
+
+  <div id="stage">
+    <div id="title-bar"><span id="song-title"></span><span id="song-info"></span></div>
+    <div id="row-current" class="row"></div>
+    <div id="row-next" class="row"></div>
+    <div id="count"></div>
+    <div id="message"></div>
+  </div>
+
+  <script>
+    // Required TaskModule interface - this module is display-only
+    window.TaskModule = {
+      init(context) {},
+      getResponse() { return null; },
+      isComplete() { return false; },
+      reset() { if (window.songPlayerApp) window.songPlayerApp.stop(); }
+    };
+    window.addEventListener('message', (event) => {
+      if (event.data && event.data.type === 'taskmodule:init') window.TaskModule.init(event.data.context);
+    });
+  </script>
+
+  <script type="module">
+    import { SongPlayer } from './shared/SongPlayer.js';
+    import { buildPartNotation, getPhrases, validatePackage } from './shared/SongModel.js';
+    import { layoutSong, renderRow } from './shared/SongRenderer.js';
+    import { getInstrument } from './shared/SongInstruments.js';
+
+    const SONGS_DIR = '../songs/';
+    const $ = (id) => document.getElementById(id);
+
+    try {
+      if (window.parent !== window && window.parent.document.body.classList.contains('resolution-4k')) {
+        document.body.classList.add('resolution-4k');
+      }
+    } catch (e) { /* cross-origin parent */ }
+
+    const store = {
+      get(k) { try { return localStorage.getItem('songPlayer.' + k); } catch (e) { return null; } },
+      set(k, v) { try { localStorage.setItem('songPlayer.' + k, v); } catch (e) { /* storage blocked */ } }
+    };
+
+    const state = {
+      songs: [],
+      pkg: null,
+      phrases: [],
+      current: 0,          // phrase shown on the top row
+      playFrom: 0,
+      shownPart: null,
+      muted: new Set(),
+      text: { solfege: true, lyrics: true, rhythm: false },
+      countIn: true,
+      notation: null,
+      layout: null,
+      rows: { current: null, next: null },
+      sounding: []
+    };
+
+    const player = new SongPlayer();
+
+    // ---------------- Song list ----------------
+    async function loadSongList() {
+      const select = $('song');
+      try {
+        const res = await fetch(SONGS_DIR + 'index.json', { cache: 'no-cache' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        state.songs = await res.json();
+      } catch (e) {
+        state.songs = [];
+      }
+      select.innerHTML = '';
+      if (!state.songs.length) {
+        select.innerHTML = '<option value="">No songs found</option>';
+        showMessage('No songs found in the songs folder.\nUse “Open a song file…” to load a package.');
+        return;
+      }
+      for (const s of state.songs) {
+        const opt = document.createElement('option');
+        opt.value = s.file;
+        opt.textContent = s.title || s.file;
+        select.appendChild(opt);
+      }
+      const last = store.get('lastSong');
+      const pick = state.songs.find(s => s.file === last) || state.songs[0];
+      select.value = pick.file;
+      await loadSongFile(pick.file);
+    }
+
+    async function loadSongFile(file) {
+      try {
+        const res = await fetch(SONGS_DIR + file, { cache: 'no-cache' });
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        setSong(validatePackage(await res.json()));
+        store.set('lastSong', file);
+      } catch (e) {
+        showMessage('Could not load ' + file + ': ' + e.message);
+      }
+    }
+
+    $('song').addEventListener('change', (e) => { if (e.target.value) loadSongFile(e.target.value); });
+
+    $('open-file').addEventListener('click', () => $('file-input').click());
+    $('file-input').addEventListener('change', async (e) => {
+      const f = e.target.files[0];
+      if (!f) return;
+      try {
+        setSong(validatePackage(JSON.parse(await f.text())));
+        const select = $('song');
+        const opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = (state.pkg.title || f.name) + ' (file)';
+        select.appendChild(opt);
+        select.value = '';
+      } catch (err) {
+        showMessage('That file is not a song package: ' + err.message);
+      }
+      e.target.value = '';
+    });
+
+    // ---------------- Song setup ----------------
+    function setSong(pkg) {
+      stop();
+      state.pkg = pkg;
+      state.phrases = getPhrases(pkg);
+      state.current = 0;
+      state.playFrom = 0;
+      state.shownPart = pkg.parts.find(p => p.id === pkg.defaultPart) ? pkg.defaultPart : pkg.parts[0].id;
+      state.muted = new Set();
+      state.text = { solfege: true, lyrics: true, rhythm: false, ...(pkg.textDefaults || {}) };
+      player.load(pkg);
+      $('play').disabled = false;
+      $('song-title').textContent = pkg.title || '';
+      $('song-info').textContent = `${pkg.timeSig.num}/${pkg.timeSig.den} · ${Math.round(pkg.tempo)} bpm`;
+      showMessage('');
+      buildPhraseButtons();
+      buildPartList();
+      syncTextChips();
+      rebuildNotation();
+    }
+
+    function buildPhraseButtons() {
+      const box = $('phrases');
+      box.innerHTML = '';
+      state.phrases.forEach((ph, i) => {
+        const b = document.createElement('button');
+        b.className = 'phrase-btn';
+        b.textContent = i + 1;
+        b.addEventListener('click', () => gotoPhrase(i, true));
+        box.appendChild(b);
+      });
+    }
+
+    function buildPartList() {
+      const box = $('parts');
+      box.innerHTML = '';
+      for (const part of state.pkg.parts) {
+        const row = document.createElement('div');
+        row.className = 'part-row';
+        const name = document.createElement('button');
+        name.className = 'part-name';
+        name.dataset.part = part.id;
+        name.innerHTML = `${escapeHtml(part.name)}<small>${escapeHtml(getInstrument(part.instrument).label)}</small>`;
+        name.addEventListener('click', () => {
+          state.shownPart = part.id;
+          syncPartButtons();
+          rebuildNotation();
+        });
+        const mute = document.createElement('button');
+        mute.className = 'mute-btn';
+        mute.dataset.part = part.id;
+        mute.title = 'Mute / unmute';
+        mute.addEventListener('click', () => {
+          const m = !state.muted.has(part.id);
+          if (m) state.muted.add(part.id); else state.muted.delete(part.id);
+          player.setMuted(part.id, m);
+          syncPartButtons();
+        });
+        row.append(name, mute);
+        box.appendChild(row);
+      }
+      syncPartButtons();
+    }
+
+    function syncPartButtons() {
+      document.querySelectorAll('.part-name').forEach(b => b.classList.toggle('shown', b.dataset.part === state.shownPart));
+      document.querySelectorAll('.mute-btn').forEach(b => {
+        const m = state.muted.has(b.dataset.part);
+        b.classList.toggle('muted', m);
+        b.textContent = m ? '🔇' : '🔊';
+      });
+    }
+
+    document.querySelectorAll('[data-text]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const k = btn.dataset.text;
+        state.text[k] = !state.text[k];
+        syncTextChips();
+        rebuildNotation();
+      });
+    });
+
+    function syncTextChips() {
+      document.querySelectorAll('[data-text]').forEach(b => b.classList.toggle('on', !!state.text[b.dataset.text]));
+    }
+
+    $('countin').addEventListener('click', () => {
+      state.countIn = !state.countIn;
+      $('countin').classList.toggle('on', state.countIn);
+    });
+
+    $('tempo').addEventListener('input', (e) => {
+      const pct = +e.target.value;
+      $('tempo-label').textContent = pct + '%';
+      player.setTempoFactor(pct / 100);
+      if (state.pkg) $('song-info').textContent = `${state.pkg.timeSig.num}/${state.pkg.timeSig.den} · ${Math.round(state.pkg.tempo * pct / 100)} bpm`;
+    });
+
+    // ---------------- Rendering ----------------
+    function rebuildNotation() {
+      if (!state.pkg) return;
+      const part = state.pkg.parts.find(p => p.id === state.shownPart);
+      state.notation = buildPartNotation(state.pkg, part);
+      renderRows();
+    }
+
+    function renderRows() {
+      if (!state.notation) return;
+      const cur = $('row-current');
+      const width = cur.clientWidth, height = cur.clientHeight;
+      if (width < 50 || height < 30) return;
+      state.layout = layoutSong(state.notation, state.phrases, { width, height, text: state.text });
+      state.rows.current = drawRow(cur, state.current);
+      state.rows.next = drawRow($('row-next'), state.current + 1);
+      state.sounding = [];
+      document.querySelectorAll('.phrase-btn').forEach((b, i) => b.classList.toggle('current', i === state.current));
+    }
+
+    function drawRow(el, phraseIndex) {
+      const ph = state.phrases[phraseIndex];
+      el.classList.toggle('empty', !ph);
+      if (!ph) { el.innerHTML = ''; return null; }
+      const row = renderRow(state.notation, state.layout, ph, {
+        showTimeSig: phraseIndex === 0,
+        timeSig: state.pkg.timeSig,
+        isSongEnd: phraseIndex === state.phrases.length - 1
+      });
+      el.innerHTML = row.svg + `<div class="phrase-tag">Phrase ${phraseIndex + 1} of ${state.phrases.length}</div>`;
+      row.el = el;
+      row.bar = el.querySelector('.beat-bar');
+      return row;
+    }
+
+    new ResizeObserver(() => renderRows()).observe($('row-current'));
+
+    function gotoPhrase(i, restartIfPlaying) {
+      if (i < 0 || i >= state.phrases.length) return;
+      const wasPlaying = player.playing;
+      if (wasPlaying && restartIfPlaying) stop();
+      state.current = i;
+      renderRows();
+      if (wasPlaying && restartIfPlaying) play();
+    }
+
+    // Tap the "next" row to move ahead while stopped
+    $('row-next').addEventListener('click', (e) => {
+      if (player.playing || e.target.closest('.ev')) return;
+      gotoPhrase(state.current + 1);
+    });
+
+    // Tap a note to hear it
+    $('stage').addEventListener('click', async (e) => {
+      const g = e.target.closest('.ev');
+      if (!g || player.playing || !state.notation) return;
+      const ev = state.notation.events[+g.dataset.ev];
+      if (!ev || ev.rest) return;
+      g.classList.add('tapped');
+      setTimeout(() => g.classList.remove('tapped'), 350);
+      for (const p of ev.pitches) player.previewNote(state.shownPart, p.midi, ev.soundD);
+    });
+
+    // ---------------- Playback ----------------
+    function phraseIndexAt(t) {
+      for (let i = state.phrases.length - 1; i >= 0; i--) {
+        if (t >= state.phrases[i].start - 1e-6) return i;
+      }
+      return 0;
+    }
+
+    function onBeat(t) {
+      const idx = phraseIndexAt(t);
+      if (idx !== state.current) {
+        state.current = idx;
+        renderRows();
+      }
+      const row = state.rows.current;
+      if (!row || !row.bar) return;
+      row.bar.setAttribute('x', row.beatX(t) - row.barWidth / 2);
+      row.bar.setAttribute('visibility', 'visible');
+    }
+
+    function onMark(t) {
+      state.sounding.forEach(el => el.classList.remove('sounding'));
+      state.sounding = [];
+      const row = state.rows.current;
+      if (!row) return;
+      for (const e of state.notation.events) {
+        if (e.rest || Math.abs(e.soundT - t) > 1e-6) continue;
+        const el = row.el.querySelector(`.ev[data-ev="${e.id}"]`);
+        if (el) { el.classList.add('sounding'); state.sounding.push(el); }
+      }
+    }
+
+    function onCount(n) {
+      const c = $('count');
+      c.textContent = n;
+      c.style.display = 'flex';
+    }
+
+    async function play() {
+      if (!state.pkg) return;
+      state.playFrom = state.current;
+      const marks = [...new Set(state.notation.events.filter(e => !e.rest && !e.tieFromPrev).map(e => e.soundT))];
+      $('play').classList.add('playing');
+      $('play').textContent = '■ Stop';
+      await player.play({
+        fromBeat: state.phrases[state.current].start,
+        countIn: state.countIn,
+        marks,
+        onBeat: (t) => { $('count').style.display = 'none'; onBeat(t); },
+        onMark,
+        onCount,
+        onEnd: () => finish()
+      });
+    }
+
+    function stop() {
+      player.stop();
+      finish();
+    }
+
+    function finish() {
+      $('play').classList.remove('playing');
+      $('play').textContent = '▶ Play';
+      $('count').style.display = 'none';
+      if (state.pkg) {
+        state.current = state.playFrom;
+        renderRows();
+      }
+    }
+
+    $('play').addEventListener('click', () => { player.playing ? stop() : play(); });
+    document.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && state.pkg) { e.preventDefault(); player.playing ? stop() : play(); }
+    });
+
+    // Smartboards: ignore long-press context menus
+    document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    function showMessage(text) {
+      $('message').textContent = text;
+      $('message').style.whiteSpace = 'pre-line';
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    }
+
+    window.songPlayerApp = { stop };
+    loadSongList();
+  </script>
+</body>
+</html>
