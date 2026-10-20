@@ -172,6 +172,7 @@
       gap: calc(4px * var(--module-scale));
     }
     .chips .toggle { flex: 1; padding-left: 0; padding-right: 0; }
+    #stage.no-bar .beat-bar { display: none; }
 
     .spacer { flex: 1; min-height: 0; }
 
@@ -277,6 +278,7 @@
 
     <div class="chips">
       <button id="countin" class="toggle on">Count-in</button>
+      <button id="beatbar" class="toggle on">Beat Bar</button>
     </div>
 
     <div>
@@ -511,6 +513,15 @@
       state.countIn = !state.countIn;
       $('countin').classList.toggle('on', state.countIn);
     });
+
+    // Beat bar on/off (remembered on this board)
+    function setBeatBar(on) {
+      $('beatbar').classList.toggle('on', on);
+      $('stage').classList.toggle('no-bar', !on);
+      store.set('beatBar', on ? '1' : '0');
+    }
+    $('beatbar').addEventListener('click', () => setBeatBar(!$('beatbar').classList.contains('on')));
+    setBeatBar(store.get('beatBar') !== '0');
 
     $('tempo').addEventListener('input', (e) => {
       const pct = +e.target.value;
