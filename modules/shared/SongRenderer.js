@@ -84,7 +84,7 @@ export function layoutSong(notation, phrases, opts) {
 
 /**
  * Render one phrase row.
- * opts: { showTimeSig, timeSig, isSongEnd, colors }
+ * opts: { showTimeSig, timeSig, isSongEnd, allMeasureNumbers (print: number every measure, not just the first) }
  */
 export function renderRow(notation, layout, phrase, opts = {}) {
   const { S, unitPx, staffTop, topLine, bottomLine } = layout;
@@ -148,11 +148,12 @@ export function renderRow(notation, layout, phrase, opts = {}) {
       `<text x="${fmt(tx)}" y="${fmt(yMid + 1.42 * S)}">${opts.timeSig.den}</text></g>`);
   }
 
-  // ---- Measure number ----
-  const firstM = notation.measures[phrase.firstMeasure];
-  if (firstM.number > 0) {
-    parts.push(`<text x="${fmt(measureX[0].start + 0.2 * S)}" y="${fmt(staffTop - layout.staffTop + 1.0 * S)}" font-size="${fmt(0.9 * S)}" fill="#8888aa" font-family="Segoe UI, Arial, sans-serif">${firstM.number}</text>`);
-  }
+  // ---- Measure numbers ----
+  measureX.forEach((mx, i) => {
+    const m = notation.measures[mx.index];
+    if (m.number <= 0 || (i > 0 && !opts.allMeasureNumbers)) return;
+    parts.push(`<text x="${fmt(mx.start + 0.2 * S)}" y="${fmt(staffTop - layout.staffTop + 1.0 * S)}" font-size="${fmt(0.9 * S)}" fill="${opts.allMeasureNumbers ? '#555570' : '#8888aa'}" font-family="Segoe UI, Arial, sans-serif">${m.number}</text>`);
+  });
 
   // ---- Barlines ----
   const barW = 0.14 * S;

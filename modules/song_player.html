@@ -255,6 +255,42 @@
       pointer-events: none;
     }
 
+    /* ---------- Print Parts (hidden on screen) ---------- */
+    #print-area { display: none; }
+
+    @page { size: letter portrait; margin: 0.5in; }
+    @media print {
+      html, body { height: auto; overflow: visible; display: block; background: #fff; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      #panel, #stage, #count, #message { display: none !important; }
+      #print-area { display: block; }
+      .print-page {
+        width: 7.5in; height: 10in;
+        display: flex; flex-direction: column;
+        break-after: page; page-break-after: always;
+        overflow: hidden;
+      }
+      .print-page:last-child { break-after: auto; page-break-after: auto; }
+      .print-head {
+        height: 0.5in; flex-shrink: 0;
+        display: flex; align-items: baseline; justify-content: space-between;
+        border-bottom: 1.5px solid #1d1d35;
+        font-family: 'Segoe UI', Arial, sans-serif; color: #1d1d35;
+      }
+      .print-head .song { font-size: 20pt; font-weight: 800; }
+      .print-head .part { font-size: 14pt; font-weight: 700; }
+      .print-head .part small { font-weight: 500; font-size: 10pt; color: #55557a; }
+      .print-rows { flex: 1; padding-top: 0.05in; }
+      .print-row { height: 1.14in; }
+      .print-row svg { display: block; width: 7.5in; height: 1.14in; }
+      .print-row .beat-bar, .print-row .hit { display: none; }
+      .print-foot {
+        height: 0.2in; flex-shrink: 0;
+        font: 8pt 'Segoe UI', Arial, sans-serif; color: #7a7a95;
+        display: flex; justify-content: space-between;
+      }
+    }
+
     #message {
       position: absolute;
       inset: 0;
@@ -300,6 +336,7 @@
     </div>
 
     <div class="spacer"></div>
+    <button id="print-parts" class="toggle" title="Print every part, 8 staves per page, using the Show settings above">🖨 Print Parts</button>
     <button id="fullscreen" class="toggle">⛶ Full Screen</button>
     <button id="open-file">Open a song file…</button>
     <input id="file-input" type="file" accept=".json,application/json" hidden>
@@ -312,6 +349,8 @@
     <div id="count"></div>
     <div id="message"></div>
   </div>
+
+  <div id="print-area"></div>
 
   <script>
     // Required TaskModule interface - this module is display-only
@@ -664,6 +703,48 @@
     }
 
     $('play').addEventListener('click', () => { player.playing ? stop() : play(); });
+
+    // ---------------- Print Parts ----------------
+    // One page per part (more if a part has over 8 rows), 8 staves per letter page.
+    // Uses the current Show toggles (solfege / lyrics / rhythm) and numbers every measure.
+    const PRINT_ROWS_PER_PAGE = 8;
+    const PRINT_W = 720, PRINT_H = 109;   // px for 7.5in x 1.14in at 96 dpi; the SVG scales to fit
+
+    function buildPrintPages() {
+      const pkg = state.pkg;
+      const pages = [];
+      for (const part of pkg.parts) {
+        const notation = buildPartNotation(pkg, part);
+        const layout = layoutSong(notation, state.phrases, { width: PRINT_W, height: PRINT_H, text: state.text });
+        const rows = state.phrases.map((ph, i) => renderRow(notation, layout, ph, {
+          showTimeSig: i === 0,
+          timeSig: pkg.timeSig,
+          isSongEnd: i === state.phrases.length - 1,
+          allMeasureNumbers: true
+        }).svg);
+        const count = Math.ceil(rows.length / PRINT_ROWS_PER_PAGE);
+        for (let p = 0; p < count; p++) {
+          const chunk = rows.slice(p * PRINT_ROWS_PER_PAGE, (p + 1) * PRINT_ROWS_PER_PAGE);
+          pages.push(`<section class="print-page">
+            <div class="print-head">
+              <span class="song">${escapeHtml(pkg.title || '')}</span>
+              <span class="part">${escapeHtml(part.name)} <small>${escapeHtml(getInstrument(part.instrument).label)}${count > 1 ? ` · page ${p + 1} of ${count}` : ''}</small></span>
+            </div>
+            <div class="print-rows">${chunk.map(svg => `<div class="print-row">${svg}</div>`).join('')}</div>
+            <div class="print-foot"><span>${pkg.timeSig.num}/${pkg.timeSig.den} · ♩ = ${Math.round(pkg.tempo)}</span><span>${escapeHtml(part.name)}</span></div>
+          </section>`);
+        }
+      }
+      return pages.join('');
+    }
+
+    $('print-parts').addEventListener('click', () => {
+      if (!state.pkg) return;
+      stop();
+      $('print-area').innerHTML = buildPrintPages();
+      window.print();
+    });
+    window.addEventListener('afterprint', () => { $('print-area').innerHTML = ''; });
 
     // Full screen: the app's iframe allows it, so the module can fill the whole display
     const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement;
