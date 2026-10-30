@@ -329,6 +329,8 @@
       <div class="seating-chart-header">
         <h2 id="seating-chart-title">Class Seating Chart</h2>
         <div class="seating-chart-header-buttons">
+          <button id="seating-chart-random-btn" class="seating-chart-random-btn" title="Pick a random student">🎲 Pick Random</button>
+          <button id="seating-chart-absent-btn" class="seating-chart-absent-btn" title="Tap students to mark them absent">🚫 Mark Absent</button>
           <button id="seating-chart-print-btn" class="seating-chart-print-btn" title="Print / Save PDF">🖨️ Print</button>
           <button id="seating-chart-close-btn" class="seating-chart-close-btn" title="Close (ESC)">✕</button>
         </div>
@@ -348,6 +350,11 @@
       <div class="seating-chart-overflow-box" id="seating-chart-overflow-box" style="display: none;">
         <span class="seating-chart-overflow-label">⚠️ Not placed:</span>
         <div class="seating-chart-overflow-students" id="seating-chart-overflow-students"></div>
+      </div>
+
+      <div class="seating-chart-absent-box" id="seating-chart-absent-box" style="display: none;">
+        <span class="seating-chart-absent-label">🚫 Absent (tap to mark present):</span>
+        <div class="seating-chart-absent-students" id="seating-chart-absent-students"></div>
       </div>
 
       <nav class="seating-chart-legend" aria-label="Seating legend">

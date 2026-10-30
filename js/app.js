@@ -309,6 +309,27 @@ class TeachingAssistantApp {
       seatingChartRefreshBtn.addEventListener('click', () => this.renderSeatingChart());
     }
 
+    const seatingChartAbsentBtn = document.getElementById('seating-chart-absent-btn');
+    if (seatingChartAbsentBtn) {
+      seatingChartAbsentBtn.addEventListener('click', () => this.setSeatingAbsentMode(!this.seatingAbsentMode));
+    }
+
+    const seatingChartRandomBtn = document.getElementById('seating-chart-random-btn');
+    if (seatingChartRandomBtn) {
+      seatingChartRandomBtn.addEventListener('click', () => this.pickRandomFromSeatingChart());
+    }
+
+    // In "Mark Absent" mode, tapping a seated student marks them absent
+    const seatingChartOverlay = document.getElementById('seating-chart-overlay');
+    if (seatingChartOverlay) {
+      seatingChartOverlay.addEventListener('click', (e) => {
+        if (!this.seatingAbsentMode) return;
+        const seat = e.target.closest('.seating-chart-student-spot.occupied, .seating-chart-stool.occupied, .seating-chart-chair.occupied');
+        if (!seat || !seat.dataset.studentId) return;
+        this.markSeatingChartStudentAbsent(seat.dataset.studentId);
+      });
+    }
+
     const seatingChartPrintBtn = document.getElementById('seating-chart-print-btn');
     if (seatingChartPrintBtn) {
       seatingChartPrintBtn.addEventListener('click', () => this.printSeatingChart());
@@ -1340,7 +1361,7 @@ class TeachingAssistantApp {
   /**
    * Toggle student absent status
    */
-  toggleAbsentStatus(student) {
+  toggleAbsentStatus(student, refreshStudentScreen = true) {
     const isCurrentlyAbsent = this.isStudentAbsent(student.student_id);
 
     if (isCurrentlyAbsent) {
@@ -1372,7 +1393,7 @@ class TeachingAssistantApp {
     this.markUnsaved();
 
     // Refresh the student list to update UI
-    this.showStudentScreen();
+    if (refreshStudentScreen) this.showStudentScreen();
   }
 
   /**
@@ -4556,6 +4577,8 @@ class TeachingAssistantApp {
 
     console.log('Setting overlay display to flex');
     overlay.style.display = 'flex';
+    this.seatingPickedIds = new Set();
+    this.setSeatingAbsentMode(false);
     console.log('Calling renderSeatingChart');
     this.renderSeatingChart();
 
@@ -5135,6 +5158,7 @@ class TeachingAssistantApp {
 
       if (assignedStudent) {
         stool.classList.add('occupied');
+        stool.dataset.studentId = assignedStudent.student.student_id;
         stool.innerHTML = `
           <span class="stool-icon">⭐</span>
           <span class="seating-chart-student-name">${this.getFirstNameOnly(assignedStudent.student.name)}</span>
@@ -5179,6 +5203,7 @@ class TeachingAssistantApp {
 
       if (assignedStudent) {
         chair.classList.add('occupied');
+        chair.dataset.studentId = assignedStudent.student.student_id;
         chair.innerHTML = `
           <span class="chair-icon">🪑</span>
           <span class="seating-chart-student-name">${this.getFirstNameOnly(assignedStudent.student.name)}</span>
@@ -5205,9 +5230,117 @@ class TeachingAssistantApp {
     // Render overflow box for students who couldn't be placed
     const overflowStudents = availableStudents.filter(s => !placedStudentIds.has(s.student_id));
     this.renderOverflowBox(overflowStudents);
+    this.renderSeatingChartAbsentBox(classStudents.filter(s => this.isStudentAbsent(s.student_id)));
 
     // Setup drag and drop handlers
     this.setupSeatingChartDragAndDrop();
+  }
+
+  /**
+   * Students in the chart's class(es), or null when no class is selected
+   */
+  getSeatingChartClassStudents() {
+    if (this.selectedClasses.size > 0) {
+      return this.students.filter(s => this.selectedClasses.has(s.class));
+    }
+    if (this.selectedClass) {
+      return this.students.filter(s => s.class === this.selectedClass);
+    }
+    return null;
+  }
+
+  /**
+   * Turn "Mark Absent" mode on/off (tapping a seated student marks them absent)
+   */
+  setSeatingAbsentMode(on) {
+    this.seatingAbsentMode = !!on;
+    const overlay = document.getElementById('seating-chart-overlay');
+    const btn = document.getElementById('seating-chart-absent-btn');
+    if (overlay) overlay.classList.toggle('absent-mode', this.seatingAbsentMode);
+    if (btn) {
+      btn.classList.toggle('active', this.seatingAbsentMode);
+      btn.textContent = this.seatingAbsentMode ? '✓ Done Marking' : '🚫 Mark Absent';
+    }
+  }
+
+  /**
+   * Mark a student absent from the seating chart (keeps their seat for when they return)
+   */
+  markSeatingChartStudentAbsent(studentId) {
+    const student = this.students.find(s => s.student_id === studentId);
+    if (!student || this.isStudentAbsent(studentId)) return;
+    this.toggleAbsentStatus(student, false);
+    this.renderSeatingChart();
+  }
+
+  /**
+   * Mark an absent student present again from the seating chart
+   */
+  markSeatingChartStudentPresent(studentId) {
+    const student = this.students.find(s => s.student_id === studentId);
+    if (!student || !this.isStudentAbsent(studentId)) return;
+    this.toggleAbsentStatus(student, false);
+    this.renderSeatingChart();
+  }
+
+  /**
+   * Show absent students as tappable chips under the chart
+   */
+  renderSeatingChartAbsentBox(absentStudents) {
+    const box = document.getElementById('seating-chart-absent-box');
+    const container = document.getElementById('seating-chart-absent-students');
+    if (!box || !container) return;
+
+    container.innerHTML = '';
+    if (absentStudents.length === 0) {
+      box.style.display = 'none';
+      return;
+    }
+
+    absentStudents.forEach(student => {
+      const chip = document.createElement('button');
+      chip.className = 'seating-chart-absent-student';
+      chip.textContent = this.getFirstNameOnly(student.name);
+      chip.title = 'Tap to mark present';
+      chip.addEventListener('click', () => this.markSeatingChartStudentPresent(student.student_id));
+      container.appendChild(chip);
+    });
+    box.style.display = 'flex';
+  }
+
+  /**
+   * Pick a random present student from the chart. No repeats until everyone has had a turn.
+   */
+  pickRandomFromSeatingChart() {
+    const classStudents = this.getSeatingChartClassStudents();
+    if (!classStudents) {
+      this.showNotification('Please select a class first!', 'warning');
+      return;
+    }
+    const present = classStudents.filter(s => !this.isStudentAbsent(s.student_id));
+    if (present.length === 0) {
+      this.showNotification('No students are present!', 'warning');
+      return;
+    }
+
+    if (!this.seatingPickedIds) this.seatingPickedIds = new Set();
+    let pool = present.filter(s => !this.seatingPickedIds.has(s.student_id));
+    if (pool.length === 0) {
+      // Everyone has had a turn: start a new round
+      this.seatingPickedIds.clear();
+      pool = present;
+    }
+
+    const picked = pool[Math.floor(Math.random() * pool.length)];
+    this.seatingPickedIds.add(picked.student_id);
+    this.showRandomStudentPopup(this.getFirstNameOnly(picked.name));
+
+    // Flash the picked student's seat so it is easy to find once the popup closes
+    const seat = document.querySelector(`#seating-chart-overlay [data-student-id="${picked.student_id}"]`);
+    if (seat) {
+      seat.classList.add('picked');
+      setTimeout(() => seat.classList.remove('picked'), 6000);
+    }
   }
 
   /**
@@ -5290,6 +5423,7 @@ class TeachingAssistantApp {
     spots.forEach(spot => {
       // Mouse drag start
       spot.addEventListener('dragstart', (e) => {
+        if (this.seatingAbsentMode) { e.preventDefault(); return; }
         this.seatingChartDraggedSpot = spot;
         spot.classList.add('dragging');
         e.dataTransfer.effectAllowed = 'move';
@@ -5308,6 +5442,7 @@ class TeachingAssistantApp {
 
       // Touch start (for mobile/smartboard)
       spot.addEventListener('touchstart', (e) => {
+        if (this.seatingAbsentMode) return; // let the tap through as a click
         this.seatingChartDraggedSpot = spot;
         spot.classList.add('dragging');
 
