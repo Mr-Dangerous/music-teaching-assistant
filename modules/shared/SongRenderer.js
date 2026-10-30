@@ -416,7 +416,7 @@ function tie(x1, x2, y, S, below) {
 function drawRest(e, x, yMid, S, hasMidLine) {
   const s = (v) => fmt(v * S);
   const out = [];
-  const base = e.measureRest ? 4 : e.base;
+  const base = e.base;
   if (base >= 2) {
     const w = 1.25 * S, h = 0.55 * S;
     const yLine = yMid;

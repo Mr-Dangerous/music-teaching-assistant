@@ -1,5 +1,5 @@
 {
-  "version": "3.77.1",
+  "version": "3.78.1",
   "lastUpdated": "2026-10-30",
-  "description": "Print Parts: every staff row stretches to the full page width"
+  "description": "Song Player: full-measure rests in 2/4 are drawn as half rests"
 }

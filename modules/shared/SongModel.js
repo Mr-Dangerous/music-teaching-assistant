@@ -273,7 +273,11 @@ export function buildPartNotation(pkg, part) {
     }
     if (cursor < mEnd - EPS) {
       if (Math.abs(cursor - m.start) < EPS) {
-        m.events.push({ t: m.start, d: m.length, base: 4, dots: 0, rest: true, measureRest: true, pitches: [] });
+        // A whole rest fills any full measure by convention, except a measure shorter than 4 beats that is
+        // exactly one undotted value (e.g. 2/4 = half rest). 3/4 keeps the whole rest.
+        const exact = VALUES.find(x => x.dots === 0 && Math.abs(x.v - m.length) < EPS);
+        const restBase = exact && m.length < 4 ? exact.base : 4;
+        m.events.push({ t: m.start, d: m.length, base: restBase, dots: 0, rest: true, measureRest: true, pitches: [] });
       } else {
         addRest(cursor, mEnd);
       }
