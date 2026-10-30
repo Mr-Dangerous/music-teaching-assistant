@@ -1,5 +1,5 @@
 {
-  "version": "3.75.1",
+  "version": "3.75.2",
   "lastUpdated": "2026-10-30",
-  "description": "Song Player: Print Parts (one page per part, 8 staves per page, measure numbers, optional solfege/lyrics/rhythm)"
+  "description": "Song Player: Print Parts explains when printing is blocked by an old cached app"
 }

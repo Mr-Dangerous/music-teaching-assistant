@@ -738,8 +738,21 @@
       return pages.join('');
     }
 
+    // Browsers ignore print() inside a sandboxed iframe unless it has allow-modals
+    function printBlockedBySandbox() {
+      try {
+        const f = window.frameElement;
+        return !!(f && f.sandbox && f.sandbox.length && !f.sandbox.contains('allow-modals'));
+      } catch (e) { return false; }
+    }
+
     $('print-parts').addEventListener('click', () => {
       if (!state.pkg) return;
+      if (printBlockedBySandbox()) {
+        showMessage('Printing is blocked because this page is running an old cached copy of the app.\nReload with Ctrl+Shift+R (clear the site cache on the board), then try again.');
+        setTimeout(() => showMessage(''), 9000);
+        return;
+      }
       stop();
       $('print-area').innerHTML = buildPrintPages();
       window.print();
