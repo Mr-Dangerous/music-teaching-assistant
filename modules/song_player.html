@@ -755,9 +755,34 @@
       }
       stop();
       $('print-area').innerHTML = buildPrintPages();
+      setPrintTitle(`${state.pkg.title || 'Song'} - Parts - ${timestamp()}`);
       window.print();
     });
-    window.addEventListener('afterprint', () => { $('print-area').innerHTML = ''; });
+    window.addEventListener('afterprint', () => { $('print-area').innerHTML = ''; restorePrintTitle(); });
+
+    // "Save as PDF" names the file after the page title, so set a timestamped one while printing.
+    // The module runs inside the app's iframe, where the app's title is what usually names the file,
+    // so set both and put them back afterwards.
+    const savedTitles = {};
+    function timestamp() {
+      const d = new Date(), p = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+    }
+    function setPrintTitle(title) {
+      savedTitles.self = document.title;
+      document.title = title;
+      try {
+        if (window.parent !== window) {
+          savedTitles.parent = window.parent.document.title;
+          window.parent.document.title = title;
+        }
+      } catch (e) { /* cross-origin parent: leave its title alone */ }
+    }
+    function restorePrintTitle() {
+      if (savedTitles.self !== undefined) document.title = savedTitles.self;
+      try { if (savedTitles.parent !== undefined) window.parent.document.title = savedTitles.parent; } catch (e) { /* ignore */ }
+      delete savedTitles.self; delete savedTitles.parent;
+    }
 
     // Full screen: the app's iframe allows it, so the module can fill the whole display
     const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement;

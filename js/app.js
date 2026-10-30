@@ -4612,6 +4612,14 @@ class TeachingAssistantApp {
    * Print seating chart (opens browser print dialog / Save as PDF)
    */
   printSeatingChart() {
+    // "Save as PDF" names the file after the page title, so use a timestamped one while printing
+    const d = new Date(), p = (n) => String(n).padStart(2, '0');
+    const stamp = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+    const titleEl = document.getElementById('seating-chart-title');
+    const name = titleEl ? titleEl.textContent.replace(/^Seating Chart:\s*/, '') : '';
+    const original = document.title;
+    document.title = `Seating Chart${name ? ' - ' + name : ''} - ${stamp}`;
+    window.addEventListener('afterprint', () => { document.title = original; }, { once: true });
     window.print();
   }
 
