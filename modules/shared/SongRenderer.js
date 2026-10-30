@@ -84,7 +84,8 @@ export function layoutSong(notation, phrases, opts) {
 
 /**
  * Render one phrase row.
- * opts: { showTimeSig, timeSig, isSongEnd, allMeasureNumbers (print: number every measure, not just the first) }
+ * opts: { showTimeSig, timeSig, isSongEnd, allMeasureNumbers (print: number every measure, not just the first),
+ *         justify (print: stretch note spacing so the row always reaches the full width) }
  */
 export function renderRow(notation, layout, phrase, opts = {}) {
   const { S, unitPx, staffTop, topLine, bottomLine } = layout;
@@ -100,6 +101,16 @@ export function renderRow(notation, layout, phrase, opts = {}) {
   const eventX = new Map();
 
   // ---- Horizontal positions ----
+  // When justifying, each row gets its own spacing so short rows (e.g. whole-rest measures) still span the page
+  let unit = unitPx;
+  if (opts.justify) {
+    let w = 0, n = 0;
+    for (let mi = phrase.firstMeasure; mi <= phrase.lastMeasure; mi++) {
+      n++;
+      for (const e of notation.measures[mi].events) w += eventWeight(e);
+    }
+    unit = Math.max(unitPx, (layout.width - 0.1 * S - layout.headerW - n * (layout.padL + layout.padR)) / w);
+  }
   let x = layout.headerW;
   const measureX = [];
   for (let mi = phrase.firstMeasure; mi <= phrase.lastMeasure; mi++) {
@@ -109,13 +120,13 @@ export function renderRow(notation, layout, phrase, opts = {}) {
     for (const e of m.events) {
       eventX.set(e.id, x + rx);
       if (e.measureRest) {
-        const w = eventWeight(e) * unitPx;
+        const w = eventWeight(e) * unit;
         eventX.set(e.id, x + w / 2 - layout.padL / 2 + rx / 2);
         anchors.push([e.t, x + rx]);
         x += w;
       } else {
         anchors.push([e.t, x + rx]);
-        x += eventWeight(e) * unitPx;
+        x += eventWeight(e) * unit;
       }
     }
     x += layout.padR;

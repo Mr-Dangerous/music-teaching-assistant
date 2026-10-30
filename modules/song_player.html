@@ -720,7 +720,8 @@
           showTimeSig: i === 0,
           timeSig: pkg.timeSig,
           isSongEnd: i === state.phrases.length - 1,
-          allMeasureNumbers: true
+          allMeasureNumbers: true,
+          justify: true
         }).svg);
         const count = Math.ceil(rows.length / PRINT_ROWS_PER_PAGE);
         for (let p = 0; p < count; p++) {
