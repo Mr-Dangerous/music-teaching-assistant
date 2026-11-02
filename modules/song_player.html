@@ -391,6 +391,10 @@
     <div id="quiz-focus" class="chips" title="Always quiz these pitches"></div>
 
     <button id="clef-btn" class="toggle" title="Switch every pitched part between the solfege staff and a treble clef in concert pitch">Staff: Solfege</button>
+    <div id="octave-row" class="quiz-row" style="display:none" title="Draw this part higher or lower on the treble clef (what you hear does not change)">
+      <span style="flex:1;font-weight:700">Show octave</span>
+      <div class="quiz-spots"><button id="octave-down" class="toggle">−</button><span id="octave-val">0</span><button id="octave-up" class="toggle">+</button></div>
+    </div>
     <button id="line-labels" class="toggle" title="Cycle the do / mi / so names written beside the staff lines">Staff names: All lines</button>
 
     <div class="spacer"></div>
@@ -620,7 +624,29 @@
       $('clef-btn').textContent = treble ? 'Staff: Treble clef' : 'Staff: Solfege';
       $('clef-btn').classList.toggle('on', treble);
       $('line-labels').style.display = treble ? 'none' : '';   // line names only make sense on the solfege staff
+      syncOctaveUi();
     }
+
+    // Treble clef: draw a part an octave higher/lower (visual only). Remembered per song + part on this board;
+    // a song file can set a part's default with displayOctave.
+    const octaveKey = (part) => 'octave.' + (state.pkg.title || '') + '|' + part.id;
+    function octaveFor(part) {
+      const saved = store.get(octaveKey(part));
+      return saved !== null && saved !== '' && !isNaN(+saved) ? +saved : (part.displayOctave || 0);
+    }
+    function syncOctaveUi() {
+      const part = state.pkg && state.pkg.parts.find(p => p.id === state.shownPart);
+      const show = !!part && state.clef === 'treble' && part.kind !== 'unpitched';
+      $('octave-row').style.display = show ? 'flex' : 'none';
+      if (show) { const o = octaveFor(part); $('octave-val').textContent = o > 0 ? '+' + o : String(o); }
+    }
+    function shiftOctave(delta) {
+      const part = state.pkg.parts.find(p => p.id === state.shownPart);
+      store.set(octaveKey(part), String(Math.max(-3, Math.min(3, octaveFor(part) + delta))));
+      rebuildNotation();
+    }
+    $('octave-down').addEventListener('click', () => shiftOctave(-1));
+    $('octave-up').addEventListener('click', () => shiftOctave(1));
     $('clef-btn').addEventListener('click', () => {
       state.clef = state.clef === 'treble' ? 'solfege' : 'treble';
       store.set('clef', state.clef);
@@ -673,7 +699,8 @@
     function rebuildNotation() {
       if (!state.pkg) return;
       const part = state.pkg.parts.find(p => p.id === state.shownPart);
-      state.notation = buildPartNotation(state.pkg, part, { clef: state.clef });
+      state.notation = buildPartNotation(state.pkg, part, { clef: state.clef, octave: octaveFor(part) });
+      syncOctaveUi();
       state.quiz.focus = new Set([...state.quiz.focus].filter(s => syllablesIn(state.notation.events).includes(s)));
       state.quiz.spots = [];
       resetQuizLabels();
@@ -1012,7 +1039,7 @@
       const pkg = state.pkg;
       const pages = [];
       for (const part of pkg.parts) {
-        const notation = buildPartNotation(pkg, part, { clef: state.clef });
+        const notation = buildPartNotation(pkg, part, { clef: state.clef, octave: octaveFor(part) });
         const layout = layoutSong(notation, state.phrases, { width: PRINT_W, height: PRINT_H, text: state.text });
         const rows = state.phrases.map((ph, i) => renderRow(notation, layout, ph, {
           showTimeSig: i === 0,

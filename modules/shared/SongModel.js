@@ -16,6 +16,7 @@
  *   parts: [{
  *     id, name, kind: 'pitched'|'unpitched', instrument, volume (dB),
  *     lines: 1-5, doMidi,               // staff + solfege reference ("do" pitch)
+ *     displayOctave: 1,                 // optional; draw this part an octave higher (+) or lower (-) on a treble clef
  *     spelling: 'sharp'|'flat',         // optional; chromatic notes as di/ri/fi/si or ra/me/se/le (auto if omitted)
  *     lyrics: 'Rock- y moun- tain ...', // one token per note, '_' skips a note
  *     notes: [[t, d, midi], ...]
@@ -262,6 +263,8 @@ export function parseLyrics(text) {
  */
 export function buildPartNotation(pkg, part, buildOpts = {}) {
   const treble = buildOpts.clef === 'treble' && part.kind !== 'unpitched';
+  // Treble clef only: move the written notes up/down whole octaves (a part may set a default with `displayOctave`)
+  const octave = Math.round(buildOpts.octave ?? part.displayOctave ?? 0);
   const measures = getMeasures(pkg);
   const beatLen = beatLength(pkg);
   const pitched = part.kind !== 'unpitched';
@@ -373,7 +376,7 @@ export function buildPartNotation(pkg, part, buildOpts = {}) {
           if (p.tdiff !== cur) p.acc = { 0: '♮', 1: '♯', '-1': '♭', 2: '𝄪', '-2': '𝄫' }[p.tdiff] || null;
           state[p.tpos] = p.tdiff;
         }
-        p.degree = p.tpos;
+        p.degree = p.tpos + 7 * octave;   // octave: visual shift only (the sound and the letter names do not change)
       }
     }
   }

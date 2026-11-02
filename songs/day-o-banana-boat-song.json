@@ -2509,6 +2509,7 @@
    "name": "Xylophone Bordun",
    "kind": "pitched",
    "instrument": "xylophone",
+   "displayOctave": 1,
    "volume": 0,
    "lines": 3,
    "doMidi": 48,
