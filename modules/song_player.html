@@ -187,8 +187,9 @@
       color: white; background: #e65100; border: 3px solid white; border-radius: 999px;
       box-shadow: 0 4px 14px rgba(0,0,0,.35); cursor: pointer; white-space: nowrap;
     }
-    #quiz-focus { display: none; }
+    #quiz-focus, #quiz-sustain { display: none; }
     #quiz-focus.show { display: flex; }
+    #quiz-sustain.show { display: block; }
     #quiz-focus .toggle { flex: 0 0 auto; min-width: calc(34px * var(--module-scale)); padding: calc(4px * var(--module-scale)) calc(6px * var(--module-scale)); }
 
     .spacer { flex: 1; min-height: 0; }
@@ -357,6 +358,7 @@
       <button id="quiz" class="toggle">? Quiz</button>
       <div class="quiz-spots"><button id="quiz-less" class="toggle">−</button><span id="quiz-count">3</span><button id="quiz-more" class="toggle">+</button></div>
     </div>
+    <button id="quiz-sustain" class="toggle on" title="On: the mystery note rings while frozen. Off: silence, so students sing it from memory.">Sustain ? note</button>
     <div id="quiz-focus" class="chips" title="Always quiz these pitches"></div>
 
     <div class="spacer"></div>
@@ -425,7 +427,7 @@
       layout: null,
       rows: { current: null, next: null },
       sounding: [],
-      quiz: { on: false, count: 3, focus: new Set(), spots: [], hidden: new Set(), frozenAt: null }
+      quiz: { on: false, sustain: true, count: 3, focus: new Set(), spots: [], hidden: new Set(), frozenAt: null }
     };
     const QUIZ_HOLD_SEC = 4;   // how long each mystery note rings out while frozen
 
@@ -633,6 +635,8 @@
       $('quiz').classList.toggle('on', state.quiz.on);
       $('quiz-count').textContent = state.quiz.count;
       $('quiz-focus').classList.toggle('show', state.quiz.on);
+      $('quiz-sustain').classList.toggle('show', state.quiz.on);
+      $('quiz-sustain').classList.toggle('on', state.quiz.sustain);
     }
 
     $('quiz').addEventListener('click', () => {
@@ -644,6 +648,7 @@
       syncQuizUi();
       renderRows();
     });
+    $('quiz-sustain').addEventListener('click', () => { state.quiz.sustain = !state.quiz.sustain; syncQuizUi(); });
     $('quiz-less').addEventListener('click', () => { state.quiz.count = Math.max(2, state.quiz.count - 1); syncQuizUi(); });
     $('quiz-more').addEventListener('click', () => { state.quiz.count = Math.min(6, state.quiz.count + 1); syncQuizUi(); });
 
@@ -775,6 +780,7 @@
         marks,
         stops: state.quiz.on ? state.quiz.spots.map(r => r.t).filter(t => t > fromBeat + 1e-6) : [],
         holdSec: QUIZ_HOLD_SEC,
+        sustain: state.quiz.sustain,
         onFreeze: freezeQuiz,
         onBeat: (t) => { $('count').style.display = 'none'; onBeat(t); },
         onMark,

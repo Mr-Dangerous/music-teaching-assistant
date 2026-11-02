@@ -9,7 +9,7 @@
  *   player.setMuted('p2', true);  // live
  *   player.stop();
  *
- * Quiz mode: pass opts.stops = [beat, ...] (+ holdSec, onFreeze(beat)). At each stop the notes starting
+ * Quiz mode: pass opts.stops = [beat, ...] (+ holdSec, sustain, onFreeze(beat)). At each stop the notes starting
  * there ring for holdSec extra seconds and playback stops there (calling onFreeze). To continue, call
  * play() again with fromBeat = that beat; notes already sounding at fromBeat are re-struck.
  */
@@ -148,6 +148,7 @@ export class SongPlayer {
     const holdSec = opts.holdSec ?? 4;
     const stops = (opts.stops || []).filter(b => b >= fromBeat - EPS && b < toBeat - EPS);
     const isStop = (t) => stops.some(b => Math.abs(b - t) < EPS);
+    const sustain = opts.sustain !== false;   // false: the mystery note stays silent while frozen
 
     // Notes
     for (const part of pkg.parts) {
@@ -156,7 +157,9 @@ export class SongPlayer {
       for (const [t, d, midi] of part.notes) {
         if (t < fromBeat - EPS || t >= toBeat - EPS) continue;
         const len = Math.min(d, toBeat - t);
-        const extra = isStop(t) ? holdSec : 0;
+        const atStop = isStop(t);
+        if (atStop && !sustain) continue;
+        const extra = atStop ? holdSec : 0;
         transport.schedule((time) => {
           entry.inst.trigger(midi, len * 60 / transport.bpm.value + extra, time, 0.8);
         }, ticks(t - fromBeat + offset));

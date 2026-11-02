@@ -1,5 +1,5 @@
 {
-  "version": "3.80.1",
+  "version": "3.81.1",
   "lastUpdated": "2026-11-02",
-  "description": "Song Player quiz: freeze waits for a Reveal & continue button next to the ?"
+  "description": "Song Player quiz: optional 'Sustain ? note' (off = mystery note is silent while frozen)"
 }
