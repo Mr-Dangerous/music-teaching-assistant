@@ -27,7 +27,7 @@ function eventWeight(e) {
 
 function textLinesFor(notation, text) {
   const lines = [];
-  if (text.lyrics && notation.events.some(e => e.lyric)) lines.push('lyrics');
+  if (text.lyrics && (notation.events.some(e => e.lyric) || (notation.borrowedLyrics || []).length)) lines.push('lyrics');
   if (text.solfege && notation.lines > 1) lines.push('solfege');
   if (text.rhythm) lines.push('rhythm');
   return lines;
@@ -135,6 +135,17 @@ export function renderRow(notation, layout, phrase, opts = {}) {
   }
   const rowEnd = x;
   anchors.push([phrase.end, rowEnd - layout.padR]);
+
+  anchors.sort((a, b) => a[0] - b[0]);
+  const beatX = (t) => {
+    if (t <= anchors[0][0]) return anchors[0][1];
+    for (let i = 1; i < anchors.length; i++) {
+      const [t1, x1] = anchors[i];
+      const [t0, x0] = anchors[i - 1];
+      if (t <= t1 + EPS) return t1 - t0 < EPS ? x1 : x0 + (x1 - x0) * (t - t0) / (t1 - t0);
+    }
+    return anchors[anchors.length - 1][1];
+  };
 
   const staffLeft = layout.labelW;
   const lineYs = staff.map(yOf);
@@ -372,20 +383,45 @@ export function renderRow(notation, layout, phrase, opts = {}) {
     evParts.push(`<g class="ev${e.rest ? ' rest' : ''}" data-ev="${e.id}">${g.join('')}</g>`);
   }
 
+  // Rhythm counts that are not at a note's own start: counts held by a longer note, and rest counts
+  const rhythmLine = layout.textLines.indexOf('rhythm');
+  if (rhythmLine >= 0 && notation.rhythmMarks) {
+    const ty = layout.textTop + rhythmLine * layout.textH + layout.textH * 0.72;
+    for (const mk of notation.rhythmMarks) {
+      if (mk.t < phrase.start - EPS || mk.t >= phrase.end - EPS) continue;
+      evParts.push(`<text class="txt-rhythm" x="${fmt(beatX(mk.t))}" y="${fmt(ty)}" font-size="${fmt(0.95 * S)}" text-anchor="middle" fill="${mk.rest ? '#b8b8c8' : '#d98a5f'}" font-family="Segoe UI, Arial, sans-serif">${esc(mk.label)}</text>`);
+    }
+  }
+
+  // Lyrics borrowed from another part: each syllable sits at its beat; text shrinks if a row gets crowded
+  const lyricLine = layout.textLines.indexOf('lyrics');
+  if (lyricLine >= 0 && notation.borrowedLyrics && notation.borrowedLyrics.length) {
+    const ty = layout.textTop + lyricLine * layout.textH + layout.textH * 0.72;
+    const items = notation.borrowedLyrics
+      .filter(b => b.t >= phrase.start - EPS && b.t < phrase.end - EPS)
+      .sort((a, b) => a.t - b.t)
+      .map(b => ({ ...b, x: beatX(b.t) }));
+    const CHAR = 0.55;   // rough width of a character, in font sizes
+    let fs = 1.15 * S;
+    for (let k = 1; k < items.length; k++) {
+      const gap = items[k].x - items[k - 1].x;
+      const need = CHAR * (items[k].text.length + items[k - 1].text.length) / 2 + 0.35;   // in font sizes, with room for a hyphen
+      if (gap > EPS) fs = Math.min(fs, gap / need);
+    }
+    fs = Math.max(fs, 0.5 * S);
+    items.forEach((b, k) => {
+      const next = items[k + 1];
+      if (b.hyphen) {
+        const hx = next ? (b.x + next.x) / 2 : b.x + 1.2 * fs;
+        evParts.push(`<text class="txt-lyrics" x="${fmt(hx)}" y="${fmt(ty)}" font-size="${fmt(fs)}" text-anchor="middle" fill="${INK}" font-family="Segoe UI, Arial, sans-serif">-</text>`);
+      }
+      evParts.push(`<text class="txt-lyrics" x="${fmt(b.x)}" y="${fmt(ty)}" font-size="${fmt(fs)}" text-anchor="middle" fill="${INK}" font-family="Segoe UI, Arial, sans-serif">${esc(b.text)}</text>`);
+    });
+  }
+
   const totalW = layout.width;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${fmt(totalW)} ${fmt(layout.height)}" width="${fmt(totalW)}" height="${fmt(layout.height)}">` +
     parts.join('') + beamShapes.join('') + evParts.join('') + '</svg>';
-
-  anchors.sort((a, b) => a[0] - b[0]);
-  const beatX = (t) => {
-    if (t <= anchors[0][0]) return anchors[0][1];
-    for (let i = 1; i < anchors.length; i++) {
-      const [t1, x1] = anchors[i];
-      const [t0, x0] = anchors[i - 1];
-      if (t <= t1 + EPS) return t1 - t0 < EPS ? x1 : x0 + (x1 - x0) * (t - t0) / (t1 - t0);
-    }
-    return anchors[anchors.length - 1][1];
-  };
 
   return { svg, beatX, eventX, barWidth: 1.7 * S, rowEnd, S };
 }

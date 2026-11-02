@@ -211,20 +211,6 @@ function splitDuration(offset, len, isRest, beatLen) {
   return pieces;
 }
 
-function rhythmSyllable(len, offsetInBeat) {
-  const r = (x) => Math.abs(len - x) < EPS;
-  if (r(4)) return 'to-e-e-e';
-  if (r(3)) return 'to-e-e';
-  if (r(2)) return 'to-e';
-  if (r(1.5)) return 'tai';
-  if (r(1)) return 'ta';
-  if (r(0.75)) return 'tim';
-  if (r(0.5)) return 'ti';
-  if (r(0.25)) return isMultiple(offsetInBeat, 0.5) ? 'ti' : 'ka';
-  if (len > 1) return 'to' + '-e'.repeat(Math.round(len) - 1);
-  return 'ti';
-}
-
 /** Parse lyric text into per-note tokens. '_' skips a note; trailing '-' joins to next syllable. */
 export function parseLyrics(text) {
   if (!text) return [];
@@ -241,12 +227,12 @@ export function parseLyrics(text) {
 
 /**
  * Build notation events for one part.
- * Returns { measures: [{...measure, events: [...]}], events, lines, minDeg, maxDeg }
+ * Returns { measures: [{...measure, events: [...]}], events, lines, minDeg, maxDeg, borrowedLyrics }
  *
  * event: { t, d, base, dots, rest, measureRest, pitches: [{midi, degree, syl, acc}],
- *          tieFromPrev, tieToNext, soundT, soundD, lyric, hyphen, rhythm, beam, measure, id }
+ *          tieFromPrev, tieToNext, soundT, soundD, lyric, hyphen, rhythm (start count), beam, measure, id }
  */
-export function buildPartNotation(pkg, part) {
+export function buildPartNotation(pkg, part, buildOpts = {}) {
   const measures = getMeasures(pkg);
   const beatLen = beatLength(pkg);
   const pitched = part.kind !== 'unpitched';
@@ -336,10 +322,40 @@ export function buildPartNotation(pkg, part) {
     for (const e of m.events) {
       e.measure = m.index;
       e.id = out.length;
-      const offsetInBeat = (e.t - m.start) % beatLen;
-      if (e.rest) e.rhythm = 'sh';
-      else if (!e.tieFromPrev) e.rhythm = rhythmSyllable(e.soundD, offsetInBeat);
       out.push(e);
+    }
+  }
+
+  // Band-style counting: every note gets the count it starts on (1 e + a 2 ...). A note that keeps sounding
+  // past that count also gets its later counts in (parentheses). Rests get gray (parenthesized) counts.
+  // e.rhythm = the start label (notes); notation.rhythmMarks = [{t, label, rest}] for every other label.
+  const rhythmMarks = [];
+  const compound = Math.abs(beatLen - 1.5) < EPS;
+  const grids = compound ? [1, 1 / 3] : [1, 0.5, 0.25];
+  const countAt = (t) => {
+    const m = measures.find(mm => t >= mm.start - EPS && t < mm.start + mm.length - EPS) || measures[measures.length - 1];
+    const off = (m.pickup ? measureBeats(pkg) - m.length : 0) + (t - m.start);
+    const beat = Math.floor(off / beatLen + EPS);
+    let frac = off / beatLen - beat;
+    if (frac < EPS) frac = 0;
+    const near = (x) => Math.abs(frac - x) < 1e-3;
+    if (frac === 0) return String(beat + 1);
+    if (compound) return near(1 / 3) ? 'la' : near(2 / 3) ? 'li' : null;
+    return near(0.25) ? 'e' : near(0.5) ? '+' : near(0.75) ? 'a' : null;
+  };
+  const whole = (x, g) => Math.abs(x / g - Math.round(x / g)) < 1e-3;
+  for (const e of out) {
+    if (e.tieFromPrev) continue;
+    const start = e.rest ? e.t : e.soundT;
+    const dur = (e.rest ? e.d : e.soundD) / beatLen;                 // in beats
+    const startFrac = ((start - measures[e.measure].start + (measures[e.measure].pickup ? measureBeats(pkg) - measures[e.measure].length : 0)) / beatLen) % 1;
+    // finest step this note's start and length both land on, so a dotted quarter counts 1 (+) (2)
+    const g = grids.find(x => whole(startFrac, x) && whole(dur, x)) || dur;
+    for (let p = 0, k = 0; p < dur - 1e-3; p += g, k++) {
+      const label = countAt(start + p * beatLen);
+      if (!label) continue;
+      if (k === 0 && !e.rest) e.rhythm = label;
+      else rhythmMarks.push({ t: start + p * beatLen, label: e.rest || k > 0 ? '(' + label + ')' : label, rest: !!e.rest });
     }
   }
 
@@ -353,6 +369,18 @@ export function buildPartNotation(pkg, part) {
     if (tok) { e.lyric = tok.text; e.hyphen = tok.hyphen; }
   }
 
+  // A part with no lyrics of its own borrows the syllables of the first part that has some, placed by beat
+  // time (so a drum shows the words under whatever it plays at that moment). `borrowedLyrics` = [{t, text, hyphen}]
+  let borrowedLyrics = [];
+  if (!tokens.length && buildOpts.borrow !== false) {
+    const src = pkg.parts.find(p => p.id !== part.id && parseLyrics(p.lyrics).length);
+    if (src) {
+      borrowedLyrics = buildPartNotation(pkg, src, { borrow: false }).events
+        .filter(e => e.lyric)
+        .map(e => ({ t: e.soundT, text: e.lyric, hyphen: !!e.hyphen }));
+    }
+  }
+
   let minDeg = Infinity, maxDeg = -Infinity;
   for (const e of out) for (const p of e.pitches) {
     minDeg = Math.min(minDeg, p.degree);
@@ -362,7 +390,7 @@ export function buildPartNotation(pkg, part) {
   minDeg = Math.min(minDeg, staff[0]);
   maxDeg = Math.max(maxDeg, staff[staff.length - 1]);
 
-  return { measures, events: out, lines, staff, minDeg, maxDeg, beatLen, spelling };
+  return { measures, events: out, lines, staff, minDeg, maxDeg, beatLen, spelling, borrowedLyrics, rhythmMarks };
 }
 
 let beamCounter = 0;
@@ -374,7 +402,7 @@ function finishBeam(group) {
 
 /** Lyrics need a note count to line up; this lists the notes a lyric token will land on */
 export function lyricSlots(pkg, part) {
-  return buildPartNotation(pkg, { ...part, lyrics: '' }).events
+  return buildPartNotation(pkg, { ...part, lyrics: '' }, { borrow: false }).events
     .filter(e => !e.rest && !e.tieFromPrev);
 }
 
