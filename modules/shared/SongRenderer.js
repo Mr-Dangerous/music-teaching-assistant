@@ -340,6 +340,11 @@ export function renderRow(notation, layout, phrase, opts = {}) {
         txt = e.pitches.map(p => p.syl).reverse().join('/');
         color = '#2a5bd7';
         weight = 'bold';
+        if (opts.hiddenSolfege && opts.hiddenSolfege.has(e.id)) {
+          // quiz mode: show "?" now; the player swaps the real syllable back in (data-syl) on reveal
+          g.push(`<text class="txt-solfege quiz-hidden" data-syl="${esc(txt)}" x="${fmt(ex)}" y="${fmt(ty)}" font-size="${fmt(fs)}" font-weight="bold" text-anchor="middle" fill="#c2410c" font-family="Segoe UI, Arial, sans-serif">?</text>`);
+          txt = '';
+        }
       } else if (kind === 'rhythm' && e.rhythm) {
         txt = e.rhythm;
         color = e.rest ? '#b8b8c8' : '#c2410c';

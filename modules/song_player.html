@@ -174,6 +174,15 @@
     .chips .toggle { flex: 1; padding-left: 0; padding-right: 0; }
     #stage.no-bar .beat-bar { display: none; }
 
+    /* Solfege quiz controls (kept small: the panel never scrolls) */
+    .quiz-row { display: flex; gap: calc(4px * var(--module-scale)); align-items: center; }
+    .quiz-row .toggle { flex: 1; padding-left: 0; padding-right: 0; }
+    .quiz-spots { display: flex; align-items: center; gap: calc(4px * var(--module-scale)); font-weight: 700; }
+    .quiz-spots button { width: calc(28px * var(--module-scale)); padding: 0; }
+    #quiz-focus { display: none; }
+    #quiz-focus.show { display: flex; }
+    #quiz-focus .toggle { flex: 0 0 auto; min-width: calc(34px * var(--module-scale)); padding: calc(4px * var(--module-scale)) calc(6px * var(--module-scale)); }
+
     .spacer { flex: 1; min-height: 0; }
 
     #open-file {
@@ -335,6 +344,13 @@
       <button class="toggle" data-text="rhythm">Rhythm</button>
     </div>
 
+    <div class="section-label">Solfege quiz</div>
+    <div class="quiz-row">
+      <button id="quiz" class="toggle">? Quiz</button>
+      <div class="quiz-spots"><button id="quiz-less" class="toggle">−</button><span id="quiz-count">3</span><button id="quiz-more" class="toggle">+</button></div>
+    </div>
+    <div id="quiz-focus" class="chips" title="Always quiz these pitches"></div>
+
     <div class="spacer"></div>
     <button id="print-parts" class="toggle" title="Print every part, 8 staves per page, using the Show settings above">🖨 Print Parts</button>
     <button id="fullscreen" class="toggle">⛶ Full Screen</button>
@@ -370,6 +386,7 @@
     import { buildPartNotation, getPhrases, validatePackage } from './shared/SongModel.js';
     import { layoutSong, renderRow } from './shared/SongRenderer.js';
     import { getInstrument } from './shared/SongInstruments.js';
+    import { buildRuns, syllablesIn, pickQuizSpots } from './shared/SolfegeQuiz.js';
 
     const SONGS_DIR = '../songs/';
     const $ = (id) => document.getElementById(id);
@@ -398,8 +415,10 @@
       notation: null,
       layout: null,
       rows: { current: null, next: null },
-      sounding: []
+      sounding: [],
+      quiz: { on: false, count: 3, focus: new Set(), spots: [], hidden: new Set() }
     };
+    const QUIZ_HOLD_SEC = 3;   // how long playback freezes on each mystery note
 
     const player = new SongPlayer();
 
@@ -480,6 +499,9 @@
       buildPhraseButtons();
       buildPartList();
       syncTextChips();
+      state.quiz.focus = new Set();
+      state.quiz.spots = [];
+      state.quiz.hidden = new Set();
       rebuildNotation();
     }
 
@@ -574,7 +596,71 @@
       if (!state.pkg) return;
       const part = state.pkg.parts.find(p => p.id === state.shownPart);
       state.notation = buildPartNotation(state.pkg, part);
+      state.quiz.focus = new Set([...state.quiz.focus].filter(s => syllablesIn(state.notation.events).includes(s)));
+      state.quiz.spots = [];
+      state.quiz.hidden = new Set();
+      buildQuizFocus();
       renderRows();
+    }
+
+    // ---------------- Solfege quiz ----------------
+    function buildQuizFocus() {
+      const box = $('quiz-focus');
+      box.innerHTML = '';
+      if (!state.notation) return;
+      for (const syl of syllablesIn(state.notation.events)) {
+        const b = document.createElement('button');
+        b.className = 'toggle' + (state.quiz.focus.has(syl) ? ' on' : '');
+        b.textContent = syl;
+        b.addEventListener('click', () => {
+          if (state.quiz.focus.has(syl)) state.quiz.focus.delete(syl); else state.quiz.focus.add(syl);
+          b.classList.toggle('on', state.quiz.focus.has(syl));
+        });
+        box.appendChild(b);
+      }
+    }
+
+    function syncQuizUi() {
+      $('quiz').classList.toggle('on', state.quiz.on);
+      $('quiz-count').textContent = state.quiz.count;
+      $('quiz-focus').classList.toggle('show', state.quiz.on);
+    }
+
+    $('quiz').addEventListener('click', () => {
+      if (player.playing) stop();
+      state.quiz.on = !state.quiz.on;
+      if (state.quiz.on && !state.text.solfege) { state.text.solfege = true; syncTextChips(); }
+      state.quiz.spots = [];
+      state.quiz.hidden = new Set();
+      syncQuizUi();
+      renderRows();
+    });
+    $('quiz-less').addEventListener('click', () => { state.quiz.count = Math.max(2, state.quiz.count - 1); syncQuizUi(); });
+    $('quiz-more').addEventListener('click', () => { state.quiz.count = Math.min(6, state.quiz.count + 1); syncQuizUi(); });
+
+    // Pick fresh mystery spots for this play-through and hide their solfege
+    function chooseQuizSpots() {
+      const runs = buildRuns(state.notation.events);
+      state.quiz.spots = pickQuizSpots(runs, {
+        count: state.quiz.count,
+        focus: [...state.quiz.focus],
+        fromBeat: state.phrases[state.current].start
+      });
+      state.quiz.hidden = new Set(state.quiz.spots.flatMap(r => r.events.map(e => e.id)));
+      renderRows();
+    }
+
+    function revealQuizSpot(beat) {
+      const spot = state.quiz.spots.find(r => Math.abs(r.t - beat) < 1e-6);
+      if (!spot) return;
+      for (const e of spot.events) state.quiz.hidden.delete(e.id);
+      for (const row of [state.rows.current, state.rows.next]) {
+        if (!row || !row.el) continue;
+        for (const e of spot.events) {
+          const el = row.el.querySelector(`.ev[data-ev="${e.id}"] .quiz-hidden`);
+          if (el) { el.textContent = el.dataset.syl; el.setAttribute('fill', '#2a5bd7'); el.classList.remove('quiz-hidden'); }
+        }
+      }
     }
 
     function renderRows() {
@@ -596,7 +682,8 @@
       const row = renderRow(state.notation, state.layout, ph, {
         showTimeSig: phraseIndex === 0,
         timeSig: state.pkg.timeSig,
-        isSongEnd: phraseIndex === state.phrases.length - 1
+        isSongEnd: phraseIndex === state.phrases.length - 1,
+        hiddenSolfege: state.quiz.hidden
       });
       el.innerHTML = row.svg + `<div class="phrase-tag">Phrase ${phraseIndex + 1} of ${state.phrases.length}</div>`;
       row.el = el;
@@ -673,6 +760,7 @@
     async function play() {
       if (!state.pkg) return;
       state.playFrom = state.current;
+      if (state.quiz.on) chooseQuizSpots();
       const marks = [...new Set(state.notation.events.filter(e => !e.rest && !e.tieFromPrev).map(e => e.soundT))];
       $('play').classList.add('playing');
       $('play').textContent = '■ Stop';
@@ -680,6 +768,9 @@
         fromBeat: state.phrases[state.current].start,
         countIn: state.countIn,
         marks,
+        stops: state.quiz.on ? state.quiz.spots.map(r => r.t) : [],
+        holdSec: QUIZ_HOLD_SEC,
+        onResume: revealQuizSpot,
         onBeat: (t) => { $('count').style.display = 'none'; onBeat(t); },
         onMark,
         onCount,
@@ -698,6 +789,8 @@
       $('count').style.display = 'none';
       if (state.pkg) {
         state.current = state.playFrom;
+        state.quiz.spots = [];
+        state.quiz.hidden = new Set();
         renderRows();
       }
     }
@@ -816,6 +909,7 @@
     }
 
     window.songPlayerApp = { stop };
+    syncQuizUi();
     loadSongList();
   </script>
 </body>

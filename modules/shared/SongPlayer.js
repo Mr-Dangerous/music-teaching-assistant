@@ -8,6 +8,9 @@
  *   player.setTempoFactor(0.75);  // live
  *   player.setMuted('p2', true);  // live
  *   player.stop();
+ *
+ * Quiz mode: pass opts.stops = [beat, ...] (+ holdSec, onFreeze(beat), onResume(beat)). At each stop the
+ * notes sounding there are held out longer, the transport pauses for holdSec seconds, then continues.
  */
 
 import { createInstrument } from './SongInstruments.js';
@@ -25,6 +28,7 @@ export class SongPlayer {
     this.playing = false;
     this.click = null;
     this._session = 0;
+    this._resumeTimer = null;
   }
 
   load(pkg) {
@@ -140,6 +144,11 @@ export class SongPlayer {
       }
     }
 
+    // Quiz stops: the notes starting there are held out for the freeze
+    const holdSec = opts.holdSec ?? 3;
+    const stops = (opts.stops || []).filter(b => b >= fromBeat - EPS && b < toBeat - EPS);
+    const isStop = (t) => stops.some(b => Math.abs(b - t) < EPS);
+
     // Notes
     for (const part of pkg.parts) {
       const entry = this.parts.get(part.id);
@@ -147,10 +156,25 @@ export class SongPlayer {
       for (const [t, d, midi] of part.notes) {
         if (t < fromBeat - EPS || t >= toBeat - EPS) continue;
         const len = Math.min(d, toBeat - t);
+        const extra = isStop(t) ? holdSec : 0;
         transport.schedule((time) => {
-          entry.inst.trigger(midi, len * 60 / transport.bpm.value, time, 0.8);
+          entry.inst.trigger(midi, len * 60 / transport.bpm.value + extra, time, 0.8);
         }, ticks(t - fromBeat + offset));
       }
+    }
+
+    // Freeze: pause just after the note starts, then resume after holdSec
+    for (const b of stops) {
+      transport.schedule((time) => {
+        transport.pause(time);
+        Tone.Draw.schedule(() => { if (session === this._session && opts.onFreeze) opts.onFreeze(b); }, time);
+        clearTimeout(this._resumeTimer);
+        this._resumeTimer = setTimeout(() => {
+          if (session !== this._session) return;
+          transport.start('+0.05');
+          if (opts.onResume) opts.onResume(b);
+        }, holdSec * 1000);
+      }, (Math.round((b - fromBeat + offset) * PPQ) + 2) + 'i');
     }
 
     // Beat bar + note highlight callbacks
@@ -181,6 +205,7 @@ export class SongPlayer {
   stop() {
     if (typeof Tone === 'undefined') return;
     this._session++;
+    clearTimeout(this._resumeTimer);
     Tone.Transport.stop();
     Tone.Transport.cancel(0);
     this.playing = false;

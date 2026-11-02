@@ -16,6 +16,7 @@
  *   parts: [{
  *     id, name, kind: 'pitched'|'unpitched', instrument, volume (dB),
  *     lines: 1-5, doMidi,               // staff + solfege reference ("do" pitch)
+ *     spelling: 'sharp'|'flat',         // optional; chromatic notes as di/ri/fi/si or ra/me/se/le (auto if omitted)
  *     lyrics: 'Rock- y moun- tain ...', // one token per note, '_' skips a note
  *     notes: [[t, d, midi], ...]
  *   }]
@@ -27,8 +28,10 @@ export const PACKAGE_VERSION = 1;
 
 const EPS = 1e-6;
 
-// Diatonic degree (do = 0) and syllable for each semitone above do
-const CHROMATIC = [
+// Diatonic degree (do = 0) and syllable for each semitone above do.
+// Sharp songs spell the in-between notes upward (di ri fi si); flat songs spell them
+// downward (ra me se le). "ta" (lowered ti) is the same in both.
+const CHROMATIC_SHARP = [
   { deg: 0, syl: 'do' }, { deg: 0, syl: 'di', acc: '♯' },
   { deg: 1, syl: 're' }, { deg: 1, syl: 'ri', acc: '♯' },
   { deg: 2, syl: 'mi' }, { deg: 3, syl: 'fa' },
@@ -36,6 +39,15 @@ const CHROMATIC = [
   { deg: 4, syl: 'si', acc: '♯' }, { deg: 5, syl: 'la' },
   { deg: 6, syl: 'ta', acc: '♭' }, { deg: 6, syl: 'ti' }
 ];
+const CHROMATIC_FLAT = [
+  { deg: 0, syl: 'do' }, { deg: 1, syl: 'ra', acc: '♭' },
+  { deg: 1, syl: 're' }, { deg: 2, syl: 'me', acc: '♭' },
+  { deg: 2, syl: 'mi' }, { deg: 3, syl: 'fa' },
+  { deg: 4, syl: 'se', acc: '♭' }, { deg: 4, syl: 'so' },
+  { deg: 5, syl: 'le', acc: '♭' }, { deg: 5, syl: 'la' },
+  { deg: 6, syl: 'ta', acc: '♭' }, { deg: 6, syl: 'ti' }
+];
+const CHROMATIC_SEMITONES = new Set([1, 3, 6, 8]);   // the ones that differ between spellings
 
 const DEGREE_NAMES = ['do', 're', 'mi', 'fa', 'so', 'la', 'ti'];
 
@@ -62,11 +74,34 @@ export function midiName(m) {
   return n + (Math.floor(m / 12) - 1);
 }
 
-export function solfegeOf(midi, doMidi) {
+export function solfegeOf(midi, doMidi, spelling = 'sharp') {
   const diff = midi - doMidi;
   const oct = Math.floor(diff / 12);
-  const c = CHROMATIC[((diff % 12) + 12) % 12];
+  const table = spelling === 'flat' ? CHROMATIC_FLAT : CHROMATIC_SHARP;
+  const c = table[((diff % 12) + 12) % 12];
   return { degree: oct * 7 + c.deg, syl: c.syl, acc: c.acc || null };
+}
+
+/**
+ * Should this part's in-between notes be spelled with sharps or flats?
+ * A song package can say so with `spelling: 'sharp' | 'flat'` (on the package, or on a part).
+ * Otherwise it is guessed the usual way: chromatic notes approached upward are sharps, downward are flats.
+ */
+export function detectSpelling(pkg, part) {
+  const set = (part && part.spelling) || (pkg && pkg.spelling);
+  if (set === 'sharp' || set === 'flat') return set;
+  if (!part || part.kind === 'unpitched') return 'sharp';
+  const notes = [...part.notes].sort((a, b) => a[0] - b[0]);
+  let up = 0, down = 0;
+  notes.forEach((n, i) => {
+    if (!CHROMATIC_SEMITONES.has((((n[2] - part.doMidi) % 12) + 12) % 12)) return;
+    const prev = notes.slice(0, i).reverse().find(x => x[2] !== n[2]);
+    const next = notes.slice(i + 1).find(x => x[2] !== n[2]);
+    const from = prev ? prev[2] : null;
+    const ref = from !== null ? n[2] - from : next ? next[2] - n[2] : 0;   // moving up into it, or (at the start) away from it
+    if (ref > 0) up++; else if (ref < 0) down++;
+  });
+  return down > up ? 'flat' : 'sharp';
 }
 
 export function measureBeats(pkg) {
@@ -233,9 +268,10 @@ export function buildPartNotation(pkg, part) {
     chords[i].end = Math.min(chords[i].end, chords[i + 1].t);
   }
 
+  const spelling = detectSpelling(pkg, part);
   const pitchInfo = (midi) => {
     if (!pitched) return { midi, degree: 0, syl: '', acc: null };
-    return { midi, ...solfegeOf(midi, part.doMidi) };
+    return { midi, ...solfegeOf(midi, part.doMidi, spelling) };
   };
 
   const out = [];
@@ -326,7 +362,7 @@ export function buildPartNotation(pkg, part) {
   minDeg = Math.min(minDeg, staff[0]);
   maxDeg = Math.max(maxDeg, staff[staff.length - 1]);
 
-  return { measures, events: out, lines, staff, minDeg, maxDeg, beatLen };
+  return { measures, events: out, lines, staff, minDeg, maxDeg, beatLen, spelling };
 }
 
 let beamCounter = 0;
