@@ -104,6 +104,18 @@ export function detectSpelling(pkg, part) {
   return down > up ? 'flat' : 'sharp';
 }
 
+// Concert-pitch letter names. The letter follows the note's staff position (so ra is D♭, not C♯) and the
+// song's "do" (taken as the usual key name for its pitch class), and the accidental makes up the difference.
+const NATURAL_PC = [0, 2, 4, 5, 7, 9, 11];                       // C D E F G A B
+const DO_LETTER = [0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6];          // key letter for each pitch class of do (D♭ E♭ F♯ A♭ B♭ keys)
+const LETTER_NAMES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+export function letterOf(midi, doMidi, degree) {
+  const idx = (((DO_LETTER[((doMidi % 12) + 12) % 12] + degree) % 7) + 7) % 7;
+  const diff = ((((midi % 12) - NATURAL_PC[idx]) % 12) + 18) % 12 - 6;   // -6..5 semitones from the natural letter
+  const acc = { 0: '', 1: '♯', '-1': '♭', 2: '𝄪', '-2': '𝄫' }[diff] ?? '';
+  return LETTER_NAMES[idx] + acc;
+}
+
 export function measureBeats(pkg) {
   return pkg.timeSig.num * 4 / pkg.timeSig.den;
 }
@@ -256,8 +268,9 @@ export function buildPartNotation(pkg, part, buildOpts = {}) {
 
   const spelling = detectSpelling(pkg, part);
   const pitchInfo = (midi) => {
-    if (!pitched) return { midi, degree: 0, syl: '', acc: null };
-    return { midi, ...solfegeOf(midi, part.doMidi, spelling) };
+    if (!pitched) return { midi, degree: 0, syl: '', acc: null, letter: '' };
+    const s = solfegeOf(midi, part.doMidi, spelling);
+    return { midi, ...s, letter: letterOf(midi, part.doMidi, s.degree) };
   };
 
   const out = [];

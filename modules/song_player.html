@@ -358,6 +358,7 @@
       <button class="toggle" data-text="solfege">Solfege</button>
       <button class="toggle" data-text="lyrics">Lyrics</button>
       <button class="toggle" data-text="rhythm">Rhythm</button>
+      <button class="toggle" data-text="pitch" title="Concert pitch letter names">Pitch</button>
     </div>
 
     <div class="section-label">Solfege quiz</div>
@@ -430,7 +431,7 @@
       playFrom: 0,
       shownPart: null,
       muted: new Set(),
-      text: { solfege: true, lyrics: true, rhythm: false },
+      text: { solfege: true, lyrics: true, rhythm: false, pitch: false },
       countIn: true,
       lineLabels: store.get('lineLabels') || 'lines',
       notation: null,
@@ -511,7 +512,7 @@
       state.playFrom = 0;
       state.shownPart = pkg.parts.find(p => p.id === pkg.defaultPart) ? pkg.defaultPart : pkg.parts[0].id;
       state.muted = new Set();
-      state.text = { solfege: true, lyrics: true, rhythm: false, ...(pkg.textDefaults || {}) };
+      state.text = { solfege: true, lyrics: true, rhythm: false, pitch: false, ...(pkg.textDefaults || {}) };
       player.load(pkg);
       $('play').disabled = false;
       $('song-title').textContent = pkg.title || '';
@@ -709,8 +710,11 @@
       for (const row of [state.rows.current, state.rows.next]) {
         if (!row || !row.el) continue;
         for (const id of ids) {
-          const el = row.el.querySelector(`.ev[data-ev="${id}"] .quiz-hidden`);
-          if (el) { el.textContent = el.dataset.syl; el.setAttribute('fill', '#2a5bd7'); el.classList.remove('quiz-hidden'); }
+          row.el.querySelectorAll(`.ev[data-ev="${id}"] .quiz-hidden`).forEach(el => {
+            el.textContent = el.dataset.syl;
+            el.setAttribute('fill', el.classList.contains('txt-pitch') ? '#0f766e' : '#2a5bd7');
+            el.classList.remove('quiz-hidden');
+          });
         }
       }
     }

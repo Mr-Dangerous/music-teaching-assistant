@@ -1,5 +1,5 @@
 {
-  "version": "3.86.1",
+  "version": "3.87.1",
   "lastUpdated": "2026-11-02",
-  "description": "Song Player: Rhythm labels now use band-style counting (1 e + a), held beats in parentheses"
+  "description": "Song Player: Show > Pitch button for concert pitch letter names"
 }

@@ -29,13 +29,14 @@ function textLinesFor(notation, text) {
   const lines = [];
   if (text.lyrics && (notation.events.some(e => e.lyric) || (notation.borrowedLyrics || []).length)) lines.push('lyrics');
   if (text.solfege && notation.lines > 1) lines.push('solfege');
+  if (text.pitch && notation.lines > 1) lines.push('pitch');
   if (text.rhythm) lines.push('rhythm');
   return lines;
 }
 
 /**
  * Compute shared sizing for all rows of a part.
- * opts: { width, height (per row, px), text: { solfege, lyrics, rhythm } }
+ * opts: { width, height (per row, px), text: { solfege, lyrics, rhythm, pitch } }
  */
 export function layoutSong(notation, phrases, opts) {
   const { width, height } = opts;
@@ -368,6 +369,15 @@ export function renderRow(notation, layout, phrase, opts = {}) {
           // The player swaps the real syllable back in (data-syl) when it is revealed.
           const mystery = opts.mysterySolfege ? opts.mysterySolfege.has(e.id) : true;
           g.push(`<text class="txt-solfege quiz-hidden" data-syl="${esc(txt)}" x="${fmt(ex)}" y="${fmt(ty)}" font-size="${fmt(fs)}" font-weight="bold" text-anchor="middle" fill="${mystery ? '#c2410c' : color}" font-family="Segoe UI, Arial, sans-serif">${mystery ? '?' : ''}</text>`);
+          txt = '';
+        }
+      } else if (kind === 'pitch' && !e.rest && !e.tieFromPrev) {
+        txt = e.pitches.map(p => p.letter).reverse().join('/');
+        color = '#0f766e';
+        weight = 'bold';
+        if (opts.hiddenSolfege && opts.hiddenSolfege.has(e.id)) {
+          // quiz mode: the letter would give the answer away, so it waits (blank) until the note is revealed
+          g.push(`<text class="txt-pitch quiz-hidden" data-syl="${esc(txt)}" x="${fmt(ex)}" y="${fmt(ty)}" font-size="${fmt(fs)}" font-weight="bold" text-anchor="middle" fill="#0f766e" font-family="Segoe UI, Arial, sans-serif"></text>`);
           txt = '';
         }
       } else if (kind === 'rhythm' && e.rhythm) {
