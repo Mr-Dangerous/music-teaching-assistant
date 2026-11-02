@@ -688,18 +688,19 @@
         focus: [...state.quiz.focus],
         fromBeat: state.phrases[state.current].start
       });
+      // Play: every note shows its syllable except the mystery ones
       state.quiz.mystery = new Set(state.quiz.spots.flatMap(r => r.events.map(e => e.id)));
-      state.quiz.hidden = allLabelIds();
+      state.quiz.hidden = new Set(state.quiz.mystery);
       renderRows();
     }
 
-    // Every note label in the shown part (quiz mode hides them all until each note sounds)
+    // Every note label in the shown part (quiz mode shows "?" on all of them until Play is pressed)
     function allLabelIds() {
       return new Set(state.notation.events.filter(e => !e.rest && !e.tieFromPrev).map(e => e.id));
     }
     function resetQuizLabels() {
-      state.quiz.mystery = new Set();
       state.quiz.hidden = state.quiz.on && state.notation ? allLabelIds() : new Set();
+      state.quiz.mystery = new Set(state.quiz.hidden);   // all "?" until Play
     }
 
     // Show the real syllables for these note ids (rows already on screen are updated in place)
@@ -804,12 +805,6 @@
       state.sounding = [];
       const row = state.rows.current;
       if (!row) return;
-      // quiz mode: a note's label appears as it sounds (mystery notes wait for the reveal button)
-      if (state.quiz.hidden.size) {
-        revealIds(state.notation.events
-          .filter(e => !e.rest && Math.abs(e.soundT - t) < 1e-6 && state.quiz.hidden.has(e.id) && !state.quiz.mystery.has(e.id))
-          .map(e => e.id));
-      }
       for (const e of state.notation.events) {
         if (e.rest || Math.abs(e.soundT - t) > 1e-6) continue;
         const el = row.el.querySelector(`.ev[data-ev="${e.id}"]`);
