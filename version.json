@@ -1,5 +1,5 @@
 {
-  "version": "3.82.1",
+  "version": "3.83.1",
   "lastUpdated": "2026-11-02",
-  "description": "Song Player: cycling toggle for staff-line names (none / so / do / all lines / lines + spaces)"
+  "description": "Song Player quiz: hide all note labels (reveal as each note sounds) and animated preview of mystery spots on Play"
 }

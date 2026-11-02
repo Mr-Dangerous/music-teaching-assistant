@@ -179,6 +179,13 @@
     .quiz-row .toggle { flex: 1; padding-left: 0; padding-right: 0; }
     .quiz-spots { display: flex; align-items: center; gap: calc(4px * var(--module-scale)); font-weight: 700; }
     .quiz-spots button { width: calc(28px * var(--module-scale)); padding: 0; }
+    #stage.no-bar.previewing .beat-bar { display: inline; }
+    .ev.preview .head { fill: #ff9800; }
+    .ev .quiz-hidden.preview-pulse {
+      fill: #e91e63; transform-box: fill-box; transform-origin: center;
+      animation: qpulse .45s ease-in-out infinite alternate;
+    }
+    @keyframes qpulse { from { transform: scale(1); } to { transform: scale(1.8); } }
     #resume-btn {
       position: absolute; z-index: 20; display: none;
       transform: translateX(-50%);
@@ -430,7 +437,7 @@
       layout: null,
       rows: { current: null, next: null },
       sounding: [],
-      quiz: { on: false, sustain: true, count: 3, focus: new Set(), spots: [], hidden: new Set(), frozenAt: null }
+      quiz: { on: false, sustain: true, count: 3, focus: new Set(), spots: [], hidden: new Set(), mystery: new Set(), frozenAt: null, previewing: false, previewToken: 0 }
     };
     const QUIZ_HOLD_SEC = 4;   // how long each mystery note rings out while frozen
 
@@ -515,7 +522,6 @@
       syncTextChips();
       state.quiz.focus = new Set();
       state.quiz.spots = [];
-      state.quiz.hidden = new Set();
       rebuildNotation();
     }
 
@@ -631,7 +637,7 @@
       state.notation = buildPartNotation(state.pkg, part);
       state.quiz.focus = new Set([...state.quiz.focus].filter(s => syllablesIn(state.notation.events).includes(s)));
       state.quiz.spots = [];
-      state.quiz.hidden = new Set();
+      resetQuizLabels();
       buildQuizFocus();
       renderRows();
     }
@@ -666,7 +672,7 @@
       state.quiz.on = !state.quiz.on;
       if (state.quiz.on && !state.text.solfege) { state.text.solfege = true; syncTextChips(); }
       state.quiz.spots = [];
-      state.quiz.hidden = new Set();
+      resetQuizLabels();
       syncQuizUi();
       renderRows();
     });
@@ -682,21 +688,36 @@
         focus: [...state.quiz.focus],
         fromBeat: state.phrases[state.current].start
       });
-      state.quiz.hidden = new Set(state.quiz.spots.flatMap(r => r.events.map(e => e.id)));
+      state.quiz.mystery = new Set(state.quiz.spots.flatMap(r => r.events.map(e => e.id)));
+      state.quiz.hidden = allLabelIds();
       renderRows();
+    }
+
+    // Every note label in the shown part (quiz mode hides them all until each note sounds)
+    function allLabelIds() {
+      return new Set(state.notation.events.filter(e => !e.rest && !e.tieFromPrev).map(e => e.id));
+    }
+    function resetQuizLabels() {
+      state.quiz.mystery = new Set();
+      state.quiz.hidden = state.quiz.on && state.notation ? allLabelIds() : new Set();
+    }
+
+    // Show the real syllables for these note ids (rows already on screen are updated in place)
+    function revealIds(ids) {
+      for (const id of ids) { state.quiz.hidden.delete(id); state.quiz.mystery.delete(id); }
+      for (const row of [state.rows.current, state.rows.next]) {
+        if (!row || !row.el) continue;
+        for (const id of ids) {
+          const el = row.el.querySelector(`.ev[data-ev="${id}"] .quiz-hidden`);
+          if (el) { el.textContent = el.dataset.syl; el.setAttribute('fill', '#2a5bd7'); el.classList.remove('quiz-hidden'); }
+        }
+      }
     }
 
     function revealQuizSpot(beat) {
       const spot = state.quiz.spots.find(r => Math.abs(r.t - beat) < 1e-6);
       if (!spot) return;
-      for (const e of spot.events) state.quiz.hidden.delete(e.id);
-      for (const row of [state.rows.current, state.rows.next]) {
-        if (!row || !row.el) continue;
-        for (const e of spot.events) {
-          const el = row.el.querySelector(`.ev[data-ev="${e.id}"] .quiz-hidden`);
-          if (el) { el.textContent = el.dataset.syl; el.setAttribute('fill', '#2a5bd7'); el.classList.remove('quiz-hidden'); }
-        }
-      }
+      revealIds(spot.events.map(e => e.id));
     }
 
     function renderRows() {
@@ -721,6 +742,7 @@
         timeSig: state.pkg.timeSig,
         isSongEnd: phraseIndex === state.phrases.length - 1,
         hiddenSolfege: state.quiz.hidden,
+        mysterySolfege: state.quiz.mystery,
         lineLabels: state.lineLabels
       });
       el.innerHTML = row.svg + `<div class="phrase-tag">Phrase ${phraseIndex + 1} of ${state.phrases.length}</div>`;
@@ -782,6 +804,12 @@
       state.sounding = [];
       const row = state.rows.current;
       if (!row) return;
+      // quiz mode: a note's label appears as it sounds (mystery notes wait for the reveal button)
+      if (state.quiz.hidden.size) {
+        revealIds(state.notation.events
+          .filter(e => !e.rest && Math.abs(e.soundT - t) < 1e-6 && state.quiz.hidden.has(e.id) && !state.quiz.mystery.has(e.id))
+          .map(e => e.id));
+      }
       for (const e of state.notation.events) {
         if (e.rest || Math.abs(e.soundT - t) > 1e-6) continue;
         const el = row.el.querySelector(`.ev[data-ev="${e.id}"]`);
@@ -793,6 +821,60 @@
       const c = $('count');
       c.textContent = n;
       c.style.display = 'flex';
+    }
+
+    // Before the count-in: glide a marker along the song to each mystery spot (about 10 seconds at most)
+    const ease = (k) => k * k * (3 - 2 * k);
+    function animate(ms, fn, token) {
+      return new Promise(resolve => {
+        const t0 = performance.now();
+        const step = (now) => {
+          if (token !== state.quiz.previewToken) return resolve(false);
+          const k = Math.min(1, (now - t0) / ms);
+          fn(k);
+          if (k < 1) requestAnimationFrame(step); else resolve(true);
+        };
+        requestAnimationFrame(step);
+      });
+    }
+
+    async function previewSpots() {
+      const spots = state.quiz.spots;
+      if (!spots.length) return true;
+      const token = ++state.quiz.previewToken;
+      state.quiz.previewing = true;
+      $('stage').classList.add('previewing');
+      const per = Math.min(2, 9.5 / spots.length);     // seconds per spot, so the whole preview stays under 10
+      const travel = Math.min(0.6, per * 0.4);
+      const dwell = per - travel;
+      let at = null;                                    // beat the marker is currently at
+      for (const spot of spots) {
+        const idx = phraseIndexAt(spot.t);
+        if (idx !== state.current || at === null) {
+          state.current = idx;
+          renderRows();
+          at = state.phrases[idx].start;
+        }
+        const row = state.rows.current;
+        if (!row || !row.bar) continue;
+        row.bar.setAttribute('visibility', 'visible');
+        const from = at;
+        const moved = await animate(travel * 1000, (k) => {
+          row.bar.setAttribute('x', row.beatX(from + (spot.t - from) * ease(k)) - row.barWidth / 2);
+        }, token);
+        if (!moved) return false;
+        at = spot.t;
+        const els = spot.events.map(e => row.el.querySelector(`.ev[data-ev="${e.id}"]`)).filter(Boolean);
+        els.forEach(el => { el.classList.add('preview'); const q = el.querySelector('.quiz-hidden'); if (q) q.classList.add('preview-pulse'); });
+        const held = await animate(dwell * 1000, () => {}, token);
+        els.forEach(el => { el.classList.remove('preview'); const q = el.querySelector('.quiz-hidden'); if (q) q.classList.remove('preview-pulse'); });
+        if (!held) return false;
+      }
+      state.quiz.previewing = false;
+      $('stage').classList.remove('previewing');
+      state.current = state.playFrom;
+      renderRows();
+      return true;
     }
 
     function playOptions(fromBeat, countIn) {
@@ -815,9 +897,12 @@
     async function play() {
       if (!state.pkg) return;
       state.playFrom = state.current;
-      if (state.quiz.on) chooseQuizSpots();
       $('play').classList.add('playing');
       $('play').textContent = '■ Stop';
+      if (state.quiz.on) {
+        chooseQuizSpots();
+        if (!(await previewSpots())) return;   // stopped during the preview
+      }
       await player.play(playOptions(state.phrases[state.current].start, state.countIn));
     }
 
@@ -865,16 +950,20 @@
       $('play').textContent = '▶ Play';
       $('count').style.display = 'none';
       state.quiz.frozenAt = null;
+      state.quiz.previewToken++;           // cancels a preview in progress
+      state.quiz.previewing = false;
+      $('stage').classList.remove('previewing');
       $('resume-btn').style.display = 'none';
       if (state.pkg) {
         state.current = state.playFrom;
         state.quiz.spots = [];
-        state.quiz.hidden = new Set();
+        state.quiz.hidden = new Set();   // quiz over: show every answer
+        state.quiz.mystery = new Set();
         renderRows();
       }
     }
 
-    $('play').addEventListener('click', () => { (player.playing || state.quiz.frozenAt !== null) ? stop() : play(); });
+    $('play').addEventListener('click', () => { (player.playing || state.quiz.previewing || state.quiz.frozenAt !== null) ? stop() : play(); });
 
     // ---------------- Print Parts ----------------
     // One page per part (more if a part has over 8 rows), 8 staves per letter page.
@@ -973,7 +1062,7 @@
     document.addEventListener('fullscreenchange', syncFullscreen);
     document.addEventListener('webkitfullscreenchange', syncFullscreen);
     document.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && state.pkg) { e.preventDefault(); (player.playing || state.quiz.frozenAt !== null) ? stop() : play(); }
+      if (e.code === 'Space' && state.pkg) { e.preventDefault(); (player.playing || state.quiz.previewing || state.quiz.frozenAt !== null) ? stop() : play(); }
     });
 
     // Smartboards: ignore long-press context menus

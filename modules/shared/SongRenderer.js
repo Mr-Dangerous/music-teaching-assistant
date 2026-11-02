@@ -353,8 +353,10 @@ export function renderRow(notation, layout, phrase, opts = {}) {
         color = '#2a5bd7';
         weight = 'bold';
         if (opts.hiddenSolfege && opts.hiddenSolfege.has(e.id)) {
-          // quiz mode: show "?" now; the player swaps the real syllable back in (data-syl) on reveal
-          g.push(`<text class="txt-solfege quiz-hidden" data-syl="${esc(txt)}" x="${fmt(ex)}" y="${fmt(ty)}" font-size="${fmt(fs)}" font-weight="bold" text-anchor="middle" fill="#c2410c" font-family="Segoe UI, Arial, sans-serif">?</text>`);
+          // quiz mode: hidden labels are blank, or "?" for a mystery note (opts.mysterySolfege).
+          // The player swaps the real syllable back in (data-syl) when it is revealed.
+          const mystery = opts.mysterySolfege ? opts.mysterySolfege.has(e.id) : true;
+          g.push(`<text class="txt-solfege quiz-hidden" data-syl="${esc(txt)}" x="${fmt(ex)}" y="${fmt(ty)}" font-size="${fmt(fs)}" font-weight="bold" text-anchor="middle" fill="${mystery ? '#c2410c' : color}" font-family="Segoe UI, Arial, sans-serif">${mystery ? '?' : ''}</text>`);
           txt = '';
         }
       } else if (kind === 'rhythm' && e.rhythm) {
