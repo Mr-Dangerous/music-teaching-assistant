@@ -142,11 +142,23 @@ export function renderRow(notation, layout, phrase, opts = {}) {
   const staffBotY = unpitched ? yMid + S : Math.max(...lineYs);
 
   // ---- Staff lines + labels ----
+  // opts.lineLabels: 'none' | 'so' (so lines only) | 'do' (do lines only) | 'lines' (default) | 'all' (lines and spaces)
+  const labelMode = opts.lineLabels || 'lines';
+  const sylOf = (deg) => lineName(deg).replace('low ', '').replace('high ', '');
+  const showLineLabel = (deg) => labelMode === 'lines' || labelMode === 'all' ||
+    (labelMode === 'so' && sylOf(deg) === 'so') || (labelMode === 'do' && sylOf(deg) === 'do');
+  const lineLabel = (deg, y) =>
+    `<text x="${fmt(staffLeft - 0.35 * S)}" y="${fmt(y + 0.32 * S)}" font-size="${fmt(0.95 * S)}" text-anchor="end" fill="#7a7aa0" font-family="Segoe UI, Arial, sans-serif" font-style="italic">${sylOf(deg)}</text>`;
   for (const deg of staff) {
     const y = yOf(deg);
     parts.push(`<line x1="${fmt(staffLeft)}" y1="${fmt(y)}" x2="${fmt(rowEnd)}" y2="${fmt(y)}" stroke="${INK}" stroke-width="${fmt(0.11 * S)}"/>`);
-    if (!unpitched) {
-      parts.push(`<text x="${fmt(staffLeft - 0.35 * S)}" y="${fmt(y + 0.32 * S)}" font-size="${fmt(0.95 * S)}" text-anchor="end" fill="#7a7aa0" font-family="Segoe UI, Arial, sans-serif" font-style="italic">${lineName(deg).replace('low ', '')}</text>`);
+    if (!unpitched && showLineLabel(deg)) parts.push(lineLabel(deg, y));
+  }
+  // Spaces between the lines get a label too, only in the "lines and spaces" setting
+  if (!unpitched && labelMode === 'all') {
+    const lo = Math.min(...staff), hi = Math.max(...staff);
+    for (let deg = lo + 1; deg < hi; deg++) {
+      if (!staff.includes(deg)) parts.push(lineLabel(deg, yOf(deg)));
     }
   }
 

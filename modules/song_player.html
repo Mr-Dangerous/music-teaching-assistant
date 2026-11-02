@@ -361,6 +361,8 @@
     <button id="quiz-sustain" class="toggle on" title="On: the mystery note rings while frozen. Off: silence, so students sing it from memory.">Sustain ? note</button>
     <div id="quiz-focus" class="chips" title="Always quiz these pitches"></div>
 
+    <button id="line-labels" class="toggle" title="Cycle the do / mi / so names written beside the staff lines">Staff names: All lines</button>
+
     <div class="spacer"></div>
     <button id="print-parts" class="toggle" title="Print every part, 8 staves per page, using the Show settings above">🖨 Print Parts</button>
     <button id="fullscreen" class="toggle">⛶ Full Screen</button>
@@ -423,6 +425,7 @@
       muted: new Set(),
       text: { solfege: true, lyrics: true, rhythm: false },
       countIn: true,
+      lineLabels: store.get('lineLabels') || 'lines',
       notation: null,
       layout: null,
       rows: { current: null, next: null },
@@ -581,6 +584,25 @@
       document.querySelectorAll('[data-text]').forEach(b => b.classList.toggle('on', !!state.text[b.dataset.text]));
     }
 
+    // Staff-line names: none -> so only -> do only -> all lines -> lines and spaces (remembered on this board)
+    const LINE_LABEL_MODES = [
+      ['none', 'None'], ['so', 'So only'], ['do', 'Do only'], ['lines', 'All lines'], ['all', 'Lines + spaces']
+    ];
+    if (!LINE_LABEL_MODES.some(m => m[0] === state.lineLabels)) state.lineLabels = 'lines';
+    function syncLineLabelBtn() {
+      const m = LINE_LABEL_MODES.find(x => x[0] === state.lineLabels);
+      $('line-labels').textContent = 'Staff names: ' + m[1];
+      $('line-labels').classList.toggle('on', state.lineLabels !== 'none');
+    }
+    $('line-labels').addEventListener('click', () => {
+      const i = LINE_LABEL_MODES.findIndex(x => x[0] === state.lineLabels);
+      state.lineLabels = LINE_LABEL_MODES[(i + 1) % LINE_LABEL_MODES.length][0];
+      store.set('lineLabels', state.lineLabels);
+      syncLineLabelBtn();
+      renderRows();
+    });
+    syncLineLabelBtn();
+
     $('countin').addEventListener('click', () => {
       state.countIn = !state.countIn;
       $('countin').classList.toggle('on', state.countIn);
@@ -698,7 +720,8 @@
         showTimeSig: phraseIndex === 0,
         timeSig: state.pkg.timeSig,
         isSongEnd: phraseIndex === state.phrases.length - 1,
-        hiddenSolfege: state.quiz.hidden
+        hiddenSolfege: state.quiz.hidden,
+        lineLabels: state.lineLabels
       });
       el.innerHTML = row.svg + `<div class="phrase-tag">Phrase ${phraseIndex + 1} of ${state.phrases.length}</div>`;
       row.el = el;
@@ -870,7 +893,8 @@
           timeSig: pkg.timeSig,
           isSongEnd: i === state.phrases.length - 1,
           allMeasureNumbers: true,
-          justify: true
+          justify: true,
+          lineLabels: state.lineLabels
         }).svg);
         const count = Math.ceil(rows.length / PRINT_ROWS_PER_PAGE);
         for (let p = 0; p < count; p++) {
