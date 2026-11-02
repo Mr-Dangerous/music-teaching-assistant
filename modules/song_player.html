@@ -179,6 +179,14 @@
     .quiz-row .toggle { flex: 1; padding-left: 0; padding-right: 0; }
     .quiz-spots { display: flex; align-items: center; gap: calc(4px * var(--module-scale)); font-weight: 700; }
     .quiz-spots button { width: calc(28px * var(--module-scale)); padding: 0; }
+    #resume-btn {
+      position: absolute; z-index: 20; display: none;
+      transform: translateX(-50%);
+      padding: calc(8px * var(--module-scale)) calc(16px * var(--module-scale));
+      font-size: calc(18px * var(--module-scale)); font-weight: 800;
+      color: white; background: #e65100; border: 3px solid white; border-radius: 999px;
+      box-shadow: 0 4px 14px rgba(0,0,0,.35); cursor: pointer; white-space: nowrap;
+    }
     #quiz-focus { display: none; }
     #quiz-focus.show { display: flex; }
     #quiz-focus .toggle { flex: 0 0 auto; min-width: calc(34px * var(--module-scale)); padding: calc(4px * var(--module-scale)) calc(6px * var(--module-scale)); }
@@ -364,6 +372,7 @@
     <div id="row-next" class="row"></div>
     <div id="count"></div>
     <div id="message"></div>
+    <button id="resume-btn">▶ Reveal &amp; continue</button>
   </div>
 
   <div id="print-area"></div>
@@ -416,9 +425,9 @@
       layout: null,
       rows: { current: null, next: null },
       sounding: [],
-      quiz: { on: false, count: 3, focus: new Set(), spots: [], hidden: new Set() }
+      quiz: { on: false, count: 3, focus: new Set(), spots: [], hidden: new Set(), frozenAt: null }
     };
-    const QUIZ_HOLD_SEC = 3;   // how long playback freezes on each mystery note
+    const QUIZ_HOLD_SEC = 4;   // how long each mystery note rings out while frozen
 
     const player = new SongPlayer();
 
@@ -673,6 +682,7 @@
       state.rows.next = drawRow($('row-next'), state.current + 1);
       state.sounding = [];
       document.querySelectorAll('.phrase-btn').forEach((b, i) => b.classList.toggle('current', i === state.current));
+      placeResumeButton();
     }
 
     function drawRow(el, phraseIndex) {
@@ -757,26 +767,64 @@
       c.style.display = 'flex';
     }
 
-    async function play() {
-      if (!state.pkg) return;
-      state.playFrom = state.current;
-      if (state.quiz.on) chooseQuizSpots();
+    function playOptions(fromBeat, countIn) {
       const marks = [...new Set(state.notation.events.filter(e => !e.rest && !e.tieFromPrev).map(e => e.soundT))];
-      $('play').classList.add('playing');
-      $('play').textContent = '■ Stop';
-      await player.play({
-        fromBeat: state.phrases[state.current].start,
-        countIn: state.countIn,
+      return {
+        fromBeat,
+        countIn,
         marks,
-        stops: state.quiz.on ? state.quiz.spots.map(r => r.t) : [],
+        stops: state.quiz.on ? state.quiz.spots.map(r => r.t).filter(t => t > fromBeat + 1e-6) : [],
         holdSec: QUIZ_HOLD_SEC,
-        onResume: revealQuizSpot,
+        onFreeze: freezeQuiz,
         onBeat: (t) => { $('count').style.display = 'none'; onBeat(t); },
         onMark,
         onCount,
         onEnd: () => finish()
-      });
+      };
     }
+
+    async function play() {
+      if (!state.pkg) return;
+      state.playFrom = state.current;
+      if (state.quiz.on) chooseQuizSpots();
+      $('play').classList.add('playing');
+      $('play').textContent = '■ Stop';
+      await player.play(playOptions(state.phrases[state.current].start, state.countIn));
+    }
+
+    // Playback has stopped on a mystery note: show a button next to the "?"
+    function freezeQuiz(beat) {
+      state.quiz.frozenAt = beat;
+      placeResumeButton();
+    }
+
+    function placeResumeButton() {
+      const btn = $('resume-btn');
+      if (state.quiz.frozenAt === null) { btn.style.display = 'none'; return; }
+      const spot = state.quiz.spots.find(r => Math.abs(r.t - state.quiz.frozenAt) < 1e-6);
+      const q = spot && state.rows.current && state.rows.current.el
+        ? state.rows.current.el.querySelector(`.ev[data-ev="${spot.events[0].id}"] .txt-solfege`) : null;
+      btn.style.display = 'block';
+      const stage = $('stage').getBoundingClientRect();
+      if (q) {
+        const r = q.getBoundingClientRect();
+        btn.style.left = (r.left + r.width / 2 - stage.left) + 'px';
+        btn.style.top = (r.bottom - stage.top + 6) + 'px';
+      } else {
+        btn.style.left = '50%';
+        btn.style.top = '60%';
+      }
+    }
+
+    // Reveal the answer and carry on from the frozen note
+    $('resume-btn').addEventListener('click', async () => {
+      const beat = state.quiz.frozenAt;
+      if (beat === null) return;
+      state.quiz.frozenAt = null;
+      $('resume-btn').style.display = 'none';
+      revealQuizSpot(beat);
+      await player.play(playOptions(beat, false));
+    });
 
     function stop() {
       player.stop();
@@ -787,6 +835,8 @@
       $('play').classList.remove('playing');
       $('play').textContent = '▶ Play';
       $('count').style.display = 'none';
+      state.quiz.frozenAt = null;
+      $('resume-btn').style.display = 'none';
       if (state.pkg) {
         state.current = state.playFrom;
         state.quiz.spots = [];
@@ -795,7 +845,7 @@
       }
     }
 
-    $('play').addEventListener('click', () => { player.playing ? stop() : play(); });
+    $('play').addEventListener('click', () => { (player.playing || state.quiz.frozenAt !== null) ? stop() : play(); });
 
     // ---------------- Print Parts ----------------
     // One page per part (more if a part has over 8 rows), 8 staves per letter page.
@@ -893,7 +943,7 @@
     document.addEventListener('fullscreenchange', syncFullscreen);
     document.addEventListener('webkitfullscreenchange', syncFullscreen);
     document.addEventListener('keydown', (e) => {
-      if (e.code === 'Space' && state.pkg) { e.preventDefault(); player.playing ? stop() : play(); }
+      if (e.code === 'Space' && state.pkg) { e.preventDefault(); (player.playing || state.quiz.frozenAt !== null) ? stop() : play(); }
     });
 
     // Smartboards: ignore long-press context menus

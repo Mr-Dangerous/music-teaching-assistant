@@ -9,8 +9,9 @@
  *   player.setMuted('p2', true);  // live
  *   player.stop();
  *
- * Quiz mode: pass opts.stops = [beat, ...] (+ holdSec, onFreeze(beat), onResume(beat)). At each stop the
- * notes sounding there are held out longer, the transport pauses for holdSec seconds, then continues.
+ * Quiz mode: pass opts.stops = [beat, ...] (+ holdSec, onFreeze(beat)). At each stop the notes starting
+ * there ring for holdSec extra seconds and playback stops there (calling onFreeze). To continue, call
+ * play() again with fromBeat = that beat; notes already sounding at fromBeat are re-struck.
  */
 
 import { createInstrument } from './SongInstruments.js';
@@ -28,7 +29,6 @@ export class SongPlayer {
     this.playing = false;
     this.click = null;
     this._session = 0;
-    this._resumeTimer = null;
   }
 
   load(pkg) {
@@ -145,7 +145,7 @@ export class SongPlayer {
     }
 
     // Quiz stops: the notes starting there are held out for the freeze
-    const holdSec = opts.holdSec ?? 3;
+    const holdSec = opts.holdSec ?? 4;
     const stops = (opts.stops || []).filter(b => b >= fromBeat - EPS && b < toBeat - EPS);
     const isStop = (t) => stops.some(b => Math.abs(b - t) < EPS);
 
@@ -163,17 +163,14 @@ export class SongPlayer {
       }
     }
 
-    // Freeze: pause just after the note starts, then resume after holdSec
+    // Freeze: stop playback where the mystery note starts (the held note keeps ringing)
     for (const b of stops) {
       transport.schedule((time) => {
-        transport.pause(time);
-        Tone.Draw.schedule(() => { if (session === this._session && opts.onFreeze) opts.onFreeze(b); }, time);
-        clearTimeout(this._resumeTimer);
-        this._resumeTimer = setTimeout(() => {
+        Tone.Draw.schedule(() => {
           if (session !== this._session) return;
-          transport.start('+0.05');
-          if (opts.onResume) opts.onResume(b);
-        }, holdSec * 1000);
+          this.stop();
+          if (opts.onFreeze) opts.onFreeze(b);
+        }, time);
       }, (Math.round((b - fromBeat + offset) * PPQ) + 2) + 'i');
     }
 
@@ -205,7 +202,6 @@ export class SongPlayer {
   stop() {
     if (typeof Tone === 'undefined') return;
     this._session++;
-    clearTimeout(this._resumeTimer);
     Tone.Transport.stop();
     Tone.Transport.cancel(0);
     this.playing = false;
