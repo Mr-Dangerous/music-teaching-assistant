@@ -5,6 +5,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Song Player</title>
   <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+  <script>
+    // Browsers keep files from GitHub Pages for up to 10 minutes, so a fresh page could run stale copies of the
+    // shared modules. Tag each module with the app version (an import map also covers the modules' own imports),
+    // so a new deploy is picked up right away.
+    (function () {
+      try {
+        const x = new XMLHttpRequest();
+        x.open('GET', '../version.json?t=' + Date.now(), false);
+        x.send();
+        const v = JSON.parse(x.responseText).version;
+        const imports = {};
+        for (const n of ['SongPlayer', 'SongModel', 'SongRenderer', 'SongInstruments', 'SolfegeQuiz']) {
+          imports[new URL('./shared/' + n + '.js', location.href).href] = './shared/' + n + '.js?v=' + v;
+        }
+        const map = document.createElement('script');
+        map.type = 'importmap';
+        map.textContent = JSON.stringify({ imports });
+        document.head.appendChild(map);
+      } catch (e) { /* no version file: load the modules as usual */ }
+    })();
+  </script>
   <style>
     :root { --module-scale: 1; }
     body.resolution-4k { --module-scale: 2; }
@@ -369,6 +390,7 @@
     <button id="quiz-sustain" class="toggle on" title="On: the mystery note rings while frozen. Off: silence, so students sing it from memory.">Sustain ? note</button>
     <div id="quiz-focus" class="chips" title="Always quiz these pitches"></div>
 
+    <button id="clef-btn" class="toggle" title="Switch every pitched part between the solfege staff and a treble clef in concert pitch">Staff: Solfege</button>
     <button id="line-labels" class="toggle" title="Cycle the do / mi / so names written beside the staff lines">Staff names: All lines</button>
 
     <div class="spacer"></div>
@@ -434,6 +456,7 @@
       text: { solfege: true, lyrics: true, rhythm: false, pitch: false },
       countIn: true,
       lineLabels: store.get('lineLabels') || 'lines',
+      clef: store.get('clef') === 'treble' ? 'treble' : 'solfege',
       notation: null,
       layout: null,
       rows: { current: null, next: null },
@@ -591,6 +614,20 @@
       document.querySelectorAll('[data-text]').forEach(b => b.classList.toggle('on', !!state.text[b.dataset.text]));
     }
 
+    // Staff: solfege lines (do / mi / so) or a treble clef showing concert pitch (remembered on this board)
+    function syncClefBtn() {
+      const treble = state.clef === 'treble';
+      $('clef-btn').textContent = treble ? 'Staff: Treble clef' : 'Staff: Solfege';
+      $('clef-btn').classList.toggle('on', treble);
+      $('line-labels').style.display = treble ? 'none' : '';   // line names only make sense on the solfege staff
+    }
+    $('clef-btn').addEventListener('click', () => {
+      state.clef = state.clef === 'treble' ? 'solfege' : 'treble';
+      store.set('clef', state.clef);
+      syncClefBtn();
+      rebuildNotation();
+    });
+
     // Staff-line names: none -> so only -> do only -> all lines -> lines and spaces (remembered on this board)
     const LINE_LABEL_MODES = [
       ['none', 'None'], ['so', 'So only'], ['do', 'Do only'], ['lines', 'All lines'], ['all', 'Lines + spaces']
@@ -609,6 +646,7 @@
       renderRows();
     });
     syncLineLabelBtn();
+    syncClefBtn();
 
     $('countin').addEventListener('click', () => {
       state.countIn = !state.countIn;
@@ -635,7 +673,7 @@
     function rebuildNotation() {
       if (!state.pkg) return;
       const part = state.pkg.parts.find(p => p.id === state.shownPart);
-      state.notation = buildPartNotation(state.pkg, part);
+      state.notation = buildPartNotation(state.pkg, part, { clef: state.clef });
       state.quiz.focus = new Set([...state.quiz.focus].filter(s => syllablesIn(state.notation.events).includes(s)));
       state.quiz.spots = [];
       resetQuizLabels();
@@ -974,7 +1012,7 @@
       const pkg = state.pkg;
       const pages = [];
       for (const part of pkg.parts) {
-        const notation = buildPartNotation(pkg, part);
+        const notation = buildPartNotation(pkg, part, { clef: state.clef });
         const layout = layoutSong(notation, state.phrases, { width: PRINT_W, height: PRINT_H, text: state.text });
         const rows = state.phrases.map((ph, i) => renderRow(notation, layout, ph, {
           showTimeSig: i === 0,

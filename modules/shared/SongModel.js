@@ -109,11 +109,27 @@ export function detectSpelling(pkg, part) {
 const NATURAL_PC = [0, 2, 4, 5, 7, 9, 11];                       // C D E F G A B
 const DO_LETTER = [0, 1, 1, 2, 2, 3, 3, 4, 5, 5, 6, 6];          // key letter for each pitch class of do (D♭ E♭ F♯ A♭ B♭ keys)
 const LETTER_NAMES = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-export function letterOf(midi, doMidi, degree) {
+export function letterInfo(midi, doMidi, degree) {
   const idx = (((DO_LETTER[((doMidi % 12) + 12) % 12] + degree) % 7) + 7) % 7;
   const diff = ((((midi % 12) - NATURAL_PC[idx]) % 12) + 18) % 12 - 6;   // -6..5 semitones from the natural letter
   const acc = { 0: '', 1: '♯', '-1': '♭', 2: '𝄪', '-2': '𝄫' }[diff] ?? '';
-  return LETTER_NAMES[idx] + acc;
+  const natural = midi - diff;
+  return { name: LETTER_NAMES[idx] + acc, idx, diff, pos: Math.round((natural - NATURAL_PC[idx]) / 12) * 7 + idx };
+}
+export const letterOf = (midi, doMidi, degree) => letterInfo(midi, doMidi, degree).name;
+
+// Treble clef: staff position = octave * 7 + letter (C4 = 35), so the lines are E4 G4 B4 D5 F5
+export const TREBLE_STAFF = [37, 39, 41, 43, 45];
+// Key signature (sharps > 0, flats < 0) for a major key with do on each pitch class (D♭ E♭ F♯ A♭ B♭ keys)
+const KEY_SIG = { 0: 0, 7: 1, 2: 2, 9: 3, 4: 4, 11: 5, 6: 6, 1: -5, 8: -4, 3: -3, 10: -2, 5: -1 };
+const SHARP_ORDER = [3, 0, 4, 1, 5, 2, 6];    // F C G D A E B
+const FLAT_ORDER = [6, 2, 5, 1, 4, 0, 3];     // B E A D G C F
+export const KEY_SHARP_POS = [45, 42, 46, 43, 40, 44, 41];   // where each sharp sits on a treble staff
+export const KEY_FLAT_POS = [41, 44, 40, 43, 39, 42, 38];    // ... and each flat
+function keyAccidentals(n) {
+  const acc = [0, 0, 0, 0, 0, 0, 0];
+  (n > 0 ? SHARP_ORDER : FLAT_ORDER).slice(0, Math.abs(n)).forEach(i => { acc[i] = n > 0 ? 1 : -1; });
+  return acc;
 }
 
 export function measureBeats(pkg) {
@@ -245,6 +261,7 @@ export function parseLyrics(text) {
  *          tieFromPrev, tieToNext, soundT, soundD, lyric, hyphen, rhythm (start count), beam, measure, id }
  */
 export function buildPartNotation(pkg, part, buildOpts = {}) {
+  const treble = buildOpts.clef === 'treble' && part.kind !== 'unpitched';
   const measures = getMeasures(pkg);
   const beatLen = beatLength(pkg);
   const pitched = part.kind !== 'unpitched';
@@ -270,7 +287,8 @@ export function buildPartNotation(pkg, part, buildOpts = {}) {
   const pitchInfo = (midi) => {
     if (!pitched) return { midi, degree: 0, syl: '', acc: null, letter: '' };
     const s = solfegeOf(midi, part.doMidi, spelling);
-    return { midi, ...s, letter: letterOf(midi, part.doMidi, s.degree) };
+    const L = letterInfo(midi, part.doMidi, s.degree);
+    return { midi, ...s, letter: L.name, tidx: L.idx, tdiff: L.diff, tpos: L.pos };
   };
 
   const out = [];
@@ -339,6 +357,27 @@ export function buildPartNotation(pkg, part, buildOpts = {}) {
     }
   }
 
+  // Treble clef: put every note where its concert-pitch letter belongs and add accidentals the key doesn't cover
+  let keySig = 0;
+  if (treble) {
+    keySig = KEY_SIG[((part.doMidi % 12) + 12) % 12] ?? 0;
+    const keyAcc = keyAccidentals(keySig);
+    let measureIdx = -1, state = {};
+    for (const e of out) {
+      if (e.measure !== measureIdx) { measureIdx = e.measure; state = {}; }
+      if (e.rest) continue;
+      for (const p of e.pitches) {
+        const cur = state[p.tpos] ?? keyAcc[p.tidx];
+        p.acc = null;
+        if (!e.tieFromPrev) {
+          if (p.tdiff !== cur) p.acc = { 0: '♮', 1: '♯', '-1': '♭', 2: '𝄪', '-2': '𝄫' }[p.tdiff] || null;
+          state[p.tpos] = p.tdiff;
+        }
+        p.degree = p.tpos;
+      }
+    }
+  }
+
   // Band-style counting: every note gets the count it starts on (1 e + a 2 ...). A note that keeps sounding
   // past that count also gets its later counts in (parentheses). Rests get gray (parenthesized) counts.
   // e.rhythm = the start label (notes); notation.rhythmMarks = [{t, label, rest}] for every other label.
@@ -399,11 +438,11 @@ export function buildPartNotation(pkg, part, buildOpts = {}) {
     minDeg = Math.min(minDeg, p.degree);
     maxDeg = Math.max(maxDeg, p.degree);
   }
-  const staff = STAFF_LINES[lines];
+  const staff = treble ? TREBLE_STAFF : STAFF_LINES[lines];
   minDeg = Math.min(minDeg, staff[0]);
   maxDeg = Math.max(maxDeg, staff[staff.length - 1]);
 
-  return { measures, events: out, lines, staff, minDeg, maxDeg, beatLen, spelling, borrowedLyrics, rhythmMarks };
+  return { measures, events: out, lines, staff, minDeg, maxDeg, beatLen, spelling, borrowedLyrics, rhythmMarks, clef: treble ? 'treble' : 'solfege', keySig };
 }
 
 let beamCounter = 0;

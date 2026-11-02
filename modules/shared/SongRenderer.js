@@ -12,7 +12,9 @@
  *   row.beatX(t) -> x position of beat time t within that row
  */
 
-import { lineName } from './SongModel.js';
+import { lineName, KEY_SHARP_POS, KEY_FLAT_POS } from './SongModel.js';
+
+const CLEF_IMAGE = '../assets/clefs/symbol_treble_clef.png';   // relative to the page that shows the song
 
 const EPS = 1e-6;
 const INK = '#1d1d35';
@@ -63,7 +65,10 @@ export function layoutSong(notation, phrases, opts) {
     return { w, n };
   });
 
-  const HEADER = 5.0, PAD = 1.9, MIN_UNIT = 2.5;
+  // Treble clef rows need room for the clef and key signature instead of the solfege line names
+  const treble = notation.clef === 'treble';
+  const keyUnits = treble && notation.keySig ? Math.abs(notation.keySig) * 1.0 + 0.5 : 0;
+  const HEADER = treble ? 6.3 + keyUnits : 5.0, PAD = 1.9, MIN_UNIT = 2.5;
   for (const r of rows) {
     S = Math.min(S, width / (HEADER + PAD * r.n + MIN_UNIT * r.w));
   }
@@ -74,7 +79,7 @@ export function layoutSong(notation, phrases, opts) {
   const staffTop = topExt * S;
   return {
     S, unitPx, width, height, textLines,
-    headerW: HEADER * S, labelW: 2.5 * S, padL: 1.1 * S, padR: 0.8 * S,
+    headerW: HEADER * S, labelW: (treble ? 0.6 : 2.5) * S, treble, padL: 1.1 * S, padR: 0.8 * S,
     staffTop,
     staffBottom: staffTop + staffSpan * S,
     textTop: staffTop + (staffSpan + bottomExt) * S,
@@ -91,6 +96,7 @@ export function layoutSong(notation, phrases, opts) {
 export function renderRow(notation, layout, phrase, opts = {}) {
   const { S, unitPx, staffTop, topLine, bottomLine } = layout;
   const staff = notation.staff;
+  const treble = notation.clef === 'treble';
   const unpitched = notation.lines === 1;
   const midDeg = (topLine + bottomLine) / 2;
   const yOf = (deg) => staffTop + (topLine - deg) * S / 2;
@@ -164,10 +170,21 @@ export function renderRow(notation, layout, phrase, opts = {}) {
   for (const deg of staff) {
     const y = yOf(deg);
     parts.push(`<line x1="${fmt(staffLeft)}" y1="${fmt(y)}" x2="${fmt(rowEnd)}" y2="${fmt(y)}" stroke="${INK}" stroke-width="${fmt(0.11 * S)}"/>`);
-    if (!unpitched && showLineLabel(deg)) parts.push(lineLabel(deg, y));
+    if (!unpitched && !treble && showLineLabel(deg)) parts.push(lineLabel(deg, y));
+  }
+  // Treble clef + key signature at the start of every row
+  if (treble) {
+    const clefH = 6.9 * S, clefW = clefH * 242 / 690;
+    const yG = yOf(staff[1]);                     // the G line: the clef's curl is centered on it
+    parts.push(`<image href="${CLEF_IMAGE}" x="${fmt(staffLeft + 0.3 * S)}" y="${fmt(yG - 0.64 * clefH)}" width="${fmt(clefW)}" height="${fmt(clefH)}"/>`);
+    const n = notation.keySig || 0;
+    const posList = n > 0 ? KEY_SHARP_POS : KEY_FLAT_POS;
+    for (let k = 0; k < Math.abs(n); k++) {
+      parts.push(`<text x="${fmt(staffLeft + 3.4 * S + k * 1.0 * S)}" y="${fmt(yOf(posList[k]) + 0.5 * S)}" font-size="${fmt(1.5 * S)}" text-anchor="middle" fill="${INK}">${n > 0 ? '♯' : '♭'}</text>`);
+    }
   }
   // Spaces between the lines get a label too, only in the "lines and spaces" setting
-  if (!unpitched && labelMode === 'all') {
+  if (!unpitched && !treble && labelMode === 'all') {
     const lo = Math.min(...staff), hi = Math.max(...staff);
     for (let deg = lo + 1; deg < hi; deg++) {
       if (!staff.includes(deg)) parts.push(lineLabel(deg, yOf(deg)));
@@ -176,7 +193,7 @@ export function renderRow(notation, layout, phrase, opts = {}) {
 
   // ---- Time signature ----
   if (opts.showTimeSig && opts.timeSig) {
-    const tx = staffLeft + 1.4 * S;
+    const tx = staffLeft + (treble ? 3.4 * S + (notation.keySig ? Math.abs(notation.keySig) * 1.0 * S + 0.3 * S : 0) + 1.0 * S : 1.4 * S);
     const fs = 2.0 * S;
     parts.push(`<g font-family="Georgia, 'Times New Roman', serif" font-weight="bold" font-size="${fmt(fs)}" text-anchor="middle" fill="${INK}">` +
       `<text x="${fmt(tx)}" y="${fmt(yMid - 0.12 * S)}">${opts.timeSig.num}</text>` +
@@ -321,7 +338,7 @@ export function renderRow(notation, layout, phrase, opts = {}) {
           g.push(`<text x="${fmt(ex - rx - 0.9 * S)}" y="${fmt(y + 0.5 * S)}" font-size="${fmt(1.5 * S)}" text-anchor="middle" fill="${INK}">${p.acc}</text>`);
         }
         for (let k = 0; k < e.dots; k++) {
-          const onLine = ((p.degree % 2) + 2) % 2 === 0;
+          const onLine = (((p.degree - bottomLine) % 2) + 2) % 2 === 0;
           const dy = onLine ? y - S / 2 : y;
           g.push(`<circle cx="${fmt(ex + rx + 0.5 * S + k * 0.5 * S)}" cy="${fmt(dy)}" r="${fmt(0.17 * S)}" fill="${INK}"/>`);
         }
