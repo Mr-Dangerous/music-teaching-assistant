@@ -673,6 +673,7 @@ class TeachingAssistantApp {
       'instrument_assigner.html',
       'group_assigner.html',
       'treble_clef_note_quiz.html',
+      'bass_clef_note_quiz.html',
       'written_assessment_scorer.html',
     ];
 

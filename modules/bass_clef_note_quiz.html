@@ -1,0 +1,942 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bass Clef Note Quiz</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 10px;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .app {
+    background: rgba(255,255,255,0.97);
+    border-radius: 16px;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    gap: 8px;
+  }
+
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .title { font-size: 22px; font-weight: bold; color: #2c3e50; line-height: 1.2; }
+  .subtitle { font-size: 14px; color: #666; font-weight: 600; }
+
+  .toolbar-btns {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .toolbar-btn {
+    border: none;
+    border-radius: 20px;
+    padding: 9px 18px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    white-space: nowrap;
+    color: #fff;
+  }
+  .toolbar-btn:hover { opacity: 0.88; }
+  .toolbar-btn.active { filter: brightness(0.82); box-shadow: inset 0 2px 6px rgba(0,0,0,0.35); }
+  .btn-select-notes { background: linear-gradient(135deg,#4e54c8,#8f94fb); }
+  .btn-new-note { background: linear-gradient(135deg,#f7971e,#ffd200); color: #333; }
+
+  .hint-toolbar {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+  }
+  .btn-hint { background: linear-gradient(135deg,#ff5f6d,#ffc371); color: #333; }
+  .btn-reveal { background: linear-gradient(135deg,#00b09b,#96c93d); }
+
+  .hint-banner {
+    display: none;
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    background: rgba(255,255,255,0.97);
+    border: 2px solid #f7971e;
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: 15px;
+    color: #2c3e50;
+    line-height: 1.6;
+    z-index: 30;
+  }
+  .hint-banner.show { display: block; }
+
+  .btn-hand { background: linear-gradient(135deg,#8e2de2,#c471ed); }
+
+  /* Floating, draggable, resizable hand-staff reference window */
+  .hand-frame {
+    display: none;
+    position: fixed;
+    z-index: 600;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+    min-width: 160px;
+    min-height: 120px;
+  }
+  .hand-frame.show { display: block; }
+  .hand-titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 26px;
+    background: linear-gradient(135deg,#8e2de2,#c471ed);
+    border-radius: 14px 14px 0 0;
+    color: #fff;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: grab;
+    touch-action: none;
+    user-select: none;
+  }
+  .hand-titlebar:active { cursor: grabbing; }
+  .hand-body {
+    width: 100%;
+    height: calc(100% - 26px);
+    padding: 8px;
+    box-sizing: border-box;
+  }
+  .hand-body img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+  }
+  .hand-close {
+    position: absolute;
+    top: -14px;
+    left: -14px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 20px;
+    font-weight: bold;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.4);
+    z-index: 2;
+  }
+  .hand-resize-handle {
+    position: absolute;
+    right: 2px;
+    bottom: 2px;
+    width: 22px;
+    height: 22px;
+    cursor: nwse-resize;
+    touch-action: none;
+    background: linear-gradient(135deg, transparent 0%, transparent 42%, #8e2de2 42%, #8e2de2 58%, transparent 58%, transparent 100%);
+    opacity: 0.65;
+  }
+
+  .staff-wrap {
+    flex: 1;
+    min-height: 0;
+    background: #f5f6ff;
+    border: 2px dashed #c5cae9;
+    border-radius: 12px;
+    position: relative;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .staff-wrap.drop-target { background: #e8eaf6; border-color: #5c6bc0; }
+  #staff-canvas { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  .bank {
+    flex-shrink: 0;
+    min-height: 74px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 6px;
+  }
+
+  .letter-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 58px;
+    height: 58px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    border-radius: 50%;
+    font-size: 26px;
+    font-weight: 800;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    box-shadow: 0 3px 8px rgba(102,126,234,0.4);
+  }
+
+  /* Settings overlay */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.45);
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+  }
+  .overlay.show { display: flex; }
+  .panel {
+    background: #fff;
+    border-radius: 18px;
+    padding: 22px 26px;
+    max-width: 560px;
+    width: 90%;
+    max-height: 88vh;
+    overflow-y: auto;
+  }
+  .panel h2 { color: #2c3e50; font-size: 20px; margin-bottom: 14px; }
+
+  .count-row { margin-bottom: 16px; }
+  .count-row-label { font-weight: bold; color: #3949ab; margin-bottom: 8px; font-size: 15px; }
+  .count-buttons { display: flex; gap: 6px; flex-wrap: wrap; }
+  .count-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 2px solid #c5cae9;
+    background: #fff;
+    font-weight: bold;
+    font-size: 16px;
+    cursor: pointer;
+    color: #333;
+  }
+  .count-btn.active { background: linear-gradient(135deg,#4e54c8,#8f94fb); color: #fff; border-color: #4e54c8; }
+
+  .columns {
+    display: flex;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+  .col {
+    flex: 1 1 140px;
+    background: #f5f6ff;
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .col-header {
+    display: block;
+    font-weight: bold;
+    color: #3949ab;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 2px solid #c5cae9;
+  }
+  .col label {
+    display: block;
+    font-size: 15px;
+    color: #333;
+    padding: 4px 0;
+    cursor: pointer;
+  }
+  .col label input { margin-right: 8px; }
+
+  .panel-actions { margin-top: 18px; text-align: right; }
+  .btn-start {
+    background: linear-gradient(135deg,#11998e,#38ef7d);
+    color: #fff;
+    border: none;
+    border-radius: 20px;
+    padding: 10px 26px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+  }
+  .btn-start:hover { opacity: 0.9; }
+
+  #toast {
+    position: fixed;
+    bottom: 16px;
+    right: 16px;
+    background: #2ecc71;
+    color: #fff;
+    padding: 7px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: bold;
+    z-index: 99999;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  #toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="toolbar-btns">
+      <button class="toolbar-btn btn-new-note" id="new-note-btn" title="Give this student new note(s) to identify">&#128260; New Note(s)</button>
+      <button class="toolbar-btn btn-select-notes" id="settings-btn" title="Choose which notes to practice">&#9881; Select Notes</button>
+    </div>
+    <div class="title-block">
+      <div class="title">Bass Clef Notes</div>
+      <div class="subtitle" id="filter-summary">Practicing: ...</div>
+    </div>
+  </div>
+
+  <div class="hint-toolbar">
+    <button class="toolbar-btn btn-hint" id="hint-btn">&#128161; Reveal Hint</button>
+    <button class="toolbar-btn btn-reveal" id="reveal-f-btn">&#10132; Reveal F</button>
+    <button class="toolbar-btn btn-reveal" id="reveal-lines-btn">&#128207; Reveal All Lines</button>
+    <button class="toolbar-btn btn-reveal" id="reveal-spaces-btn">&#128209; Reveal All Spaces</button>
+  </div>
+
+  <div class="staff-wrap" id="staff-zone" data-zone="staff">
+    <canvas id="staff-canvas"></canvas>
+    <div class="hint-banner" id="hint-banner">
+      <div><b>Line Notes:</b> <b>G</b>rizzly <b>B</b>ears <b>D</b>on't <b>F</b>ly <b>A</b>irplanes.</div>
+      <div><b>Space Notes:</b> <b>A</b>ll <b>C</b>ows <b>E</b>at <b>G</b>rass.</div>
+    </div>
+  </div>
+
+  <div class="bank" id="letter-bank" data-zone="bank"></div>
+</div>
+
+<div id="settings-overlay" class="overlay">
+  <div class="panel">
+    <h2>Choose Notes to Practice</h2>
+
+    <div class="count-row">
+      <div class="count-row-label">Notes per Round</div>
+      <div class="count-buttons" id="count-buttons">
+        <button class="count-btn" data-count="1">1</button>
+        <button class="count-btn" data-count="2">2</button>
+        <button class="count-btn" data-count="3">3</button>
+        <button class="count-btn" data-count="4">4</button>
+        <button class="count-btn" data-count="5">5</button>
+        <button class="count-btn" data-count="6">6</button>
+        <button class="count-btn" data-count="7">7</button>
+        <button class="count-btn" data-count="8">8</button>
+      </div>
+    </div>
+
+    <div class="columns">
+      <div class="col">
+        <label class="col-header"><input type="checkbox" id="col-line-all"> Line Notes</label>
+        <label><input type="checkbox" class="note-cb" data-id="G2"> G &mdash; Line 1</label>
+        <label><input type="checkbox" class="note-cb" data-id="B2"> B &mdash; Line 2</label>
+        <label><input type="checkbox" class="note-cb" data-id="D3"> D &mdash; Line 3</label>
+        <label><input type="checkbox" class="note-cb" data-id="F3"> F &mdash; Line 4</label>
+        <label><input type="checkbox" class="note-cb" data-id="A3"> A &mdash; Line 5</label>
+      </div>
+      <div class="col">
+        <label class="col-header"><input type="checkbox" id="col-space-all"> Space Notes</label>
+        <label><input type="checkbox" class="note-cb" data-id="A2"> A &mdash; Space 1</label>
+        <label><input type="checkbox" class="note-cb" data-id="C3"> C &mdash; Space 2</label>
+        <label><input type="checkbox" class="note-cb" data-id="E3"> E &mdash; Space 3</label>
+        <label><input type="checkbox" class="note-cb" data-id="G3"> G &mdash; Space 4</label>
+      </div>
+      <div class="col">
+        <label class="col-header"><input type="checkbox" id="col-ext-all"> Above Staff</label>
+        <label><input type="checkbox" class="note-cb" data-id="B3"> B &mdash; above staff</label>
+        <label><input type="checkbox" class="note-cb" data-id="C4"> C &mdash; Middle C</label>
+      </div>
+    </div>
+    <div class="panel-actions">
+      <button class="btn-start" id="settings-close-btn">Done</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+  // ── Note data (bottom to top) ───────────────────────────────────────────
+  // step 0 = bottom line (G2); each step = one diatonic staff position
+  const NOTE_POSITIONS = [
+    { id: 'G2', letter: 'G', step: 0  },
+    { id: 'A2', letter: 'A', step: 1  },
+    { id: 'B2', letter: 'B', step: 2  },
+    { id: 'C3', letter: 'C', step: 3  },
+    { id: 'D3', letter: 'D', step: 4  },
+    { id: 'E3', letter: 'E', step: 5  },
+    { id: 'F3', letter: 'F', step: 6  },
+    { id: 'G3', letter: 'G', step: 7  },
+    { id: 'A3', letter: 'A', step: 8  },
+    { id: 'B3', letter: 'B', step: 9, ledger: false },
+    { id: 'C4', letter: 'C', step: 10, ledger: true  },
+  ];
+  const LINE_IDS = ['G2', 'B2', 'D3', 'F3', 'A3'];
+  const SPACE_IDS = ['A2', 'C3', 'E3', 'G3'];
+  const EXT_IDS = ['B3', 'C4'];
+  const F_STEP = 6; // F3 — fourth line from the bottom (between the clef dots)
+  const LS_KEY = 'bassClefNoteQuiz_settings_v1';
+  const CONFIGURED_KEY = 'bassClefNoteQuizConfigured';
+  const MODULE_FILE = 'bass_clef_note_quiz.html';
+  const MAX_NOTE_COUNT = 8;
+
+  const LINE_POSITIONS = NOTE_POSITIONS.filter(n => LINE_IDS.includes(n.id));
+  const SPACE_POSITIONS = NOTE_POSITIONS.filter(n => SPACE_IDS.includes(n.id));
+
+  function defaultSettings() {
+    const enabled = {};
+    NOTE_POSITIONS.forEach(n => { enabled[n.id] = LINE_IDS.includes(n.id) || SPACE_IDS.includes(n.id); });
+    return { enabled, noteCount: 1 };
+  }
+
+  // ── State ────────────────────────────────────────────────────────────────
+  let settings = defaultSettings();
+  let roundTargets = []; // [{position, answered, letter, correct, x, y}]
+  let answered = false;  // true once every target in roundTargets has been answered
+  let lastResponse = null;
+  let logicalW = 0, logicalH = 0;
+  let showF = false, showLines = false, showSpaces = false;
+
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  function enabledPositions() { return NOTE_POSITIONS.filter(n => settings.enabled[n.id]); }
+  function enabledLetters() {
+    const set = new Set(enabledPositions().map(n => n.letter));
+    return ['A', 'B', 'C', 'D', 'E', 'F', 'G'].filter(l => set.has(l));
+  }
+  function loadLocalSettings() {
+    try {
+      const raw = localStorage.getItem(LS_KEY);
+      const parsed = raw ? JSON.parse(raw) : null;
+      return parsed && parsed.enabled ? parsed : null;
+    } catch (e) { return null; }
+  }
+  function saveLocalSettings() {
+    try { localStorage.setItem(LS_KEY, JSON.stringify(settings)); } catch (e) { /* ignore */ }
+  }
+  function hasEverConfigured(context) {
+    if (context && context.savedSettings && context.savedSettings.enabled) return true;
+    try { return localStorage.getItem(CONFIGURED_KEY) === '1'; } catch (e) { return false; }
+  }
+
+  // Pick `count` note positions from pool: without replacement when the pool
+  // is large enough to avoid repeats, otherwise fills with repeats.
+  function sampleNotes(pool, count) {
+    if (!pool.length || count <= 0) return [];
+    const shuffled = [...pool].sort(() => Math.random() - 0.5);
+    if (pool.length >= count) return shuffled.slice(0, count);
+    const result = [];
+    while (result.length < count) result.push(pool[Math.floor(Math.random() * pool.length)]);
+    return result;
+  }
+
+  function pickNewRound() {
+    const pool = enabledPositions();
+    const count = Math.max(1, Math.min(MAX_NOTE_COUNT, settings.noteCount || 1));
+    const picked = sampleNotes(pool, pool.length ? count : 0);
+    roundTargets = picked.map(position => ({ position, answered: false, letter: null, correct: null, x: 0, y: 0 }));
+    answered = false;
+    lastResponse = null;
+  }
+
+  // ── Settings overlay ─────────────────────────────────────────────────────
+  function openSettingsOverlay() { document.getElementById('settings-overlay').classList.add('show'); }
+  function closeSettingsOverlay() { document.getElementById('settings-overlay').classList.remove('show'); }
+
+  function applySettingsToUI() {
+    document.querySelectorAll('.note-cb').forEach(cb => {
+      cb.checked = !!settings.enabled[cb.dataset.id];
+    });
+    updateColumnHeaders();
+    updateCountButtons();
+  }
+  function updateColumnHeaders() {
+    document.getElementById('col-line-all').checked = LINE_IDS.every(id => settings.enabled[id]);
+    document.getElementById('col-space-all').checked = SPACE_IDS.every(id => settings.enabled[id]);
+    document.getElementById('col-ext-all').checked = EXT_IDS.every(id => settings.enabled[id]);
+  }
+  function updateCountButtons() {
+    const count = settings.noteCount || 1;
+    document.querySelectorAll('.count-btn').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.count, 10) === count);
+    });
+  }
+  function toggleColumn(ids, checked) {
+    ids.forEach(id => { settings.enabled[id] = checked; });
+    applySettingsToUI();
+  }
+  function updateFilterSummary() {
+    const el = document.getElementById('filter-summary');
+    const letters = enabledLetters();
+    if (!letters.length) { el.textContent = 'No notes selected'; return; }
+    const count = settings.noteCount || 1;
+    el.textContent = `Practicing: ${letters.join(' ')} · ${count} note${count > 1 ? 's' : ''}/round`;
+  }
+
+  // ── Letter bank & drag/drop ──────────────────────────────────────────────
+  let dragLetter = null, dragClone = null, dragChip = null;
+
+  function startDrag(chip, x, y) {
+    if (roundTargets.length === 0) return;
+    // Single-note mode locks in immediately (by design); multi-note rounds
+    // stay open for correction even after every note has been answered.
+    if (roundTargets.length === 1 && answered) return;
+    dragLetter = chip.dataset.letter;
+    dragChip = chip;
+    dragClone = chip.cloneNode(true);
+    dragClone.style.cssText =
+      'position:fixed;z-index:9999;pointer-events:none;opacity:0.9;transform:scale(1.15);transition:none;';
+    document.body.appendChild(dragClone);
+    chip.style.opacity = '0.3';
+    moveDragClone(x, y);
+  }
+  function moveDragClone(x, y) {
+    if (!dragClone) return;
+    const w = dragClone.offsetWidth || 58, h = dragClone.offsetHeight || 58;
+    dragClone.style.left = (x - w / 2) + 'px';
+    dragClone.style.top = (y - h / 2) + 'px';
+
+    dragClone.style.display = 'none';
+    const under = document.elementFromPoint(x, y);
+    dragClone.style.display = '';
+    const overStaff = under && under.closest('[data-zone="staff"]');
+    document.getElementById('staff-zone').classList.toggle('drop-target', !!overStaff);
+  }
+  function endDrag(x, y) {
+    document.getElementById('staff-zone').classList.remove('drop-target');
+    if (dragClone) { dragClone.remove(); dragClone = null; }
+    if (dragChip) { dragChip.style.opacity = ''; dragChip = null; }
+    if (!dragLetter) return;
+
+    const under = document.elementFromPoint(x, y);
+    const overStaff = under && under.closest('[data-zone="staff"]');
+    if (overStaff && roundTargets.length) {
+      const rect = document.getElementById('staff-zone').getBoundingClientRect();
+      submitAnswer(dragLetter, x - rect.left, y - rect.top);
+    }
+    dragLetter = null;
+  }
+
+  function buildChip(letter) {
+    const chip = document.createElement('div');
+    chip.className = 'letter-chip';
+    chip.dataset.letter = letter;
+    chip.textContent = letter;
+
+    chip.addEventListener('mousedown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      startDrag(chip, e.clientX, e.clientY);
+      const onMove = e => moveDragClone(e.clientX, e.clientY);
+      const onUp = e => {
+        document.removeEventListener('mousemove', onMove);
+        document.removeEventListener('mouseup', onUp);
+        endDrag(e.clientX, e.clientY);
+      };
+      document.addEventListener('mousemove', onMove);
+      document.addEventListener('mouseup', onUp);
+    });
+
+    chip.addEventListener('touchstart', e => {
+      e.preventDefault();
+      const t = e.touches[0];
+      startDrag(chip, t.clientX, t.clientY);
+      const onMove = e => { e.preventDefault(); const t = e.touches[0]; moveDragClone(t.clientX, t.clientY); };
+      const onEnd = e => {
+        document.removeEventListener('touchmove', onMove);
+        document.removeEventListener('touchend', onEnd);
+        document.removeEventListener('touchcancel', onEnd);
+        const t = e.changedTouches[0];
+        endDrag(t.clientX, t.clientY);
+      };
+      document.addEventListener('touchmove', onMove, { passive: false });
+      document.addEventListener('touchend', onEnd);
+      document.addEventListener('touchcancel', onEnd);
+    }, { passive: false });
+
+    return chip;
+  }
+
+  function renderBank() {
+    const bank = document.getElementById('letter-bank');
+    bank.innerHTML = '';
+    enabledLetters().forEach(l => bank.appendChild(buildChip(l)));
+  }
+
+  // ── Answer handling ──────────────────────────────────────────────────────
+  function nearestTarget(candidates, x, y) {
+    let best = candidates[0], bestDist = Infinity;
+    candidates.forEach(t => {
+      const dx = t.x - x, dy = t.y - y;
+      const d = dx * dx + dy * dy;
+      if (d < bestDist) { bestDist = d; best = t; }
+    });
+    return best;
+  }
+
+  function submitAnswer(letter, dropX, dropY) {
+    if (!roundTargets.length) return;
+
+    // Nearest target by drop position — among ALL targets, not just
+    // unanswered ones, so dropping onto an already-answered note (in a
+    // multi-note round) corrects it instead of being ignored.
+    const target = nearestTarget(roundTargets, dropX, dropY);
+    target.answered = true;
+    target.letter = letter;
+    target.correct = letter === target.position.letter;
+    drawStaff();
+
+    if (roundTargets.every(t => t.answered)) finishRound();
+  }
+
+  function finishRound() {
+    const isCorrection = answered; // already true means this is a re-finish after a correction
+    answered = true;
+    const correctCount = roundTargets.filter(t => t.correct).length;
+    const allCorrect = correctCount === roundTargets.length;
+    lastResponse = roundTargets.map(t => `${t.position.id}|${t.letter}`).join(',');
+
+    const label = isCorrection
+      ? `Updated: ${correctCount}/${roundTargets.length} correct`
+      : roundTargets.length === 1
+        ? (allCorrect ? `Correct! It's ${roundTargets[0].position.letter}` : `Not quite — that was ${roundTargets[0].position.letter}`)
+        : `Round complete: ${correctCount}/${roundTargets.length} correct`;
+
+    showToast(label, allCorrect ? '#2ecc71' : (correctCount === 0 ? '#e74c3c' : '#e67e22'));
+
+    window.parent.postMessage({
+      type: 'taskmodule:response',
+      value: lastResponse,
+      isComplete: true
+    }, '*');
+  }
+
+  // ── Canvas rendering ─────────────────────────────────────────────────────
+  function getScale() { return document.body.classList.contains('resolution-4k') ? 2 : 1; }
+
+  function resizeCanvas() {
+    const canvas = document.getElementById('staff-canvas');
+    const wrap = document.getElementById('staff-zone');
+    const rect = wrap.getBoundingClientRect();
+    logicalW = rect.width;
+    logicalH = rect.height;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = Math.max(1, Math.round(logicalW * dpr));
+    canvas.height = Math.max(1, Math.round(logicalH * dpr));
+    const ctx = canvas.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function drawStaff() {
+    const canvas = document.getElementById('staff-canvas');
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, logicalW, logicalH);
+    if (logicalW < 10 || logicalH < 10) return;
+
+    const scale = getScale();
+    const lineSpacing = logicalH * 0.10;
+    const halfStep = lineSpacing / 2;
+    const staffBottomY = logicalH * 0.66;
+    const staffTopY = staffBottomY - lineSpacing * 4;
+
+    // Reserve a margin on the far left for line/space letter labels, then
+    // start the staff lines right after it. The clef sits ON TOP of the
+    // start of the staff (overlapping it), like real engraving, instead of
+    // in its own separate column to the left.
+    const labelMargin = 34 * scale;
+    const staffLineLeft = labelMargin;
+    const staffRight = logicalW - 30;
+
+    // The bass clef is drawn directly on the canvas (no image asset): its
+    // head sits on the F line (4th line from the bottom) with a dot above
+    // and below that line. It spans about 3.6 line-spaces horizontally.
+    const clefHeadX = staffLineLeft + lineSpacing * 0.7;
+    const clefWidth = lineSpacing * 3.6;
+
+    // Notes are placed to the right of the clef so they never overlap it.
+    const noteAreaLeft = staffLineLeft + clefWidth + 15;
+
+    ctx.strokeStyle = '#2c3e50';
+    ctx.lineWidth = 3;
+    [0, 2, 4, 6, 8].forEach(step => {
+      const y = staffBottomY - step * halfStep;
+      ctx.beginPath();
+      ctx.moveTo(staffLineLeft, y);
+      ctx.lineTo(staffRight, y);
+      ctx.stroke();
+    });
+
+    drawBassClef(ctx, clefHeadX, staffBottomY - F_STEP * halfStep, lineSpacing);
+
+    if (showLines) drawLetterLabels(ctx, LINE_POSITIONS, staffLineLeft, staffBottomY, halfStep, scale);
+    if (showSpaces) drawLetterLabels(ctx, SPACE_POSITIONS, staffLineLeft, staffBottomY, halfStep, scale);
+    if (showF) drawArrowToLine(ctx, staffBottomY - F_STEP * halfStep, staffRight, scale);
+
+    if (roundTargets.length) {
+      const n = roundTargets.length;
+      const padding = NOTE_RADIUS * 2.2;
+      const usableLeft = noteAreaLeft + padding;
+      const usableRight = staffRight - padding;
+      const span = Math.max(usableRight - usableLeft, 0);
+
+      roundTargets.forEach((t, i) => {
+        const x = n === 1
+          ? noteAreaLeft + (staffRight - noteAreaLeft) * 0.5
+          : usableLeft + span * (i / (n - 1));
+        const y = staffBottomY - t.position.step * halfStep;
+        t.x = x;
+        t.y = y;
+
+        if (t.position.ledger) {
+          const ledgerHalfWidth = NOTE_RADIUS * 1.7;
+          ctx.beginPath();
+          ctx.moveTo(x - ledgerHalfWidth, y);
+          ctx.lineTo(x + ledgerHalfWidth, y);
+          ctx.stroke();
+        }
+
+        const status = t.answered ? (t.correct ? 'correct' : 'wrong') : undefined;
+        drawNotehead(ctx, x, y, status, t.position.step >= 4);
+      });
+    } else {
+      ctx.fillStyle = '#888';
+      ctx.font = '16px Arial';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Select at least one note in settings ⚙', logicalW / 2, logicalH / 2);
+    }
+  }
+
+  function drawBassClef(ctx, hx, yF, u) {
+    ctx.save();
+    ctx.strokeStyle = '#2c3e50';
+    ctx.fillStyle = '#2c3e50';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = u * 0.34;
+    // sweeping tail: up from the head, over the top, down to the bottom line
+    ctx.beginPath();
+    ctx.moveTo(hx, yF);
+    ctx.bezierCurveTo(hx + 0.2 * u, yF - 1.4 * u, hx + 2.3 * u, yF - 1.1 * u, hx + 2.2 * u, yF + 0.6 * u);
+    ctx.bezierCurveTo(hx + 2.1 * u, yF + 1.8 * u, hx + 1.2 * u, yF + 2.6 * u, hx - 0.2 * u, yF + 3.1 * u);
+    ctx.stroke();
+    // head
+    ctx.beginPath();
+    ctx.arc(hx, yF, u * 0.42, 0, Math.PI * 2);
+    ctx.fill();
+    // the two dots, either side of the F line
+    [-0.5, 0.5].forEach(dy => {
+      ctx.beginPath();
+      ctx.arc(hx + 2.9 * u, yF + dy * u, u * 0.17, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+
+  function drawLetterLabels(ctx, positions, staffLineLeft, staffBottomY, halfStep, scale) {
+    ctx.font = `bold ${18 * scale}px Arial`;
+    ctx.fillStyle = '#2c3e50';
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    positions.forEach(n => {
+      const y = staffBottomY - n.step * halfStep;
+      ctx.fillText(n.letter, staffLineLeft - 8, y);
+    });
+  }
+
+  function drawArrowToLine(ctx, y, staffRight, scale) {
+    const tipX = staffRight - 20;
+    const tailX = tipX + 55;
+    ctx.strokeStyle = '#e74c3c';
+    ctx.fillStyle = '#e74c3c';
+    ctx.lineWidth = 4 * scale;
+    ctx.beginPath();
+    ctx.moveTo(tailX, y);
+    ctx.lineTo(tipX + 10, y);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(tipX, y);
+    ctx.lineTo(tipX + 14, y - 9);
+    ctx.lineTo(tipX + 14, y + 9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.font = `bold ${18 * scale}px Arial`;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('F', tailX + 6, y);
+  }
+
+  const NOTE_SCALE = 1.75;
+  const NOTE_RADIUS = 13 * NOTE_SCALE;
+
+  function drawNotehead(ctx, x, y, status, stemDown) {
+    const r = NOTE_RADIUS;
+    const color = status === 'correct' ? '#2ecc71' : status === 'wrong' ? '#e74c3c' : '#2c3e50';
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.ellipse(x, y, r * 1.2, r, -Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5 * NOTE_SCALE;
+    ctx.beginPath();
+    // stem goes down (on the left) from the middle line up, otherwise up (on the right)
+    const sx = stemDown ? x - r : x + r;
+    ctx.moveTo(sx, y);
+    ctx.lineTo(sx, y + (stemDown ? 60 : -60) * NOTE_SCALE);
+    ctx.stroke();
+  }
+
+  window.addEventListener('resize', () => { resizeCanvas(); drawStaff(); });
+
+  // ── Toast ────────────────────────────────────────────────────────────────
+  let toastTimer = null;
+  function showToast(msg, color) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.background = color || '#2ecc71';
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+  }
+
+  // ── Settings panel wiring ────────────────────────────────────────────────
+  // Every change applies immediately and persists (localStorage + parent app),
+  // so filters are always live and carry over to the next student/question.
+  function saveAndBroadcastSettings() {
+    saveLocalSettings();
+    try { localStorage.setItem(CONFIGURED_KEY, '1'); } catch (e) { /* ignore */ }
+    window.parent.postMessage({
+      type: 'taskmodule:settings',
+      modulePath: MODULE_FILE,
+      settings: settings
+    }, '*');
+  }
+  function handleSettingsChange() {
+    applySettingsToUI();
+    updateFilterSummary();
+    renderBank();
+    saveAndBroadcastSettings();
+  }
+
+  document.querySelectorAll('.note-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      settings.enabled[cb.dataset.id] = cb.checked;
+      handleSettingsChange();
+    });
+  });
+  document.getElementById('col-line-all').addEventListener('change', e => { toggleColumn(LINE_IDS, e.target.checked); handleSettingsChange(); });
+  document.getElementById('col-space-all').addEventListener('change', e => { toggleColumn(SPACE_IDS, e.target.checked); handleSettingsChange(); });
+  document.getElementById('col-ext-all').addEventListener('change', e => { toggleColumn(EXT_IDS, e.target.checked); handleSettingsChange(); });
+
+  document.querySelectorAll('.count-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      settings.noteCount = parseInt(btn.dataset.count, 10);
+      updateCountButtons();
+      updateFilterSummary();
+      saveAndBroadcastSettings();
+    });
+  });
+
+  document.getElementById('settings-btn').addEventListener('click', openSettingsOverlay);
+
+  document.getElementById('hint-btn').addEventListener('click', () => {
+    const showHint = !document.getElementById('hint-banner').classList.contains('show');
+    document.getElementById('hint-banner').classList.toggle('show', showHint);
+    document.getElementById('hint-btn').classList.toggle('active', showHint);
+  });
+  document.getElementById('reveal-f-btn').addEventListener('click', () => {
+    showF = !showF;
+    document.getElementById('reveal-f-btn').classList.toggle('active', showF);
+    drawStaff();
+  });
+  document.getElementById('reveal-lines-btn').addEventListener('click', () => {
+    showLines = !showLines;
+    document.getElementById('reveal-lines-btn').classList.toggle('active', showLines);
+    drawStaff();
+  });
+  document.getElementById('reveal-spaces-btn').addEventListener('click', () => {
+    showSpaces = !showSpaces;
+    document.getElementById('reveal-spaces-btn').classList.toggle('active', showSpaces);
+    drawStaff();
+  });
+
+  document.getElementById('new-note-btn').addEventListener('click', () => {
+    if (enabledPositions().length === 0) {
+      showToast('Select at least one note first', '#e67e22');
+      openSettingsOverlay();
+      return;
+    }
+    pickNewRound();
+    resizeCanvas();
+    drawStaff();
+  });
+
+  document.getElementById('settings-close-btn').addEventListener('click', () => {
+    saveAndBroadcastSettings();
+    if (enabledPositions().length === 0) {
+      showToast('No notes selected — pick at least one to start quizzing', '#e67e22');
+    } else if (!roundTargets.length) {
+      pickNewRound();
+    }
+    closeSettingsOverlay();
+    resizeCanvas();
+    drawStaff();
+  });
+
+  // ── TaskModule interface ─────────────────────────────────────────────────
+  window.TaskModule = {
+    init(context) {
+      const fromApp = context && context.savedSettings && context.savedSettings.enabled ? context.savedSettings : null;
+      settings = fromApp || loadLocalSettings() || defaultSettings();
+      settings.noteCount = settings.noteCount || 1; // upgrade settings saved before multi-note mode existed
+
+      applySettingsToUI();
+      updateFilterSummary();
+
+      if (!hasEverConfigured(context)) {
+        openSettingsOverlay();
+      } else {
+        closeSettingsOverlay();
+        pickNewRound();
+      }
+
+      setTimeout(() => {
+        resizeCanvas();
+        renderBank();
+        drawStaff();
+      }, 50);
+    },
+
+    getResponse() { return lastResponse; },
+    isComplete() { return answered; },
+    reset() {
+      if (dragClone) { dragClone.remove(); dragClone = null; }
+      dragLetter = null;
+      dragChip = null;
+    }
+  };
+
+  window.addEventListener('message', e => {
+    if (e.data && e.data.type === 'taskmodule:init') {
+      window.TaskModule.init(e.data.context || {});
+    }
+  });
+</script>
+</body>
+</html>

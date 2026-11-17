@@ -23,5 +23,6 @@
   { "task_id": "instrument_assigner",       "question": "Instrument Assigner",           "module_path": "modules/instrument_assigner.html" },
   { "task_id": "group_assigner",            "question": "Group Assigner",                "module_path": "modules/group_assigner.html" },
   { "task_id": "treble_clef_note_quiz",     "question": "Treble Clef Note Quiz",         "module_path": "modules/treble_clef_note_quiz.html" },
+  { "task_id": "bass_clef_note_quiz",       "question": "Bass Clef Note Quiz",           "module_path": "modules/bass_clef_note_quiz.html" },
   { "task_id": "written_assessment_scorer", "question": "Written Assessment Scorer",     "module_path": "modules/written_assessment_scorer.html" }
 ]
